@@ -1,17 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Admin/Service Role client — ONLY for server-side operations that
- * need to bypass Row Level Security.
- *
- * Use cases:
- * - WhatsApp webhook processing (inserting messages for any business)
- * - Razorpay webhook processing (updating subscriptions)
- * - Cron jobs (resetting usage, sending reminders)
- * - Audit logging
- *
- * NEVER expose this client to the browser.
- * NEVER import this file in Client Components.
+ * Admin/Service Role client — ONLY for server-side operations
+ * that need to bypass Row Level Security.
  */
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,7 +10,7 @@ export function createAdminClient() {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Missing SUPABASE_SERVICE_ROLE_KEY. This client can only be used server-side."
+      "Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL. Ensure these are set in Vercel environment variables."
     );
   }
 

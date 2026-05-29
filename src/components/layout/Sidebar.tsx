@@ -69,20 +69,6 @@ export default function Sidebar() {
           <Settings className="w-5 h-5 flex-shrink-0" />
           Settings
         </Link>
-
-        {/* Usage indicator */}
-        <div className="mt-4 mx-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-          <div className="flex items-center justify-between text-xs mb-2">
-            <span className="text-text-secondary font-medium">Messages</span>
-            <span className="text-primary font-semibold">742 / 1,000</span>
-          </div>
-          <div className="w-full h-1.5 bg-primary/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: "74%" }}
-            />
-          </div>
-        </div>
       </div>
     </aside>
   );

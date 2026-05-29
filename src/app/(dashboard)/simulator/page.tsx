@@ -72,7 +72,7 @@ export default function SimulatorPage() {
   const [loading, setLoading] = useState(false);
   const [showDebug, setShowDebug] = useState(true);
   const [selectedDebug, setSelectedDebug] = useState<DebugInfo | null>(null);
-  const [contactName, setContactName] = useState("Priya");
+  const [contactName, setContactName] = useState("Test Customer");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
