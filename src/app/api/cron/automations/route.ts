@@ -5,21 +5,22 @@ import {
   processPaymentReminders,
   processTrialConversions,
 } from "@/lib/automations/scheduler";
+import { processFollowUps } from "@/lib/ai/follow-up";
 
 /**
  * GET /api/cron/automations
  *
- * Master cron endpoint that runs all automation schedulers.
- * Called every 15 minutes by Vercel Cron.
+ * Master cron endpoint — runs ALL automations in a single call.
+ * Compatible with Vercel Hobby plan (1 cron, runs every 6 hours).
  *
- * Each scheduler checks its own timing internally:
- * - Appointment reminders: every run (15 min)
- * - Missed customers: once per day
- * - Payment reminders: once per day
- * - Trial conversions: once per day
+ * Runs:
+ * - Follow-ups (every call)
+ * - Appointment reminders (every call)
+ * - Missed customers (daily at ~9 AM UTC)
+ * - Payment reminders (daily at ~9 AM UTC)
+ * - Trial conversions (daily at ~9 AM UTC)
  */
 export async function GET(request: NextRequest) {
-  // Verify cron authorization
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -29,7 +30,14 @@ export async function GET(request: NextRequest) {
 
   const results: Record<string, { sent: number; skipped: number } | { error: string }> = {};
 
-  // 1. Appointment reminders (every run)
+  // Always run: follow-ups + appointment reminders
+  try {
+    results.follow_ups = await processFollowUps();
+  } catch (error) {
+    console.error("[Cron] Follow-ups failed:", error);
+    results.follow_ups = { error: String(error) };
+  }
+
   try {
     results.appointment_reminders = await processAppointmentReminders();
   } catch (error) {
@@ -37,10 +45,9 @@ export async function GET(request: NextRequest) {
     results.appointment_reminders = { error: String(error) };
   }
 
-  // 2. Missed customers (check if we should run — once per day)
+  // Daily automations (run at 3 AM, 9 AM, 3 PM, 9 PM UTC — the 9 AM window)
   const hour = new Date().getUTCHours();
-  if (hour === 9) {
-    // Run daily automations at 9 AM UTC (2:30 PM IST)
+  if (hour >= 8 && hour <= 10) {
     try {
       results.missed_customers = await processMissedCustomers();
     } catch (error) {
