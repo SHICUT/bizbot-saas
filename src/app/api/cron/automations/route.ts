@@ -10,15 +10,9 @@ import { processFollowUps } from "@/lib/ai/follow-up";
 /**
  * GET /api/cron/automations
  *
- * Master cron endpoint — runs ALL automations in a single call.
- * Compatible with Vercel Hobby plan (1 cron, runs every 6 hours).
- *
- * Runs:
- * - Follow-ups (every call)
- * - Appointment reminders (every call)
- * - Missed customers (daily at ~9 AM UTC)
- * - Payment reminders (daily at ~9 AM UTC)
- * - Trial conversions (daily at ~9 AM UTC)
+ * Master cron endpoint — runs ALL automations in a single daily call.
+ * Schedule: 0 0 * * * (once per day at midnight UTC / 5:30 AM IST)
+ * Compatible with Vercel Hobby plan.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -45,29 +39,26 @@ export async function GET(request: NextRequest) {
     results.appointment_reminders = { error: String(error) };
   }
 
-  // Daily automations (run at 3 AM, 9 AM, 3 PM, 9 PM UTC — the 9 AM window)
-  const hour = new Date().getUTCHours();
-  if (hour >= 8 && hour <= 10) {
-    try {
-      results.missed_customers = await processMissedCustomers();
-    } catch (error) {
-      console.error("[Cron] Missed customers failed:", error);
-      results.missed_customers = { error: String(error) };
-    }
+  // All automations run on every call (once per day)
+  try {
+    results.missed_customers = await processMissedCustomers();
+  } catch (error) {
+    console.error("[Cron] Missed customers failed:", error);
+    results.missed_customers = { error: String(error) };
+  }
 
-    try {
-      results.payment_reminders = await processPaymentReminders();
-    } catch (error) {
-      console.error("[Cron] Payment reminders failed:", error);
-      results.payment_reminders = { error: String(error) };
-    }
+  try {
+    results.payment_reminders = await processPaymentReminders();
+  } catch (error) {
+    console.error("[Cron] Payment reminders failed:", error);
+    results.payment_reminders = { error: String(error) };
+  }
 
-    try {
-      results.trial_conversions = await processTrialConversions();
-    } catch (error) {
-      console.error("[Cron] Trial conversions failed:", error);
-      results.trial_conversions = { error: String(error) };
-    }
+  try {
+    results.trial_conversions = await processTrialConversions();
+  } catch (error) {
+    console.error("[Cron] Trial conversions failed:", error);
+    results.trial_conversions = { error: String(error) };
   }
 
   return NextResponse.json({
