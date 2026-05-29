@@ -1,0 +1,121 @@
+{
+  "name": "Appointment Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appointment_reminder",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.reminder_type }}",
+              "rightValue": "24h",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-type",
+      "name": "Is 24h Reminder?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "message",
+              "name": "message",
+              "value": "=Hi {{ $('Webhook Trigger').item.json.lead.name || 'there' }}! 📅 Just a friendly reminder — your {{ $('Webhook Trigger').item.json.appointment.title }} is scheduled for tomorrow.\n\n🕐 Time: {{ $('Webhook Trigger').item.json.appointment.scheduled_at }}\n📍 At: {{ $('Webhook Trigger').item.json.business.name }}\n\nSee you there! If you need to reschedule, just let us know. 😊",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "msg-24h",
+      "name": "24h Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "message",
+              "name": "message",
+              "value": "=⏰ Reminder: Your {{ $('Webhook Trigger').item.json.appointment.title }} at {{ $('Webhook Trigger').item.json.business.name }} is in about 1 hour!\n\nWe're looking forward to seeing you. 🙌",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "msg-1h",
+      "name": "1h Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.business.phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Webhook Trigger').item.json.business.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Trigger').item.json.lead.wa_id }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-reminder",
+      "name": "Send Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Is 24h Reminder?", "type": "main", "index": 0 }]]
+    },
+    "Is 24h Reminder?": {
+      "main": [
+        [{ "node": "24h Message", "type": "main", "index": 0 }],
+        [{ "node": "1h Message", "type": "main", "index": 0 }]
+      ]
+    },
+    "24h Message": {
+      "main": [[{ "node": "Send Reminder", "type": "main", "index": 0 }]]
+    },
+    "1h Message": {
+      "main": [[{ "node": "Send Reminder", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

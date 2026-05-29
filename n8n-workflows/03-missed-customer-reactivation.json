@@ -1,0 +1,118 @@
+{
+  "name": "Missed Customer Reactivation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "missed_customer",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.lead.previous_interest }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isNotEmpty" }
+            }
+          ]
+        }
+      },
+      "id": "has-interest",
+      "name": "Has Previous Interest?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "message",
+              "name": "message",
+              "value": "=Hi {{ $('Webhook Trigger').item.json.lead.name || 'there' }}! 👋 It's been a while since we chatted. We noticed you were interested in {{ $('Webhook Trigger').item.json.lead.previous_interest }}.\n\nWe have some exciting updates! Would you like to hear about them? 😊",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "msg-personalized",
+      "name": "Personalized Reactivation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "message",
+              "name": "message",
+              "value": "=Hi {{ $('Webhook Trigger').item.json.lead.name || 'there' }}! 👋 We miss you at {{ $('Webhook Trigger').item.json.business.name }}!\n\nJust checking in — is there anything we can help you with? We'd love to have you back. 🙏",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "msg-generic",
+      "name": "Generic Reactivation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.business.phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Webhook Trigger').item.json.business.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Trigger').item.json.lead.wa_id }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-message",
+      "name": "Send Reactivation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Has Previous Interest?", "type": "main", "index": 0 }]]
+    },
+    "Has Previous Interest?": {
+      "main": [
+        [{ "node": "Personalized Reactivation", "type": "main", "index": 0 }],
+        [{ "node": "Generic Reactivation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Personalized Reactivation": {
+      "main": [[{ "node": "Send Reactivation", "type": "main", "index": 0 }]]
+    },
+    "Generic Reactivation": {
+      "main": [[{ "node": "Send Reactivation", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,186 @@
+{
+  "name": "New Lead Follow-Up",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new_lead",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-lead-name",
+              "leftValue": "={{ $json.lead.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-name",
+      "name": "Has Name?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "greeting",
+              "name": "greeting",
+              "value": "=Hi {{ $json.lead.name }}! 👋",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-personalized",
+      "name": "Personalized Greeting",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "greeting",
+              "name": "greeting",
+              "value": "Hi there! 👋",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-generic",
+      "name": "Generic Greeting",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "minutes"
+      },
+      "id": "wait-5min",
+      "name": "Wait 5 Minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Webhook Trigger').item.json.business.phone_number_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Webhook Trigger').item.json.business.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Trigger').item.json.lead.wa_id }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.greeting }} Thanks for reaching out to {{ $('Webhook Trigger').item.json.business.name }}! We received your message and our team is here to help. Is there anything specific you'd like to know? 😊\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp Welcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook Trigger').item.json.callback_url || 'https://your-app.vercel.app/api/webhooks/n8n' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"workflow_id\": \"new-lead-follow-up\",\n  \"execution_id\": \"{{ $execution.id }}\",\n  \"event_type\": \"new_lead\",\n  \"status\": \"success\",\n  \"result\": {\n    \"message_sent\": true\n  }\n}",
+        "options": {}
+      },
+      "id": "callback",
+      "name": "Report Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Has Name?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Name?": {
+      "main": [
+        [{ "node": "Personalized Greeting", "type": "main", "index": 0 }],
+        [{ "node": "Generic Greeting", "type": "main", "index": 0 }]
+      ]
+    },
+    "Personalized Greeting": {
+      "main": [
+        [{ "node": "Wait 5 Minutes", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generic Greeting": {
+      "main": [
+        [{ "node": "Wait 5 Minutes", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait 5 Minutes": {
+      "main": [
+        [{ "node": "Send WhatsApp Welcome", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send WhatsApp Welcome": {
+      "main": [
+        [{ "node": "Report Success", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "name": "Payment Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment_reminder",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "billing@bizbot.ai",
+        "toEmail": "={{ $json.business.owner_email }}",
+        "subject": "=Your {{ $json.subscription.plan }} plan expires in {{ $json.subscription.days_until_expiry }} days",
+        "emailType": "html",
+        "html": "=<h2>Hi {{ $json.business.name }}!</h2><p>Your <strong>{{ $json.subscription.plan }}</strong> plan is expiring in <strong>{{ $json.subscription.days_until_expiry }} days</strong>.</p><p>To avoid any interruption in your WhatsApp automation:</p><ul><li>AI auto-replies will stop</li><li>Lead capture will pause</li><li>Conversation history remains safe</li></ul><p><a href='https://app.bizbot.ai/billing' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Renew Now →</a></p><p style='color:#666;margin-top:24px;font-size:14px;'>Questions? Reply to this email or message us on WhatsApp.</p>",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email Reminder",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $('Webhook Trigger').item.json.business.owner_phone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isNotEmpty" }
+            },
+            {
+              "leftValue": "={{ $('Webhook Trigger').item.json.subscription.days_until_expiry }}",
+              "rightValue": "1",
+              "operator": { "type": "number", "operation": "lte" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-urgent",
+      "name": "Urgent + Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.BIZBOT_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BIZBOT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Trigger').item.json.business.owner_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"⚠️ Hi! Your BizBot {{ $('Webhook Trigger').item.json.subscription.plan }} plan expires tomorrow. Your AI assistant will stop replying to customers.\\n\\nRenew now to keep your automation running: https://app.bizbot.ai/billing\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-whatsapp-urgent",
+      "name": "Send Urgent WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 200],
+      "retryOnFail": true,
+      "maxTries": 2
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Send Email Reminder", "type": "main", "index": 0 }]]
+    },
+    "Send Email Reminder": {
+      "main": [[{ "node": "Urgent + Has Phone?", "type": "main", "index": 0 }]]
+    },
+    "Urgent + Has Phone?": {
+      "main": [
+        [{ "node": "Send Urgent WhatsApp", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}
