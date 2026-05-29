@@ -155,7 +155,7 @@ export async function registerWithEmail(formData: FormData): Promise<AuthResult>
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect("/select-plan");
 }
 
 // ─── Logout ─────────────────────────────────────────────────────────────────

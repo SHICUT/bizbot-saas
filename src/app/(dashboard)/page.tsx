@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Users, MessageSquare, Bot, Calendar, ArrowRight, Loader2 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
+import TrialBanner from "@/components/dashboard/TrialBanner";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/layout/PageHeader";
 import Avatar from "@/components/ui/Avatar";
@@ -11,6 +12,7 @@ import Badge from "@/components/ui/Badge";
 interface DashboardData {
   user: { id: string; email: string; name: string };
   business: { name: string; plan: string; whatsapp_connected: boolean } | null;
+  subscription: { plan: string; status: string; trial_end: string | null; messages_used: number; message_limit: number } | null;
   stats: { leads: number; messages: number; conversations: number; appointments: number; messagesUsed: number; messageLimit: number };
   recentConversations: Array<{ id: string; last_message_text: string; last_message_at: string; unread_count: number; channel: string; leads: { name: string; phone: string } }>;
 }
@@ -48,6 +50,17 @@ export default function DashboardPage() {
         title={`Welcome, ${data.user.name}`}
         description={data.business ? `${data.business.name} — ${data.business.plan} plan` : "Set up your business to get started"}
       />
+
+      {/* Trial Banner */}
+      {data.subscription && (
+        <TrialBanner
+          plan={data.subscription.plan}
+          status={data.subscription.status}
+          trialEnd={data.subscription.trial_end}
+          messagesUsed={data.subscription.messages_used}
+          messageLimit={data.subscription.message_limit}
+        />
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
