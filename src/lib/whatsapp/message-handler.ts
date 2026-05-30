@@ -59,7 +59,7 @@ async function processIncomingMessage(
   // 1. Find the business by phone_number_id
   const { data: business, error: bizError } = await supabase
     .from("businesses")
-    .select("id, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
+    .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
     .eq("whatsapp_phone_number_id", phoneNumberId)
     .eq("is_active", true)
     .single();
@@ -167,8 +167,9 @@ async function processIncomingMessage(
       incomingMessage: content,
       conversationHistory: await getConversationHistory(supabase, conversation.id),
       contactName: contact?.profile?.name || "Customer",
-      // Extended context for sales assistant
       businessId: business.id,
+      businessName: business.name,
+      businessType: business.type || "other",
       leadId: lead.id,
       conversationId: conversation.id,
       leadPhone: message.from,

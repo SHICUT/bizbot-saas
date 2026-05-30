@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
   // This prevents 500 errors when env vars are missing
   if (!supabaseUrl || !supabaseKey) {
     // Allow public routes, redirect everything else to login
-    const publicRoutes = ["/login", "/register", "/callback", "/confirm", "/select-plan", "/verify-email", "/forgot-password", "/reset-password"];
+    const publicRoutes = ["/login", "/register", "/callback", "/confirm", "/select-plan", "/verify-email", "/forgot-password", "/reset-password", "/onboarding"];
     const isPublic = publicRoutes.some((r) => request.nextUrl.pathname.startsWith(r));
     const isApi = request.nextUrl.pathname.startsWith("/api/");
 
@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Public routes
-  const publicRoutes = ["/login", "/register", "/callback", "/confirm", "/select-plan", "/verify-email", "/forgot-password", "/reset-password"];
+  const publicRoutes = ["/login", "/register", "/callback", "/confirm", "/select-plan", "/verify-email", "/forgot-password", "/reset-password", "/onboarding"];
   const isPublicRoute = publicRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
@@ -70,7 +70,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isPublicRoute) {
     // Allow access to these pages even when authenticated
-    const allowWhenAuth = ["/select-plan", "/reset-password", "/verify-email"];
+    const allowWhenAuth = ["/select-plan", "/reset-password", "/verify-email", "/onboarding"];
     if (allowWhenAuth.some((r) => request.nextUrl.pathname.startsWith(r))) {
       return supabaseResponse;
     }

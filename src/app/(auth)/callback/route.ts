@@ -23,8 +23,8 @@ export async function GET(request: Request) {
       if (next) {
         return NextResponse.redirect(`${origin}${next}`);
       }
-      // Default: redirect to select-plan (for new signups) or dashboard
-      return NextResponse.redirect(`${origin}/select-plan`);
+      // Default: redirect to onboarding (for new signups) or dashboard
+      return NextResponse.redirect(`${origin}/onboarding`);
     }
   }
 
