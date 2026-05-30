@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
 
   // Build update based on step
-  const updates: Record<string, unknown> = { onboarding_step: step };
+  const updates: Record<string, unknown> = {};
 
   switch (step) {
     case 1: // Business Type
@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
       break;
     case 2: // Business Profile
       if (data.name) updates.name = data.name;
-      if (data.description) updates.description = data.description;
-      if (data.website) updates.website = data.website;
-      if (data.address) updates.address = data.address;
+      if (data.description !== undefined) updates.description = data.description;
+      if (data.website !== undefined) updates.website = data.website;
+      if (data.address !== undefined) updates.address = data.address;
       break;
     case 3: // Services
       if (data.services) updates.services = data.services;
@@ -65,13 +65,24 @@ export async function POST(request: NextRequest) {
       break;
   }
 
+  if (Object.keys(updates).length === 0) {
+    console.log("[Onboarding POST] No updates for step", step);
+    return NextResponse.json({ success: true, step });
+  }
+
+  console.log("[Onboarding POST] Updating business", business.id, "with:", JSON.stringify(updates));
+
   const { error } = await adminSupabase
     .from("businesses")
     .update(updates)
     .eq("id", business.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[Onboarding POST] Update failed:", error.message, "| Code:", error.code);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
+  console.log("[Onboarding POST] Step", step, "saved successfully");
   return NextResponse.json({ success: true, step });
 }
 
@@ -90,7 +101,7 @@ export async function GET() {
 
   const { data: business, error: bizErr } = await adminSupabase
     .from("businesses")
-    .select("*")
+    .select("id, name, type, description, services, business_hours, ai_personality, ai_tone, lead_collection, onboarding_completed, whatsapp_connected")
     .eq("owner_id", user.id)
     .single();
 
@@ -110,6 +121,6 @@ export async function GET() {
     user: { name: user.user_metadata?.full_name || "", email: user.email },
     business,
     onboarding_completed: business.onboarding_completed === true,
-    current_step: business.onboarding_step || 0,
+    current_step: 0,
   });
 }
