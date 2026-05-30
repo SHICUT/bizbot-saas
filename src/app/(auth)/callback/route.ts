@@ -4,10 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * GET /callback
  *
- * Handles all Supabase Auth redirects:
- * - Email verification (after clicking verify link)
- * - Password reset (after clicking reset link)
- * - OAuth callbacks (if enabled in future)
+ * Handles Supabase Auth redirects:
+ * - Email verification: /callback?code=xxx
+ * - Password reset: /callback?code=xxx (type=recovery in the session)
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -16,18 +15,29 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      // If there's a "next" param, use it (e.g., /reset-password)
+    if (!error && data.session) {
+      // Check if this is a password recovery flow
+      // Supabase sets the session type when exchanging a recovery code
+      if (data.session.user?.recovery_sent_at) {
+        const recoverySentAt = new Date(data.session.user.recovery_sent_at).getTime();
+        const now = Date.now();
+        // If recovery was sent within the last hour, redirect to reset page
+        if (now - recoverySentAt < 60 * 60 * 1000) {
+          return NextResponse.redirect(`${origin}/reset-password`);
+        }
+      }
+
+      // If there's a "next" param, use it
       if (next) {
         return NextResponse.redirect(`${origin}${next}`);
       }
-      // Default: redirect to dashboard (layout will check onboarding)
+
+      // Default: go to dashboard
       return NextResponse.redirect(`${origin}/`);
     }
   }
 
-  // Failed — redirect to login with error
   return NextResponse.redirect(`${origin}/login?error=verification_failed`);
 }

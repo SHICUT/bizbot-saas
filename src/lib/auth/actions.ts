@@ -87,7 +87,11 @@ export async function forgotPassword(formData: FormData): Promise<AuthResult> {
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[ForgotPassword] Error:", error.message);
+    if (error.message.includes("rate limit")) return { error: "Too many attempts. Please try again in a few minutes." };
+    return { error: "Failed to send reset email. Please try again." };
+  }
   return { success: true };
 }
 
