@@ -29,19 +29,26 @@ export default function ResetPasswordPage() {
 
     // Handle the recovery token from URL
     async function handleRecovery() {
+      console.log("[ResetPassword] Full URL:", window.location.href);
+      console.log("[ResetPassword] Search:", window.location.search);
+      console.log("[ResetPassword] Hash:", window.location.hash);
+
       // Check URL for code param (PKCE flow)
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
+      console.log("[ResetPassword] Code param:", code);
 
       if (code) {
-        console.log("[ResetPassword] Found code param, exchanging...");
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        console.log("[ResetPassword] Exchanging code for session...");
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        console.log("[ResetPassword] Exchange result:", { hasSession: !!data?.session, error: error?.message });
         if (error) {
-          console.error("[ResetPassword] Code exchange failed:", error.message);
+          console.error("[ResetPassword] Exchange FAILED:", error.message, error.status);
           setError("This reset link has expired. Please request a new one.");
           setChecking(false);
           return;
         }
+        console.log("[ResetPassword] Session established. User:", data.session?.user?.email);
         setReady(true);
         setChecking(false);
         return;
