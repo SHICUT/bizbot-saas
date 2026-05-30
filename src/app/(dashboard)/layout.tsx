@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
@@ -10,33 +9,46 @@ import MobileNav from "@/components/layout/MobileNav";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [checking, setChecking] = useState(true);
-  const pathname = usePathname();
 
   useEffect(() => {
-    // Check onboarding status on dashboard load
-    console.log("[Dashboard] Checking onboarding status...");
-    fetch("/api/onboarding")
-      .then((r) => r.json())
-      .then((data) => {
-        console.log("[Dashboard] Onboarding response:", {
-          onboarding_completed: data.onboarding_completed,
-          current_step: data.current_step,
-          has_business: !!data.business,
-        });
+    // Only check once on mount, not on every pathname change
+    console.log("[Dashboard Layout] Checking onboarding...");
 
-        if (!data.onboarding_completed) {
-          console.log("[Dashboard] Onboarding not completed. Redirecting to /onboarding");
+    fetch("/api/onboarding")
+      .then((r) => {
+        console.log("[Dashboard Layout] API response status:", r.status);
+        if (!r.ok) throw new Error(`API returned ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        console.log("[Dashboard Layout] API data:", JSON.stringify({
+          onboarding_completed: data.onboarding_completed,
+          has_business: !!data.business,
+          business_name: data.business?.name,
+        }));
+
+        // If business exists AND has a type set, consider onboarding done
+        // This is the fallback check in case onboarding_completed wasn't saved
+        const isCompleted = data.onboarding_completed === true ||
+          (data.business && data.business.type && data.business.type !== "other");
+
+        if (!isCompleted && !data.business) {
+          // No business at all — definitely needs onboarding
+          console.log("[Dashboard Layout] No business found. Redirecting to onboarding.");
           window.location.assign("/onboarding");
           return;
         }
+
+        // Business exists — allow dashboard access
+        console.log("[Dashboard Layout] Access granted. onboarding_completed:", data.onboarding_completed);
         setChecking(false);
       })
       .catch((err) => {
-        console.error("[Dashboard] Onboarding check failed:", err);
-        // Allow access on error (don't block if API fails)
+        console.error("[Dashboard Layout] Check failed:", err.message);
+        // On error, allow dashboard access (don't trap user in loop)
         setChecking(false);
       });
-  }, [pathname]);
+  }, []); // Only run ONCE on mount
 
   if (checking) {
     return (
