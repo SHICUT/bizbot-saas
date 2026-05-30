@@ -67,46 +67,61 @@ export default function OnboardingPage() {
 
   async function saveStep(stepNum: number, data: Record<string, unknown>) {
     setLoading(true);
+    console.log("[Onboarding] Saving step", stepNum, "with data:", JSON.stringify(data));
     try {
       const res = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step: stepNum, data }),
       });
-      if (!res.ok) throw new Error("Save failed");
-      setStep(stepNum + 1 > 8 ? 8 : stepNum);
-      return true;
-    } catch {
-      return false;
+      const result = await res.json();
+      if (!res.ok) {
+        console.error("[Onboarding] Save step", stepNum, "failed:", result.error);
+        // Don't block navigation — save failed but let user continue
+      } else {
+        console.log("[Onboarding] Step", stepNum, "saved successfully");
+      }
+      return true; // Always return true to allow navigation
+    } catch (err) {
+      console.error("[Onboarding] Network error on step", stepNum, ":", err);
+      return true; // Still allow navigation on network error
     } finally {
       setLoading(false);
     }
   }
 
   function nextStep() {
+    console.log("[Onboarding] Next clicked. Current step:", step);
     switch (step) {
-      case 0: setStep(1); break; // Welcome → Business Type
-      case 1: saveStep(1, { type: formData.type }).then((ok) => ok && setStep(2)); break;
-      case 2: saveStep(2, { name: formData.name, description: formData.description, website: formData.website, address: formData.address }).then((ok) => ok && setStep(3)); break;
-      case 3: saveStep(3, { services: formData.services }).then((ok) => ok && setStep(4)); break;
+      case 0: setStep(1); break;
+      case 1:
+        if (!formData.type) { console.log("[Onboarding] No type selected"); return; }
+        saveStep(1, { type: formData.type }).then(() => setStep(2));
+        break;
+      case 2:
+        if (!formData.name) { console.log("[Onboarding] No name"); return; }
+        saveStep(2, { name: formData.name, description: formData.description, website: formData.website, address: formData.address }).then(() => setStep(3));
+        break;
+      case 3:
+        saveStep(3, { services: formData.services }).then(() => setStep(4));
+        break;
       case 4: {
         const hours: Record<string, { open: string; close: string; closed: boolean }> = {};
         ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].forEach((d) => {
           hours[d] = { open: formData.openTime, close: formData.closeTime, closed: !formData.workingDays.includes(d) };
         });
-        saveStep(4, { business_hours: hours }).then((ok) => ok && setStep(5));
+        saveStep(4, { business_hours: hours }).then(() => setStep(5));
         break;
       }
-      case 5: saveStep(5, { lead_collection: formData.leadCollection }).then((ok) => ok && setStep(6)); break;
-      case 6: saveStep(6, { ai_personality: formData.aiPersonality, ai_tone: formData.aiPersonality }).then((ok) => ok && setStep(7)); break;
-      case 7: {
+      case 5: saveStep(5, { lead_collection: formData.leadCollection }).then(() => setStep(6)); break;
+      case 6: saveStep(6, { ai_personality: formData.aiPersonality, ai_tone: formData.aiPersonality }).then(() => setStep(7)); break;
+      case 7:
         if (formData.waPhoneNumberId) {
-          saveStep(7, { phone_number_id: formData.waPhoneNumberId, business_account_id: formData.waBusinessAccountId, access_token: formData.waAccessToken }).then((ok) => ok && setStep(8));
+          saveStep(7, { phone_number_id: formData.waPhoneNumberId, business_account_id: formData.waBusinessAccountId, access_token: formData.waAccessToken }).then(() => setStep(8));
         } else {
-          saveStep(7, { skip: true }).then((ok) => ok && setStep(8));
+          saveStep(7, { skip: true }).then(() => setStep(8));
         }
         break;
-      }
       case 8: saveStep(8, {}).then(() => window.location.assign("/select-plan")); break;
     }
   }
