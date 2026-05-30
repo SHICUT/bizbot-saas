@@ -17,10 +17,12 @@ export async function registerWithEmail(formData: FormData): Promise<AuthResult>
   const phone = formData.get("phone") as string;
   const password = formData.get("password") as string;
 
+  console.log("[Signup] Attempting signup for:", email);
+
   if (!email || !password || !name) return { error: "Name, email, and password are required" };
   if (password.length < 6) return { error: "Password must be at least 6 characters" };
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -30,11 +32,15 @@ export async function registerWithEmail(formData: FormData): Promise<AuthResult>
   });
 
   if (error) {
+    console.error("[Signup] Auth error:", error.message, "| Code:", error.status, "| Full:", JSON.stringify(error));
     if (error.message.includes("already registered")) return { error: "An account with this email already exists." };
-    if (error.message.includes("rate limit")) return { error: "We couldn't send the verification email right now. Please try again in a few minutes." };
+    if (error.message.includes("rate limit")) return { error: "Too many attempts. Please try again in a few minutes." };
     if (error.message.includes("invalid")) return { error: "Please enter a valid email address." };
-    return { error: "Something went wrong. Please try again." };
+    // Show actual error in development, friendly message in production
+    return { error: `Signup failed: ${error.message}` };
   }
+
+  console.log("[Signup] Success. User ID:", data.user?.id, "| Email confirmed:", data.user?.email_confirmed_at ? "yes" : "no");
 
   redirect("/verify-email?email=" + encodeURIComponent(email));
 }
