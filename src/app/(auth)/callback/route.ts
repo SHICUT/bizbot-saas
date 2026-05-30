@@ -23,8 +23,8 @@ export async function GET(request: Request) {
       if (next) {
         return NextResponse.redirect(`${origin}${next}`);
       }
-      // Default: redirect to onboarding (for new signups) or dashboard
-      return NextResponse.redirect(`${origin}/onboarding`);
+      // Default: redirect to dashboard (layout will check onboarding)
+      return NextResponse.redirect(`${origin}/`);
     }
   }
 

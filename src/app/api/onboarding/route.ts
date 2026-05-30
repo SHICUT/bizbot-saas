@@ -85,16 +85,31 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const adminSupabase = createAdminClient();
-  const { data: business } = await adminSupabase
+
+  console.log("[Onboarding GET] Checking for user:", user.id);
+
+  const { data: business, error: bizErr } = await adminSupabase
     .from("businesses")
-    .select("id, name, type, description, services, business_hours, ai_personality, lead_collection, onboarding_completed, onboarding_step, whatsapp_connected")
+    .select("*")
     .eq("owner_id", user.id)
     .single();
 
+  if (bizErr) {
+    console.log("[Onboarding GET] No business found:", bizErr.message);
+    return NextResponse.json({
+      user: { name: user.user_metadata?.full_name || "", email: user.email },
+      business: null,
+      onboarding_completed: false,
+      current_step: 0,
+    });
+  }
+
+  console.log("[Onboarding GET] Business found:", business.id, "| onboarding_completed:", business.onboarding_completed);
+
   return NextResponse.json({
     user: { name: user.user_metadata?.full_name || "", email: user.email },
-    business: business || null,
-    onboarding_completed: business?.onboarding_completed || false,
-    current_step: business?.onboarding_step || 0,
+    business,
+    onboarding_completed: business.onboarding_completed === true,
+    current_step: business.onboarding_step || 0,
   });
 }
