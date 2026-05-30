@@ -65,9 +65,69 @@ export default function OnboardingPage() {
       .catch(() => setInitialLoading(false));
   }, []);
 
-  async function saveStep(stepNum: number, data: Record<string, unknown>) {
-    setLoading(true);
-    console.log("[Onboarding] Saving step", stepNum, "with data:", JSON.stringify(data));
+  function nextStep() {
+    console.log("NEXT CLICKED - current step:", step, "type:", formData.type, "loading:", loading);
+
+    if (loading) {
+      console.log("BLOCKED: loading is true");
+      return;
+    }
+
+    switch (step) {
+      case 0:
+        console.log("Moving from Welcome to Step 1");
+        setStep(1);
+        break;
+      case 1:
+        if (!formData.type) { console.log("BLOCKED: no type selected"); return; }
+        console.log("Moving from Step 1 to Step 2, saving type:", formData.type);
+        setStep(2); // Move immediately
+        saveStepBackground(1, { type: formData.type }); // Save in background
+        break;
+      case 2:
+        if (!formData.name) { console.log("BLOCKED: no name"); return; }
+        setStep(3);
+        saveStepBackground(2, { name: formData.name, description: formData.description, website: formData.website, address: formData.address });
+        break;
+      case 3:
+        setStep(4);
+        saveStepBackground(3, { services: formData.services });
+        break;
+      case 4: {
+        const hours: Record<string, { open: string; close: string; closed: boolean }> = {};
+        ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].forEach((d) => {
+          hours[d] = { open: formData.openTime, close: formData.closeTime, closed: !formData.workingDays.includes(d) };
+        });
+        setStep(5);
+        saveStepBackground(4, { business_hours: hours });
+        break;
+      }
+      case 5:
+        setStep(6);
+        saveStepBackground(5, { lead_collection: formData.leadCollection });
+        break;
+      case 6:
+        setStep(7);
+        saveStepBackground(6, { ai_personality: formData.aiPersonality, ai_tone: formData.aiPersonality });
+        break;
+      case 7:
+        setStep(8);
+        if (formData.waPhoneNumberId) {
+          saveStepBackground(7, { phone_number_id: formData.waPhoneNumberId, business_account_id: formData.waBusinessAccountId, access_token: formData.waAccessToken });
+        } else {
+          saveStepBackground(7, { skip: true });
+        }
+        break;
+      case 8:
+        setLoading(true);
+        saveStepBackground(8, {}).then(() => window.location.assign("/select-plan"));
+        break;
+    }
+  }
+
+  // Fire-and-forget save — never blocks navigation
+  async function saveStepBackground(stepNum: number, data: Record<string, unknown>) {
+    console.log("[Onboarding] Background save step", stepNum);
     try {
       const res = await fetch("/api/onboarding", {
         method: "POST",
@@ -75,54 +135,10 @@ export default function OnboardingPage() {
         body: JSON.stringify({ step: stepNum, data }),
       });
       const result = await res.json();
-      if (!res.ok) {
-        console.error("[Onboarding] Save step", stepNum, "failed:", result.error);
-        // Don't block navigation — save failed but let user continue
-      } else {
-        console.log("[Onboarding] Step", stepNum, "saved successfully");
-      }
-      return true; // Always return true to allow navigation
+      if (!res.ok) console.error("[Onboarding] Save failed:", result.error);
+      else console.log("[Onboarding] Step", stepNum, "saved");
     } catch (err) {
-      console.error("[Onboarding] Network error on step", stepNum, ":", err);
-      return true; // Still allow navigation on network error
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function nextStep() {
-    console.log("[Onboarding] Next clicked. Current step:", step);
-    switch (step) {
-      case 0: setStep(1); break;
-      case 1:
-        if (!formData.type) { console.log("[Onboarding] No type selected"); return; }
-        saveStep(1, { type: formData.type }).then(() => setStep(2));
-        break;
-      case 2:
-        if (!formData.name) { console.log("[Onboarding] No name"); return; }
-        saveStep(2, { name: formData.name, description: formData.description, website: formData.website, address: formData.address }).then(() => setStep(3));
-        break;
-      case 3:
-        saveStep(3, { services: formData.services }).then(() => setStep(4));
-        break;
-      case 4: {
-        const hours: Record<string, { open: string; close: string; closed: boolean }> = {};
-        ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].forEach((d) => {
-          hours[d] = { open: formData.openTime, close: formData.closeTime, closed: !formData.workingDays.includes(d) };
-        });
-        saveStep(4, { business_hours: hours }).then(() => setStep(5));
-        break;
-      }
-      case 5: saveStep(5, { lead_collection: formData.leadCollection }).then(() => setStep(6)); break;
-      case 6: saveStep(6, { ai_personality: formData.aiPersonality, ai_tone: formData.aiPersonality }).then(() => setStep(7)); break;
-      case 7:
-        if (formData.waPhoneNumberId) {
-          saveStep(7, { phone_number_id: formData.waPhoneNumberId, business_account_id: formData.waBusinessAccountId, access_token: formData.waAccessToken }).then(() => setStep(8));
-        } else {
-          saveStep(7, { skip: true }).then(() => setStep(8));
-        }
-        break;
-      case 8: saveStep(8, {}).then(() => window.location.assign("/select-plan")); break;
+      console.error("[Onboarding] Network error:", err);
     }
   }
 
