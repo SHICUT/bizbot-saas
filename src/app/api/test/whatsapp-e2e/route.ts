@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     senderPhone: body.sender_phone || "919876543210",
     senderName: body.sender_name || "Test Customer",
     messageText: body.message_text || "Hi, what are your prices?",
-    skipAi: body.skip_ai ?? !process.env.OPENAI_API_KEY,
+    skipAi: body.skip_ai ?? !process.env.GEMINI_API_KEY,
   };
 
   const supabase = createAdminClient();
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     results.push({
       test: "7. AI Response Generation",
       status: "skipped",
-      message: "Skipped (skip_ai=true or OPENAI_API_KEY not set)",
+      message: "Skipped (skip_ai=true or GEMINI_API_KEY not set)",
     });
   }
 
@@ -416,7 +416,7 @@ async function testFullPipeline(
     return {
       test: "7. AI Response Generation",
       status: "failed",
-      message: "No AI response generated (check OPENAI_API_KEY and WhatsApp token)",
+      message: "No AI response generated (check GEMINI_API_KEY and WhatsApp token)",
     };
   } catch (error) {
     return {

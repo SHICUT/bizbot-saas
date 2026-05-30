@@ -9,7 +9,7 @@
  * - Database migrations applied
  *
  * Optional:
- * - OPENAI_API_KEY set (for AI response test)
+ * - GEMINI_API_KEY set (for AI response test)
  * - Real WhatsApp credentials (for send test)
  */
 

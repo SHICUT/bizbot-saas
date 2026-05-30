@@ -1,8 +1,8 @@
 /**
  * AI Reply Engine — Entry Point
  *
- * Interface used by the webhook message handler.
- * Bridges message handler → language detection → sales assistant → actions.
+ * Used by WhatsApp handler, Instagram handler, and Chat Simulator.
+ * All use the same Gemini-powered pipeline.
  */
 
 import { generateSalesReply } from "./sales-assistant";
@@ -28,8 +28,9 @@ interface SimpleReplyInput {
 }
 
 /**
- * Generate an AI reply for an incoming WhatsApp message.
- * Language is auto-detected from the message — no static setting needed.
+ * Generate an AI reply using Google Gemini.
+ * Returns null only for skip-reply messages (ok, thanks, bye).
+ * Returns error message string if Gemini fails.
  */
 export async function generateAIReply(input: SimpleReplyInput): Promise<string | null> {
   const ctx: ConversationContext = {
@@ -40,7 +41,6 @@ export async function generateAIReply(input: SimpleReplyInput): Promise<string |
     businessContext: input.businessContext,
     businessType: input.businessType || "service",
     businessHours: input.businessHours || {},
-    // Language/tone are now detected per-message, not from config
     tone: (input.tone as "friendly" | "casual" | "formal") || "friendly",
     language: (input.language as "english" | "hindi" | "hinglish") || "english",
     leadName: input.contactName || null,
