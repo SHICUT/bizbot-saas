@@ -20,6 +20,10 @@ export async function POST(request: NextRequest) {
   if (!razorpayKeyId || !razorpayKeySecret) {
     return NextResponse.json({
       error: "Payment system not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to environment variables.",
+      debug: {
+        RAZORPAY_KEY_ID_set: !!razorpayKeyId,
+        RAZORPAY_KEY_SECRET_set: !!razorpayKeySecret,
+      },
     }, { status: 503 });
   }
 
