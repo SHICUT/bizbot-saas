@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search, Menu, Loader2 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import { logout } from "@/lib/auth/actions";
+import { useToast } from "@/components/ui/Toast";
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -13,6 +14,8 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const [userName, setUserName] = useState("");
   const [userPlan, setUserPlan] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -57,7 +60,9 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                 <a href="/settings" className="block px-4 py-2 text-sm text-text-secondary hover:bg-gray-50">Settings</a>
                 <a href="/billing" className="block px-4 py-2 text-sm text-text-secondary hover:bg-gray-50">Billing</a>
                 <hr className="my-1 border-border" />
-                <button onClick={() => logout()} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Sign out</button>
+                <button onClick={async () => { setLoggingOut(true); showToast("info", "Logging out..."); try { await logout(); } catch {} }} disabled={loggingOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50">
+                  {loggingOut ? <span className="flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" />Logging out...</span> : "Sign out"}
+                </button>
               </div>
             </>
           )}

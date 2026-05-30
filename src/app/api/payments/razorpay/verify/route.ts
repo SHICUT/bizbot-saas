@@ -1,103 +1,122 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { verifyRazorpayPayment } from "@/lib/payments/razorpay";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createHmac } from "crypto";
 
 /**
  * POST /api/payments/razorpay/verify
  *
- * Verifies a Razorpay payment after checkout completes.
- * Called from the frontend after Razorpay checkout modal closes.
+ * Verifies Razorpay payment after checkout completes.
+ * Activates the subscription on successful verification.
  *
  * Body: {
+ *   razorpay_order_id: string,
  *   razorpay_payment_id: string,
- *   razorpay_subscription_id: string,
- *   razorpay_signature: string
+ *   razorpay_signature: string,
+ *   plan_id: string
  * }
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-
-  // 1. Verify auth
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 2. Parse body
   const body = await request.json();
-  const {
-    razorpay_payment_id,
-    razorpay_subscription_id,
-    razorpay_signature,
-  } = body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_id } = body;
 
-  if (!razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
-    return NextResponse.json(
-      { error: "Missing payment verification fields" },
-      { status: 400 }
-    );
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return NextResponse.json({ error: "Missing payment details" }, { status: 400 });
   }
 
-  // 3. Verify signature
-  const isValid = verifyRazorpayPayment({
-    razorpayPaymentId: razorpay_payment_id,
-    razorpaySubscriptionId: razorpay_subscription_id,
-    razorpaySignature: razorpay_signature,
-  });
-
-  if (!isValid) {
-    return NextResponse.json(
-      { error: "Payment verification failed" },
-      { status: 400 }
-    );
+  // Verify signature
+  const secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   }
 
-  // 4. Activate subscription (use admin client to bypass RLS)
+  const expectedSignature = createHmac("sha256", secret)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest("hex");
+
+  if (expectedSignature !== razorpay_signature) {
+    return NextResponse.json({ error: "Payment verification failed. Signature mismatch." }, { status: 400 });
+  }
+
+  // Payment verified — activate subscription
   const adminSupabase = createAdminClient();
 
-  const { error } = await adminSupabase
-    .from("subscriptions")
-    .update({
-      status: "active",
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(
-        Date.now() + 30 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    })
-    .eq("razorpay_subscription_id", razorpay_subscription_id);
-
-  if (error) {
-    console.error("[Billing] Failed to activate subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to activate subscription" },
-      { status: 500 }
-    );
-  }
-
-  // 5. Record payment
-  const { data: business } = await supabase
+  const { data: business } = await adminSupabase
     .from("businesses")
     .select("id")
     .eq("owner_id", user.id)
     .single();
 
-  if (business) {
-    await adminSupabase.from("payments").insert({
-      business_id: business.id,
-      amount: 0, // Will be updated by webhook with actual amount
-      currency: "INR",
+  if (!business) {
+    return NextResponse.json({ error: "Business not found" }, { status: 404 });
+  }
+
+  // Determine plan details
+  const { getPlanById } = await import("@/lib/payments/plans");
+  const plan = plan_id ? getPlanById(plan_id) : null;
+  const tier = plan?.tier || "starter";
+  const messageLimit = plan?.messageLimit || 1000;
+  const billingCycle = plan?.billingCycle || "monthly";
+
+  const now = new Date();
+  const periodEnd = new Date(now.getTime() + (billingCycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000);
+
+  // Update payment record
+  await adminSupabase
+    .from("payments")
+    .update({
       status: "captured",
-      provider: "razorpay",
       razorpay_payment_id,
       razorpay_signature,
-      paid_at: new Date().toISOString(),
-      description: "Subscription activation",
-    });
+      payment_method: "razorpay",
+      paid_at: now.toISOString(),
+    })
+    .eq("razorpay_order_id", razorpay_order_id);
+
+  // Update or create subscription
+  const { data: existingSub } = await adminSupabase
+    .from("subscriptions")
+    .select("id")
+    .eq("business_id", business.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const subData = {
+    plan: tier,
+    status: "active",
+    billing_cycle: billingCycle,
+    amount: plan?.priceInPaise || 0,
+    message_limit: messageLimit,
+    messages_used: 0,
+    current_period_start: now.toISOString(),
+    current_period_end: periodEnd.toISOString(),
+    trial_start: null,
+    trial_end: null,
+    provider: "razorpay",
+  };
+
+  if (existingSub) {
+    await adminSupabase.from("subscriptions").update(subData).eq("id", existingSub.id);
+  } else {
+    await adminSupabase.from("subscriptions").insert({ business_id: business.id, ...subData });
   }
+
+  // Update business plan
+  await adminSupabase
+    .from("businesses")
+    .update({ plan: tier })
+    .eq("id", business.id);
 
   return NextResponse.json({
     success: true,
-    message: "Subscription activated successfully",
+    plan: tier,
+    message: `${tier.charAt(0).toUpperCase() + tier.slice(1)} plan activated successfully!`,
   });
 }

@@ -104,35 +104,46 @@ export default function BillingPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Failed to create subscription");
+        setError(data.error || "Failed to create payment. Please try again.");
         setLoading(null);
         return;
       }
 
-      // Open Razorpay checkout
+      // Open Razorpay checkout (Order-based flow)
       const options = {
         key: data.key_id,
-        subscription_id: data.subscription_id,
+        amount: data.amount,
+        currency: data.currency,
+        order_id: data.order_id,
         name: "BizBot AI",
         description: `${data.plan.name} Plan (${data.plan.billing_cycle})`,
+        prefill: data.prefill,
         handler: async function (response: {
+          razorpay_order_id: string;
           razorpay_payment_id: string;
-          razorpay_subscription_id: string;
           razorpay_signature: string;
         }) {
+          // Verify payment on server
           const verifyRes = await fetch("/api/payments/razorpay/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response),
+            body: JSON.stringify({ ...response, plan_id: planId }),
           });
+          const verifyData = await verifyRes.json();
           if (verifyRes.ok) {
+            // Success — reload to show updated plan
             window.location.reload();
           } else {
-            setError("Payment verification failed. Please contact support.");
+            setError(verifyData.error || "Payment verification failed. Contact support.");
+            setLoading(null);
           }
         },
         theme: { color: "#6366f1" },
-        modal: { ondismiss: () => setLoading(null) },
+        modal: {
+          ondismiss: function () {
+            setLoading(null);
+          },
+        },
       };
 
       if (!(window as unknown as Record<string, unknown>).Razorpay) {
