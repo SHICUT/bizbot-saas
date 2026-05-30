@@ -1,7 +1,7 @@
 import { buildSystemPrompt } from "./prompts/system-prompt";
 import { classifyIntentLocal } from "./prompts/intent-classifier";
 import { detectLanguageAndTone } from "./prompts/language-detector";
-import { callGemini } from "./gemini-client";
+import { callAI } from "./gemini-client";
 import type {
   ConversationContext,
   AIResponse,
@@ -45,16 +45,16 @@ export async function generateSalesReply(
   // 5. Build system prompt with detected language
   const systemPrompt = buildSystemPrompt(ctx, languageResult);
 
-  // 6. Call Gemini
+  // 6. Call AI (Gemini → Groq → OpenAI fallback)
   try {
     const history = ctx.conversationHistory
       .slice(-12)
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-    const result = await callGemini(systemPrompt, history, incomingMessage);
+    const result = await callAI(systemPrompt, history, incomingMessage);
 
     if (!result.text) {
-      return createErrorResponse("AI did not generate a response. Please try again.");
+      return createErrorResponse("Our AI assistant is temporarily unavailable. Please try again in a moment.");
     }
 
     return {
@@ -67,16 +67,21 @@ export async function generateSalesReply(
     };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[AI Sales] Gemini error:", msg);
-    return createErrorResponse(msg);
+    console.error("[AI Sales] All providers failed:", msg);
+
+    // Friendly user-facing messages
+    if (msg.includes("No AI provider configured")) {
+      return createErrorResponse("AI assistant is not configured yet. Please contact support.");
+    }
+    return createErrorResponse("Our AI assistant is temporarily busy. Please try again in a moment.");
   }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function createErrorResponse(errorMessage: string): AIResponse {
+function createErrorResponse(friendlyMessage: string): AIResponse {
   return {
-    reply: `⚠️ AI Error: ${errorMessage}`,
+    reply: friendlyMessage,
     actions: [],
     intent: "unknown",
     confidence: 0,
