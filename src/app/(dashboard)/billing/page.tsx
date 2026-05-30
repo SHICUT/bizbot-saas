@@ -104,7 +104,9 @@ export default function BillingPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Failed to create payment. Please try again.");
+        const detail = data.razorpay_error ? JSON.stringify(data.razorpay_error) : "";
+        setError(data.error || "Payment failed");
+        if (detail && detail !== "{}") console.error("[Billing] Razorpay error detail:", detail);
         setLoading(null);
         return;
       }

@@ -102,9 +102,49 @@ export async function POST(request: NextRequest) {
         contact: business.phone || "",
       },
     });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[Razorpay] Order creation failed:", msg);
-    return NextResponse.json({ error: `Payment setup failed: ${msg}` }, { status: 500 });
+  } catch (error: unknown) {
+    // Extract the REAL error from Razorpay SDK
+    // Razorpay throws: { statusCode: 400, error: { code, description, source, step, reason } }
+    let msg = "Unknown error";
+    let debugInfo: Record<string, unknown> = {};
+
+    try {
+      if (error instanceof Error) {
+        msg = error.message;
+        debugInfo = { type: "Error", message: error.message, stack: error.stack?.split("\n")[0] };
+      } else if (error && typeof error === "object") {
+        // Force serialize to get all properties
+        const serialized = JSON.parse(JSON.stringify(error));
+        debugInfo = serialized;
+
+        // Extract message from Razorpay's nested format
+        if (serialized.error?.description) {
+          msg = serialized.error.description;
+        } else if (serialized.description) {
+          msg = serialized.description;
+        } else if (serialized.message) {
+          msg = serialized.message;
+        } else if (serialized.error && typeof serialized.error === "string") {
+          msg = serialized.error;
+        } else {
+          msg = JSON.stringify(serialized);
+        }
+      } else {
+        msg = String(error);
+        debugInfo = { raw: String(error) };
+      }
+    } catch {
+      msg = "Error parsing failed";
+      debugInfo = { parseError: true };
+    }
+
+    console.error("[Razorpay] FULL ERROR:", JSON.stringify(debugInfo));
+    console.error("[Razorpay] Error message:", msg);
+    console.error("[Razorpay] Key ID prefix:", razorpayKeyId?.substring(0, 12));
+
+    return NextResponse.json({
+      error: `Payment failed: ${msg}`,
+      razorpay_error: debugInfo,
+    }, { status: 500 });
   }
 }
