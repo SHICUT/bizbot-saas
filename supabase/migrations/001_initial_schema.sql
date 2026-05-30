@@ -237,7 +237,7 @@ CREATE INDEX idx_appointments_business_date ON public.appointments(business_id, 
 CREATE INDEX idx_appointments_business_status ON public.appointments(business_id, status, scheduled_at);
 CREATE INDEX idx_appointments_lead ON public.appointments(lead_id);
 CREATE INDEX idx_appointments_upcoming ON public.appointments(business_id, scheduled_at)
-    WHERE status IN ('pending', 'confirmed') AND scheduled_at > now();
+    WHERE status IN ('pending', 'confirmed');
 
 -- ============================================================================
 -- 6. SUBSCRIPTIONS (Billing & plan management)

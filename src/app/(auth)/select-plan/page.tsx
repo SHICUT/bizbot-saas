@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Zap, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
 
@@ -51,6 +51,19 @@ export default function SelectPlanPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Check if user already has an active plan
+  useEffect(() => {
+    fetch("/api/payments/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.isActive) {
+          // Already has active plan — skip to dashboard
+          window.location.assign("/");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function handleSelectPlan(planId: string) {
     setLoading(planId);
     setError(null);
@@ -65,15 +78,21 @@ export default function SelectPlanPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to activate plan");
+        if (res.status === 401) {
+          // Session not ready — redirect to login
+          setError("Session expired. Redirecting to login...");
+          setTimeout(() => { window.location.assign("/login"); }, 2000);
+        } else {
+          setError(data.error || "Failed to activate plan. Please try again.");
+        }
         setLoading(null);
         return;
       }
 
-      // Redirect to dashboard
-      window.location.href = "/";
+      // Success — redirect to dashboard
+      window.location.assign("/");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Network error. Please check your connection and try again.");
       setLoading(null);
     }
   }

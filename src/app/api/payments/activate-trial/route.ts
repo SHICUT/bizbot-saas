@@ -6,60 +6,74 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * POST /api/payments/activate-trial
  *
  * Activates a free trial or marks the selected plan.
- * For trial: immediately activates 14-day trial.
- * For paid plans: marks intent (actual payment handled by Razorpay flow).
- *
  * Body: { plan: "trial" | "starter" | "pro" | "business" }
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) {
+      console.error("[activate-trial] Auth failed:", authErr?.message || "No user");
+      return NextResponse.json({ error: "Please log in again and retry." }, { status: 401 });
+    }
 
-  const body = await request.json();
-  const { plan } = body;
+    const body = await request.json();
+    const { plan } = body;
 
-  if (!plan || !["trial", "starter", "pro", "business"].includes(plan)) {
-    return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
-  }
+    if (!plan || !["trial", "starter", "pro", "business"].includes(plan)) {
+      return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
+    }
 
-  const adminSupabase = createAdminClient();
+    const adminSupabase = createAdminClient();
 
-  // Get or create business
-  let { data: business } = await adminSupabase
-    .from("businesses")
-    .select("id")
-    .eq("owner_id", user.id)
-    .single();
-
-  if (!business) {
-    // Create business if it doesn't exist
-    const { data: newBiz, error: bizErr } = await adminSupabase
+    // Get business
+    const { data: business, error: bizFetchErr } = await adminSupabase
       .from("businesses")
-      .insert({
-        owner_id: user.id,
-        name: user.user_metadata?.business_name || "My Business",
-        email: user.email,
-        phone: user.user_metadata?.phone || null,
-        type: "other",
-        plan: plan === "trial" ? "trial" : plan,
-        is_active: true,
-      })
       .select("id")
+      .eq("owner_id", user.id)
       .single();
 
-    if (bizErr || !newBiz) {
-      return NextResponse.json({ error: "Failed to create business" }, { status: 500 });
-    }
-    business = newBiz;
-  }
+    if (bizFetchErr || !business) {
+      // Business doesn't exist — create it
+      const { data: newBiz, error: bizCreateErr } = await adminSupabase
+        .from("businesses")
+        .insert({
+          owner_id: user.id,
+          name: user.user_metadata?.business_name || "My Business",
+          email: user.email,
+          phone: user.user_metadata?.phone || null,
+          type: "other",
+          plan: "trial",
+          is_active: true,
+        })
+        .select("id")
+        .single();
 
-  // Set trial/subscription dates
+      if (bizCreateErr || !newBiz) {
+        console.error("[activate-trial] Create business failed:", bizCreateErr?.message);
+        return NextResponse.json({ error: "Setup failed. Please try again." }, { status: 500 });
+      }
+
+      // Wait for trigger to create subscription, then update it
+      await new Promise((r) => setTimeout(r, 1000));
+      return await activateSubscription(adminSupabase, newBiz.id, plan);
+    }
+
+    return await activateSubscription(adminSupabase, business.id, plan);
+  } catch (err) {
+    console.error("[activate-trial] Unexpected error:", err);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+}
+
+async function activateSubscription(
+  adminSupabase: ReturnType<typeof createAdminClient>,
+  businessId: string,
+  plan: string
+) {
   const now = new Date();
-  const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days
+  const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
   const messageLimits: Record<string, number> = {
     trial: 1000,
@@ -68,44 +82,56 @@ export async function POST(request: NextRequest) {
     business: 20000,
   };
 
-  // Upsert subscription
-  const { error: subErr } = await adminSupabase
+  // Find existing subscription
+  const { data: existingSub } = await adminSupabase
     .from("subscriptions")
-    .upsert(
-      {
-        business_id: business.id,
-        plan: plan === "trial" ? "starter" : plan,
-        status: plan === "trial" ? "trialing" : "created",
-        billing_cycle: "monthly",
-        message_limit: messageLimits[plan] || 1000,
-        messages_used: 0,
-        trial_start: plan === "trial" ? now.toISOString() : null,
-        trial_end: plan === "trial" ? trialEnd.toISOString() : null,
-        current_period_start: now.toISOString(),
-        current_period_end: plan === "trial" ? trialEnd.toISOString() : null,
-      },
-      { onConflict: "business_id" }
-    );
+    .select("id")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
 
-  if (subErr) {
-    return NextResponse.json({ error: "Failed to activate plan" }, { status: 500 });
+  const subData = {
+    plan: plan === "trial" ? "trial" : plan,
+    status: plan === "trial" ? "trialing" : "created",
+    message_limit: messageLimits[plan] || 1000,
+    messages_used: 0,
+    trial_start: plan === "trial" ? now.toISOString() : null,
+    trial_end: plan === "trial" ? trialEnd.toISOString() : null,
+    current_period_start: now.toISOString(),
+    current_period_end: plan === "trial" ? trialEnd.toISOString() : null,
+  };
+
+  if (existingSub) {
+    const { error } = await adminSupabase
+      .from("subscriptions")
+      .update(subData)
+      .eq("id", existingSub.id);
+
+    if (error) {
+      console.error("[activate-trial] Update sub failed:", error.message);
+      return NextResponse.json({ error: "Failed to activate. Please try again." }, { status: 500 });
+    }
+  } else {
+    const { error } = await adminSupabase
+      .from("subscriptions")
+      .insert({ business_id: businessId, ...subData });
+
+    if (error) {
+      console.error("[activate-trial] Insert sub failed:", error.message);
+      return NextResponse.json({ error: "Failed to activate. Please try again." }, { status: 500 });
+    }
   }
 
-  // Update business plan
+  // Update business
   await adminSupabase
     .from("businesses")
-    .update({
-      plan: plan === "trial" ? "trial" : plan,
-      onboarding_completed: true,
-    })
-    .eq("id", business.id);
+    .update({ plan: plan === "trial" ? "trial" : plan, onboarding_completed: true })
+    .eq("id", businessId);
 
   return NextResponse.json({
     success: true,
     plan: plan === "trial" ? "trial" : plan,
     trial_end: plan === "trial" ? trialEnd.toISOString() : null,
-    message: plan === "trial"
-      ? "14-day free trial activated! You have full Starter access."
-      : `${plan} plan selected. Complete payment to activate.`,
   });
 }

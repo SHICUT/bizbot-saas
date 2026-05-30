@@ -40,22 +40,18 @@ export default function LeadsPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLeads();
-  }, []);
-
-  async function fetchLeads() {
-    try {
-      const res = await fetch("/api/dashboard");
-      const data = await res.json();
-      // For now, leads come from the dashboard API or a dedicated endpoint
-      // The actual leads will be populated when WhatsApp messages arrive
-      setLeads([]);
-    } catch {
-      setLeads([]);
-    } finally {
-      setLoading(false);
+    async function loadLeads() {
+      try {
+        await fetch("/api/dashboard");
+        setLeads([]);
+      } catch {
+        setLeads([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    loadLeads();
+  }, []);
 
   const filteredLeads = leads.filter((lead) => {
     const matchesFilter = activeFilter === "all" || lead.status === activeFilter;
