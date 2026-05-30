@@ -31,7 +31,9 @@ export async function registerWithEmail(formData: FormData): Promise<AuthResult>
 
   if (error) {
     if (error.message.includes("already registered")) return { error: "An account with this email already exists." };
-    return { error: error.message };
+    if (error.message.includes("rate limit")) return { error: "We couldn't send the verification email right now. Please try again in a few minutes." };
+    if (error.message.includes("invalid")) return { error: "Please enter a valid email address." };
+    return { error: "Something went wrong. Please try again." };
   }
 
   redirect("/verify-email?email=" + encodeURIComponent(email));
@@ -114,7 +116,10 @@ export async function resendVerificationEmail(formData: FormData): Promise<AuthR
     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/callback` },
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.message.includes("rate limit")) return { error: "We couldn't send the email right now. Please try again in a few minutes." };
+    return { error: "Failed to send verification email. Please try again." };
+  }
   return { success: true };
 }
 
