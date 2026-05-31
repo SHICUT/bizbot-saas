@@ -47,10 +47,10 @@ export default function TrialBanner({ plan, status, trialEnd, messagesUsed, mess
           </div>
           <div>
             <p className="text-sm font-semibold text-amber-800">
-              {daysLeft} day{daysLeft !== 1 ? "s" : ""} left in your free trial
+              Trial ends in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
             </p>
             <p className="text-xs text-amber-600">
-              {messagesUsed}/{messageLimit} messages used • Full Starter access
+              {messagesUsed}/{messageLimit} messages used • 7-day free trial
             </p>
           </div>
         </div>

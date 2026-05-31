@@ -74,7 +74,7 @@ export default function RegisterPage() {
         <div className="relative z-10">
           <h1 className="text-4xl font-bold text-white leading-tight mb-6">Start converting leads<br />in under 5 minutes.</h1>
           <div className="space-y-3">
-            {["AI replies to customers 24/7", "Every lead captured automatically", "No technical setup required", "14-day free trial, no card needed"].map((feature) => (
+            {["AI replies to customers 24/7", "Every lead captured automatically", "No technical setup required", "7-day free trial, no card needed"].map((feature) => (
               <div key={feature} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
                 <span className="text-white/80 text-sm">{feature}</span>
@@ -94,7 +94,7 @@ export default function RegisterPage() {
           </div>
 
           <h2 className="text-2xl font-bold text-text-primary mb-1">Create your account</h2>
-          <p className="text-sm text-text-secondary mb-8">14-day free trial • No credit card required</p>
+          <p className="text-sm text-text-secondary mb-8">7-day free trial • No credit card required</p>
 
           {/* Success Message */}
           {success && (

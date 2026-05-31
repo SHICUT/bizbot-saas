@@ -38,6 +38,16 @@ export async function GET() {
       .limit(1)
       .single();
 
+    // Validate subscription expiry server-side
+    let subStatus = "expired";
+    let isActive = false;
+    if (subscription) {
+      const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+      const isExpired = periodEnd ? periodEnd < new Date() : false;
+      isActive = !isExpired;
+      subStatus = isExpired ? "expired" : subscription.status;
+    }
+
     // Get stats
     let leadsCount = 0;
     let messagesCount = 0;

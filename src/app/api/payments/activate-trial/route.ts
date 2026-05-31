@@ -73,10 +73,10 @@ async function activateSubscription(
   plan: string
 ) {
   const now = new Date();
-  const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const messageLimits: Record<string, number> = {
-    trial: 1000,
+    trial: 100,
     starter: 1000,
     pro: 5000,
     business: 20000,

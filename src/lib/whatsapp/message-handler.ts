@@ -337,7 +337,7 @@ async function checkMessageLimit(
 ): Promise<boolean> {
   const { data } = await supabase
     .from("subscriptions")
-    .select("message_limit, messages_used")
+    .select("message_limit, messages_used, current_period_end")
     .eq("business_id", businessId)
     .in("status", ["active", "trialing"])
     .order("created_at", { ascending: false })
@@ -345,5 +345,18 @@ async function checkMessageLimit(
     .single();
 
   if (!data) return false;
-  return data.messages_used < data.message_limit;
+
+  // Check expiry
+  if (data.current_period_end && new Date(data.current_period_end) < new Date()) {
+    console.log("[Webhook] Subscription expired for business:", businessId);
+    return false;
+  }
+
+  // Check message limit
+  if (data.messages_used >= data.message_limit) {
+    console.log("[Webhook] Message limit reached:", data.messages_used, "/", data.message_limit);
+    return false;
+  }
+
+  return true;
 }
