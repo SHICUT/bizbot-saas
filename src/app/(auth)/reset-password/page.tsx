@@ -9,8 +9,11 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Reset Password Page
  *
- * Handles recovery code from Supabase email link.
- * Uses verifyOtp with type=recovery (no PKCE verifier needed).
+ * With PKCE flow, the code must be exchanged on the SERVER (via /callback route)
+ * which sets the session cookie. By the time this page loads, the session
+ * should already be established.
+ *
+ * If user arrives here with a ?code param, we exchange it server-side first.
  */
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -23,76 +26,54 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    async function handleRecovery() {
+    async function init() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-      const hash = window.location.hash;
 
-      console.log("[RESET DEBUG] URL:", window.location.href);
-      console.log("[RESET DEBUG] code param:", code);
-      console.log("[RESET DEBUG] hash:", hash ? hash.substring(0, 80) : "(none)");
-
-      // Method 1: code param — use verifyOtp with token_hash
+      // If code is present, exchange it via server-side API
       if (code) {
-        console.log("[RESET DEBUG] Calling verifyOtp with token_hash:", code.substring(0, 30) + "...");
-        const result = await supabase.auth.verifyOtp({
-          token_hash: code,
-          type: "recovery",
+        console.log("[ResetPassword] Code found, exchanging via server...");
+        const res = await fetch("/api/auth/exchange-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
         });
-        console.log("[RESET DEBUG] verifyOtp result:", JSON.stringify({
-          hasSession: !!result.data?.session,
-          user: result.data?.user?.email,
-          error: result.error?.message,
-          errorStatus: result.error?.status,
-          errorCode: (result.error as unknown as Record<string,unknown>)?.code,
-        }));
+        const data = await res.json();
+        console.log("[ResetPassword] Server exchange result:", data);
 
-        if (!result.error && result.data?.session) {
-          setReady(true);
-          setChecking(false);
+        if (data.success) {
+          // Reload page without code param to pick up the new session cookie
+          window.location.assign("/reset-password");
           return;
-        }
-
-        // verifyOtp failed — show the exact error on screen for debugging
-        const errMsg = result.error?.message || "Unknown error";
-        console.error("[RESET DEBUG] verifyOtp FAILED:", errMsg);
-        setError(`Debug: verifyOtp failed — ${errMsg}. Code used: ${code.substring(0, 20)}...`);
-        setChecking(false);
-        return;
-      }
-
-      // Method 2: hash fragment with access_token
-      if (hash && hash.includes("access_token")) {
-        await new Promise((r) => setTimeout(r, 1000));
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          setReady(true);
+        } else {
+          setError(data.error || "Reset link expired. Please request a new one.");
           setChecking(false);
           return;
         }
       }
 
-      // Method 3: check if session already exists
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
+      // No code — check if we already have a session (set by previous exchange)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log("[ResetPassword] Session found:", session.user?.email);
         setReady(true);
-        setChecking(false);
+      } else {
+        console.log("[ResetPassword] No session found");
+        // Listen for auth state change
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+          if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+            setReady(true);
+            setChecking(false);
+            subscription.unsubscribe();
+          }
+        });
+        setTimeout(() => { subscription.unsubscribe(); setChecking(false); }, 3000);
         return;
       }
-
-      // Method 4: listen for PASSWORD_RECOVERY event
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-          setReady(true);
-          setChecking(false);
-          subscription.unsubscribe();
-        }
-      });
-
-      setTimeout(() => { setChecking(false); subscription.unsubscribe(); }, 5000);
+      setChecking(false);
     }
 
-    handleRecovery();
+    init();
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

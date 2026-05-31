@@ -4,40 +4,30 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * GET /callback
  *
- * Handles Supabase Auth redirects:
- * - Email verification: /callback?code=xxx
- * - Password reset: /callback?code=xxx (type=recovery in the session)
+ * Supabase redirects here after email verification or password reset.
+ * The code is exchanged SERVER-SIDE (has access to cookie store for PKCE verifier).
+ * Then redirects to the appropriate page.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next");
+  const next = searchParams.get("next") || "/";
+
+  console.log("[Callback] Received. code:", code ? "yes" : "no", "| next:", next);
 
   if (code) {
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error && data.session) {
-      // Check if this is a password recovery flow
-      // Supabase sets the session type when exchanging a recovery code
-      if (data.session.user?.recovery_sent_at) {
-        const recoverySentAt = new Date(data.session.user.recovery_sent_at).getTime();
-        const now = Date.now();
-        // If recovery was sent within the last hour, redirect to reset page
-        if (now - recoverySentAt < 60 * 60 * 1000) {
-          return NextResponse.redirect(`${origin}/reset-password`);
-        }
-      }
-
-      // If there's a "next" param, use it
-      if (next) {
-        return NextResponse.redirect(`${origin}${next}`);
-      }
-
-      // Default: go to dashboard
-      return NextResponse.redirect(`${origin}/`);
+    if (error) {
+      console.error("[Callback] Exchange failed:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=link_expired`);
     }
+
+    console.log("[Callback] Exchange success. Redirecting to:", next);
+    return NextResponse.redirect(`${origin}${next}`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=verification_failed`);
+  console.log("[Callback] No code. Redirecting to login.");
+  return NextResponse.redirect(`${origin}/login?error=no_code`);
 }

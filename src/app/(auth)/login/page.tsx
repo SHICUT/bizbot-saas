@@ -13,9 +13,9 @@ function LoginForm() {
   const resetSuccess = searchParams.get("reset") === "success";
   const code = searchParams.get("code");
 
-  // If a recovery code arrives on /login, redirect to /reset-password
+  // If a recovery code arrives on /login (old emails), redirect to callback
   if (code && typeof window !== "undefined") {
-    window.location.assign("/reset-password?code=" + code);
+    window.location.assign("/callback?code=" + code + "&next=/reset-password");
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   }
 

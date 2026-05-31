@@ -83,7 +83,7 @@ export async function forgotPassword(formData: FormData): Promise<AuthResult> {
 
   if (!email) return { error: "Email is required" };
 
-  const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`;
+  const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/callback?next=/reset-password`;
   console.log("[ForgotPassword] Sending reset email to:", email, "| redirectTo:", redirectUrl);
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
