@@ -6,6 +6,12 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Reset Password Page
+ *
+ * Handles recovery code from Supabase email link.
+ * Uses verifyOtp with type=recovery (no PKCE verifier needed).
+ */
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -13,85 +19,67 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [ready, setReady] = useState(false);
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-
-  function log(msg: string) {
-    console.log("[ResetPassword]", msg);
-    setDebugLog((prev) => [...prev, msg]);
-  }
 
   useEffect(() => {
     const supabase = createClient();
 
     async function handleRecovery() {
-      log("Page loaded");
-      log("URL: " + window.location.href);
-      log("Search: " + window.location.search);
-      log("Hash: " + (window.location.hash ? window.location.hash.substring(0, 50) + "..." : "(empty)"));
-
-      // Method 1: Check for code param
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-      log("Code param: " + (code ? code.substring(0, 20) + "..." : "NULL"));
+      const hash = window.location.hash;
 
+      // Method 1: code param — use verifyOtp with token_hash
       if (code) {
-        log("Exchanging code for session...");
-        const { data, error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchErr) {
-          log("EXCHANGE FAILED: " + exchErr.message + " (status: " + exchErr.status + ")");
-          setError("Reset link expired. Request a new one.");
-          setChecking(false);
-          return;
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: code,
+          type: "recovery",
+        });
+
+        if (error) {
+          console.error("[ResetPassword] verifyOtp failed:", error.message);
+          // Fallback: try exchangeCodeForSession (works if same browser)
+          const { error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchErr) {
+            console.error("[ResetPassword] exchangeCode also failed:", exchErr.message);
+            setError("This link has expired. Please request a new one.");
+            setChecking(false);
+            return;
+          }
         }
-        log("EXCHANGE OK. User: " + (data.session?.user?.email || "unknown"));
         setReady(true);
         setChecking(false);
         return;
       }
 
-      // Method 2: Check hash fragment (non-PKCE)
-      const hash = window.location.hash;
+      // Method 2: hash fragment with access_token
       if (hash && hash.includes("access_token")) {
-        log("Found access_token in hash. Waiting for Supabase to process...");
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 1000));
         const { data } = await supabase.auth.getSession();
         if (data.session) {
-          log("Session from hash OK. User: " + data.session.user?.email);
           setReady(true);
           setChecking(false);
           return;
         }
-        log("Session from hash FAILED");
       }
 
-      // Method 3: Listen for auth event
-      log("No code/hash. Listening for PASSWORD_RECOVERY event...");
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        log("Auth event: " + event);
-        if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
-          log("Recovery session detected via event");
+      // Method 3: check if session already exists
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setReady(true);
+        setChecking(false);
+        return;
+      }
+
+      // Method 4: listen for PASSWORD_RECOVERY event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
           setReady(true);
           setChecking(false);
           subscription.unsubscribe();
         }
       });
 
-      // Method 4: Check existing session
-      const { data: existingSession } = await supabase.auth.getSession();
-      if (existingSession.session) {
-        log("Existing session found. User: " + existingSession.session.user?.email);
-        setReady(true);
-        setChecking(false);
-        subscription.unsubscribe();
-        return;
-      }
-
-      log("No session found. Waiting 5s for auth event...");
-      setTimeout(() => {
-        log("Timeout reached. No recovery session.");
-        setChecking(false);
-        subscription.unsubscribe();
-      }, 5000);
+      setTimeout(() => { setChecking(false); subscription.unsubscribe(); }, 5000);
     }
 
     handleRecovery();
@@ -113,39 +101,33 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
-      log("Password update FAILED: " + updateError.message);
       setError("Failed to update: " + updateError.message);
       setLoading(false);
       return;
     }
 
-    log("Password updated successfully");
     setSuccess(true);
     setTimeout(() => { window.location.assign("/login?reset=success"); }, 2000);
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center flex-col gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <p className="text-sm text-text-muted">Verifying reset link...</p>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2 mb-6">
+        <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
           <span className="text-lg font-bold">BizBot AI</span>
         </div>
 
-        {/* DEBUG PANEL — visible on page */}
-        <div className="mb-6 p-3 rounded-lg bg-gray-900 text-green-400 text-xs font-mono max-h-48 overflow-y-auto">
-          <p className="text-gray-500 mb-1">Debug Log:</p>
-          {debugLog.length === 0 && <p>Loading...</p>}
-          {debugLog.map((line, i) => <p key={i}>{line}</p>)}
-          <p className="mt-2 text-yellow-400">Ready: {String(ready)} | Checking: {String(checking)}</p>
-        </div>
-
-        {checking ? (
-          <div className="text-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-3" />
-            <p className="text-sm text-text-muted">Verifying reset link...</p>
-          </div>
-        ) : success ? (
+        {success ? (
           <div className="text-center">
             <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">Password updated!</h2>
@@ -153,13 +135,13 @@ export default function ResetPasswordPage() {
           </div>
         ) : !ready ? (
           <div className="text-center">
-            <h2 className="text-xl font-bold mb-2">Link expired or invalid</h2>
-            <p className="text-sm text-text-secondary mb-4">Please request a new password reset link.</p>
-            <a href="/forgot-password" className="text-primary font-medium text-sm hover:underline">Request New Link →</a>
+            <h2 className="text-xl font-bold mb-2">Link expired</h2>
+            <p className="text-sm text-text-secondary mb-6">This reset link has expired or was already used.</p>
+            <a href="/forgot-password" className="px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors inline-block">Request New Link</a>
           </div>
         ) : (
           <>
-            <h2 className="text-xl font-bold text-center mb-6">Set new password</h2>
+            <h2 className="text-2xl font-bold text-center mb-6">Set new password</h2>
             {error && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
