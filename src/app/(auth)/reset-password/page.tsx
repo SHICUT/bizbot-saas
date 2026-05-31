@@ -28,25 +28,35 @@ export default function ResetPasswordPage() {
       const code = params.get("code");
       const hash = window.location.hash;
 
+      console.log("[RESET DEBUG] URL:", window.location.href);
+      console.log("[RESET DEBUG] code param:", code);
+      console.log("[RESET DEBUG] hash:", hash ? hash.substring(0, 80) : "(none)");
+
       // Method 1: code param — use verifyOtp with token_hash
       if (code) {
-        const { error } = await supabase.auth.verifyOtp({
+        console.log("[RESET DEBUG] Calling verifyOtp with token_hash:", code.substring(0, 30) + "...");
+        const result = await supabase.auth.verifyOtp({
           token_hash: code,
           type: "recovery",
         });
+        console.log("[RESET DEBUG] verifyOtp result:", JSON.stringify({
+          hasSession: !!result.data?.session,
+          user: result.data?.user?.email,
+          error: result.error?.message,
+          errorStatus: result.error?.status,
+          errorCode: (result.error as unknown as Record<string,unknown>)?.code,
+        }));
 
-        if (error) {
-          console.error("[ResetPassword] verifyOtp failed:", error.message);
-          // Fallback: try exchangeCodeForSession (works if same browser)
-          const { error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchErr) {
-            console.error("[ResetPassword] exchangeCode also failed:", exchErr.message);
-            setError("This link has expired. Please request a new one.");
-            setChecking(false);
-            return;
-          }
+        if (!result.error && result.data?.session) {
+          setReady(true);
+          setChecking(false);
+          return;
         }
-        setReady(true);
+
+        // verifyOtp failed — show the exact error on screen for debugging
+        const errMsg = result.error?.message || "Unknown error";
+        console.error("[RESET DEBUG] verifyOtp FAILED:", errMsg);
+        setError(`Debug: verifyOtp failed — ${errMsg}. Code used: ${code.substring(0, 20)}...`);
         setChecking(false);
         return;
       }
@@ -136,7 +146,7 @@ export default function ResetPasswordPage() {
         ) : !ready ? (
           <div className="text-center">
             <h2 className="text-xl font-bold mb-2">Link expired</h2>
-            <p className="text-sm text-text-secondary mb-6">This reset link has expired or was already used.</p>
+            <p className="text-sm text-text-secondary mb-4">{error || "This reset link has expired or was already used."}</p>
             <a href="/forgot-password" className="px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors inline-block">Request New Link</a>
           </div>
         ) : (
