@@ -1,21 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Loader2, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
+import { Zap, Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Reset Password Page
- *
- * Supabase redirects here after user clicks the reset link in email.
- * The URL contains either:
- * - Hash fragment: #access_token=xxx&type=recovery (PKCE disabled)
- * - Query params: ?code=xxx (PKCE enabled)
- *
- * This page handles BOTH cases client-side.
- */
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -23,72 +13,82 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [ready, setReady] = useState(false);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  function log(msg: string) {
+    console.log("[ResetPassword]", msg);
+    setDebugLog((prev) => [...prev, msg]);
+  }
 
   useEffect(() => {
     const supabase = createClient();
 
-    // Handle the recovery token from URL
     async function handleRecovery() {
-      console.log("[ResetPassword] Full URL:", window.location.href);
-      console.log("[ResetPassword] Search:", window.location.search);
-      console.log("[ResetPassword] Hash:", window.location.hash);
+      log("Page loaded");
+      log("URL: " + window.location.href);
+      log("Search: " + window.location.search);
+      log("Hash: " + (window.location.hash ? window.location.hash.substring(0, 50) + "..." : "(empty)"));
 
-      // Check URL for code param (PKCE flow)
+      // Method 1: Check for code param
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-      console.log("[ResetPassword] Code param:", code);
+      log("Code param: " + (code ? code.substring(0, 20) + "..." : "NULL"));
 
       if (code) {
-        console.log("[ResetPassword] Exchanging code for session...");
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        console.log("[ResetPassword] Exchange result:", { hasSession: !!data?.session, error: error?.message });
-        if (error) {
-          console.error("[ResetPassword] Exchange FAILED:", error.message, error.status);
-          setError("This reset link has expired. Please request a new one.");
+        log("Exchanging code for session...");
+        const { data, error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchErr) {
+          log("EXCHANGE FAILED: " + exchErr.message + " (status: " + exchErr.status + ")");
+          setError("Reset link expired. Request a new one.");
           setChecking(false);
           return;
         }
-        console.log("[ResetPassword] Session established. User:", data.session?.user?.email);
+        log("EXCHANGE OK. User: " + (data.session?.user?.email || "unknown"));
         setReady(true);
         setChecking(false);
         return;
       }
 
-      // Check hash fragment (non-PKCE flow)
+      // Method 2: Check hash fragment (non-PKCE)
       const hash = window.location.hash;
-      if (hash && hash.includes("type=recovery")) {
-        console.log("[ResetPassword] Found recovery hash, waiting for session...");
-        // Supabase client auto-detects the hash and sets the session
-        // Wait a moment for it to process
-        await new Promise((r) => setTimeout(r, 1000));
+      if (hash && hash.includes("access_token")) {
+        log("Found access_token in hash. Waiting for Supabase to process...");
+        await new Promise((r) => setTimeout(r, 1500));
         const { data } = await supabase.auth.getSession();
         if (data.session) {
+          log("Session from hash OK. User: " + data.session.user?.email);
           setReady(true);
           setChecking(false);
           return;
         }
+        log("Session from hash FAILED");
       }
 
-      // Listen for PASSWORD_RECOVERY event
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        console.log("[ResetPassword] Auth event:", event);
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+      // Method 3: Listen for auth event
+      log("No code/hash. Listening for PASSWORD_RECOVERY event...");
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        log("Auth event: " + event);
+        if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+          log("Recovery session detected via event");
           setReady(true);
           setChecking(false);
+          subscription.unsubscribe();
         }
       });
 
-      // Check if already has a session (user might have been redirected with session intact)
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
+      // Method 4: Check existing session
+      const { data: existingSession } = await supabase.auth.getSession();
+      if (existingSession.session) {
+        log("Existing session found. User: " + existingSession.session.user?.email);
         setReady(true);
         setChecking(false);
         subscription.unsubscribe();
         return;
       }
 
-      // Timeout after 5 seconds
+      log("No session found. Waiting 5s for auth event...");
       setTimeout(() => {
+        log("Timeout reached. No recovery session.");
         setChecking(false);
         subscription.unsubscribe();
       }, 5000);
@@ -113,57 +113,58 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
-      console.error("[ResetPassword] Update failed:", updateError.message);
-      setError("Failed to update password: " + updateError.message);
+      log("Password update FAILED: " + updateError.message);
+      setError("Failed to update: " + updateError.message);
       setLoading(false);
       return;
     }
 
+    log("Password updated successfully");
     setSuccess(true);
     setTimeout(() => { window.location.assign("/login?reset=success"); }, 2000);
-  }
-
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center flex-col gap-3">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <p className="text-sm text-text-muted">Verifying reset link...</p>
-      </div>
-    );
   }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-2 mb-6">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
-          <span className="text-lg font-bold text-text-primary">BizBot AI</span>
+          <span className="text-lg font-bold">BizBot AI</span>
         </div>
 
-        {success ? (
+        {/* DEBUG PANEL — visible on page */}
+        <div className="mb-6 p-3 rounded-lg bg-gray-900 text-green-400 text-xs font-mono max-h-48 overflow-y-auto">
+          <p className="text-gray-500 mb-1">Debug Log:</p>
+          {debugLog.length === 0 && <p>Loading...</p>}
+          {debugLog.map((line, i) => <p key={i}>{line}</p>)}
+          <p className="mt-2 text-yellow-400">Ready: {String(ready)} | Checking: {String(checking)}</p>
+        </div>
+
+        {checking ? (
+          <div className="text-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-3" />
+            <p className="text-sm text-text-muted">Verifying reset link...</p>
+          </div>
+        ) : success ? (
           <div className="text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-7 h-7 text-emerald-600" /></div>
-            <h2 className="text-xl font-bold text-text-primary mb-2">Password updated!</h2>
+            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Password updated!</h2>
             <p className="text-sm text-text-secondary">Redirecting to login...</p>
           </div>
         ) : !ready ? (
           <div className="text-center">
-            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-7 h-7 text-amber-600" /></div>
-            <h2 className="text-xl font-bold text-text-primary mb-2">Link expired</h2>
-            <p className="text-sm text-text-secondary mb-6">This password reset link has expired or was already used. Please request a new one.</p>
-            <a href="/forgot-password" className="inline-block px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">Request New Link</a>
+            <h2 className="text-xl font-bold mb-2">Link expired or invalid</h2>
+            <p className="text-sm text-text-secondary mb-4">Please request a new password reset link.</p>
+            <a href="/forgot-password" className="text-primary font-medium text-sm hover:underline">Request New Link →</a>
           </div>
         ) : (
           <>
-            <h2 className="text-2xl font-bold text-text-primary mb-1 text-center">Set new password</h2>
-            <p className="text-sm text-text-secondary mb-8 text-center">Choose a strong password.</p>
-
+            <h2 className="text-xl font-bold text-center mb-6">Set new password</h2>
             {error && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
-
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
                 <Input id="password" name="password" label="New Password" type={showPassword ? "text" : "password"} placeholder="Min 6 characters" required disabled={loading} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[34px] text-text-muted hover:text-text-secondary" tabIndex={-1}>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[34px] text-text-muted" tabIndex={-1}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
