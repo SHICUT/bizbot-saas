@@ -11,6 +11,13 @@ import { loginWithEmail } from "@/lib/auth/actions";
 function LoginForm() {
   const searchParams = useSearchParams();
   const resetSuccess = searchParams.get("reset") === "success";
+  const code = searchParams.get("code");
+
+  // If a recovery code arrives on /login, redirect to /reset-password
+  if (code && typeof window !== "undefined") {
+    window.location.assign("/reset-password?code=" + code);
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  }
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
