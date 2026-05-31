@@ -1,5 +1,6 @@
 import type { ConversationContext } from "../types";
 import type { LanguageDetectionResult } from "./language-detector";
+import { getSalesModeInstructions, getLeadScoringInstructions, getFollowUpInstructions } from "./sales-mode";
 
 /**
  * System Prompt Builder
@@ -108,7 +109,11 @@ When escalating: "Let me connect you with [name/our team]. They'll message you s
 
 # Response Format
 Reply with ONLY the message text. No labels, no prefixes, no formatting markers.
-Write exactly as a human would type on WhatsApp.`;
+Write exactly as a human would type on WhatsApp.
+
+${getSalesModeInstructions(ctx.businessType)}
+${getLeadScoringInstructions()}
+${getFollowUpInstructions()}`;
 }
 
 // ─── Language Instructions (Dynamic per message) ────────────────────────────
