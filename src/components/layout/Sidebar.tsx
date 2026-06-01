@@ -16,6 +16,7 @@ import {
   Zap,
   FlaskConical,
   Shield,
+  Image,
 } from "lucide-react";
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Conversations", href: "/conversations", icon: MessageSquare },
   { name: "Automations", href: "/automations", icon: Bot },
   { name: "Appointments", href: "/appointments", icon: Calendar },
+  { name: "Media", href: "/media", icon: Image },
   { name: "Simulator", href: "/simulator", icon: FlaskConical },
   { name: "Analytics", href: "/analytics", icon: BarChart2 },
   { name: "Billing", href: "/billing", icon: CreditCard },
