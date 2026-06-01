@@ -17,15 +17,59 @@ interface MediaItem {
   created_at: string;
 }
 
-const CATEGORIES = [
-  { id: "pricing", label: "Pricing", emoji: "💰" },
-  { id: "membership", label: "Membership", emoji: "🎫" },
-  { id: "services", label: "Services", emoji: "✂️" },
-  { id: "menu", label: "Menu", emoji: "🍽️" },
-  { id: "offers", label: "Offers", emoji: "🎉" },
-  { id: "brochure", label: "Brochure", emoji: "📄" },
-  { id: "gallery", label: "Gallery", emoji: "🖼️" },
-];
+const CATEGORIES_BY_TYPE: Record<string, Array<{ id: string; label: string; emoji: string }>> = {
+  gym: [
+    { id: "pricing", label: "Pricing", emoji: "💰" },
+    { id: "membership", label: "Membership Plans", emoji: "🎫" },
+    { id: "timetable", label: "Timetable", emoji: "📅" },
+    { id: "offers", label: "Offers", emoji: "🎉" },
+    { id: "gallery", label: "Gallery", emoji: "🖼️" },
+    { id: "trainers", label: "Trainers", emoji: "💪" },
+  ],
+  salon: [
+    { id: "services", label: "Services", emoji: "✂️" },
+    { id: "pricing", label: "Pricing", emoji: "💰" },
+    { id: "offers", label: "Offers", emoji: "🎉" },
+    { id: "before_after", label: "Before/After", emoji: "✨" },
+    { id: "gallery", label: "Gallery", emoji: "🖼️" },
+    { id: "products", label: "Products", emoji: "🧴" },
+  ],
+  restaurant: [
+    { id: "menu", label: "Menu", emoji: "🍽️" },
+    { id: "offers", label: "Offers", emoji: "🎉" },
+    { id: "gallery", label: "Gallery", emoji: "🖼️" },
+    { id: "events", label: "Events", emoji: "🎶" },
+  ],
+  clinic: [
+    { id: "services", label: "Services", emoji: "🏥" },
+    { id: "doctors", label: "Doctors", emoji: "👨‍⚕️" },
+    { id: "pricing", label: "Pricing", emoji: "💰" },
+    { id: "certificates", label: "Certificates", emoji: "📜" },
+    { id: "gallery", label: "Gallery", emoji: "🖼️" },
+  ],
+  real_estate: [
+    { id: "brochure", label: "Brochure", emoji: "📄" },
+    { id: "pricing", label: "Price Sheet", emoji: "💰" },
+    { id: "floor_plans", label: "Floor Plans", emoji: "🏗️" },
+    { id: "gallery", label: "Gallery", emoji: "🖼️" },
+    { id: "location", label: "Location", emoji: "📍" },
+    { id: "amenities", label: "Amenities", emoji: "🏊" },
+  ],
+  coaching: [
+    { id: "courses", label: "Courses", emoji: "📚" },
+    { id: "pricing", label: "Fee Structure", emoji: "💰" },
+    { id: "timetable", label: "Batch Timings", emoji: "📅" },
+    { id: "results", label: "Results", emoji: "🏆" },
+    { id: "faculty", label: "Faculty", emoji: "👨‍🏫" },
+  ],
+  other: [
+    { id: "pricing", label: "Pricing", emoji: "💰" },
+    { id: "services", label: "Services", emoji: "📋" },
+    { id: "offers", label: "Offers", emoji: "🎉" },
+    { id: "brochure", label: "Brochure", emoji: "📄" },
+    { id: "gallery", label: "Gallery", emoji: "🖼️" },
+  ],
+};
 
 export default function MediaPage() {
   const [media, setMedia] = useState<MediaItem[]>([]);
@@ -33,8 +77,17 @@ export default function MediaPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [filter, setFilter] = useState("all");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [businessType, setBusinessType] = useState("other");
 
-  useEffect(() => { fetchMedia(); }, []);
+  const categories = CATEGORIES_BY_TYPE[businessType] || CATEGORIES_BY_TYPE.other;
+
+  useEffect(() => {
+    fetchMedia();
+    // Get business type
+    fetch("/api/dashboard").then((r) => r.json()).then((d) => {
+      if (d.business?.type) setBusinessType(d.business.type);
+    }).catch(() => {});
+  }, []);
 
   async function fetchMedia() {
     const res = await fetch("/api/media");
@@ -92,7 +145,7 @@ export default function MediaPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filter === "all" ? "bg-primary text-white" : "bg-gray-100 text-text-secondary hover:bg-gray-200"}`}>All ({media.length})</button>
-        {CATEGORIES.map((c) => {
+        {categories.map((c) => {
           const count = media.filter((m) => m.type === c.id).length;
           return <button key={c.id} onClick={() => setFilter(c.id)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filter === c.id ? "bg-primary text-white" : "bg-gray-100 text-text-secondary hover:bg-gray-200"}`}>{c.emoji} {c.label} ({count})</button>;
         })}
@@ -149,7 +202,7 @@ export default function MediaPage() {
               <div><label className="text-sm font-medium block mb-1.5">Title *</label><input name="name" required className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. Membership Plans Chart" /></div>
               <div><label className="text-sm font-medium block mb-1.5">Category *</label>
                 <select name="category" required className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10">
-                  {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
                 </select>
               </div>
               <div><label className="text-sm font-medium block mb-1.5">File URL *</label><input name="url" type="url" required className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="https://..." />
