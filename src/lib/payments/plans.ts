@@ -5,7 +5,7 @@
  * To restore production pricing, change TESTING_MODE to false.
  */
 
-const TESTING_MODE = true; // ← Set to false for production pricing
+const TESTING_MODE = false; // ← Set to true for ₹10/₹20/₹30 testing
 
 // ─── Production Pricing ─────────────────────────────────────────────────────
 const PRODUCTION_PRICES = {
