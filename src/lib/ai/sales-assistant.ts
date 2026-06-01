@@ -57,11 +57,21 @@ export async function generateSalesReply(
       return createErrorResponse("Our AI assistant is temporarily unavailable. Please try again in a moment.");
     }
 
+    // Calculate confidence based on context availability
+    let confidence = 0.85;
+    if (!ctx.businessContext || ctx.businessContext.length < 50) confidence = 0.4;
+    else if (ctx.businessContext.length < 200) confidence = 0.6;
+    else if (ctx.businessContext.length > 500) confidence = 0.92;
+
+    // Check if response contains "I don't have" or similar — lower confidence
+    const lowConfidencePatterns = /i don't have|information.*not available|contact.*directly|not sure about/i;
+    if (lowConfidencePatterns.test(result.text)) confidence = Math.min(confidence, 0.5);
+
     return {
       reply: result.text,
       actions: [],
       intent,
-      confidence: 0.85,
+      confidence,
       shouldEscalate: false,
       tokensUsed: result.tokensUsed,
     };

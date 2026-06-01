@@ -15,10 +15,12 @@ import {
   BarChart2,
   Settings,
   FlaskConical,
+  BookOpen,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Knowledge", href: "/knowledge", icon: BookOpen },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Conversations", href: "/conversations", icon: MessageSquare },
   { name: "Automations", href: "/automations", icon: Bot },

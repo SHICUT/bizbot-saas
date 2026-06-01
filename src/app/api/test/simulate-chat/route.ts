@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateSalesReply } from "@/lib/ai/sales-assistant";
 import { detectLanguageAndTone } from "@/lib/ai/prompts/language-detector";
 import type { ConversationContext, ChatMessage } from "@/lib/ai/types";
@@ -6,13 +8,12 @@ import type { ConversationContext, ChatMessage } from "@/lib/ai/types";
 /**
  * POST /api/test/simulate-chat
  *
- * Chat simulator endpoint — tests the AI without WhatsApp.
+ * Chat simulator endpoint — tests the AI using REAL business data.
  * Returns the AI reply + debug information (language detection, timing, etc.)
  *
  * Body: {
  *   message: string,
  *   history?: Array<{ role: "user" | "assistant", content: string }>,
- *   businessContext?: string,
  *   contactName?: string
  * }
  */
@@ -23,12 +24,47 @@ export async function POST(request: NextRequest) {
   const {
     message,
     history = [],
-    businessContext,
     contactName = "Test Customer",
   } = body;
 
   if (!message || typeof message !== "string") {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
+  }
+
+  // Try to get real business data from authenticated user
+  let businessContext = "";
+  let businessName = "Your Business";
+  let businessType = "other";
+  let businessHours: Record<string, { open: string; close: string; closed: boolean }> = {};
+
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const admin = createAdminClient();
+      const { data: business } = await admin
+        .from("businesses")
+        .select("name, type, business_context, business_hours")
+        .eq("owner_id", user.id)
+        .single();
+
+      if (business) {
+        businessContext = business.business_context || "";
+        businessName = business.name || "Your Business";
+        businessType = business.type || "other";
+        if (business.business_hours) {
+          businessHours = business.business_hours as typeof businessHours;
+        }
+      }
+    }
+  } catch {
+    // If auth fails, use fallback context
+  }
+
+  // Fallback if no business data
+  if (!businessContext) {
+    businessContext = `This is a test business. No knowledge base has been set up yet. Please go to the Knowledge Base page to add your business information.`;
   }
 
   // 1. Detect language
@@ -39,30 +75,10 @@ export async function POST(request: NextRequest) {
     businessId: "simulator",
     leadId: "simulator",
     conversationId: "simulator",
-    businessName: "FitZone Gym",
-    businessContext: businessContext || `We are FitZone Gym located in Koregaon Park, Pune.
-
-Membership Plans:
-- Basic: ₹1,500/month (gym access only)
-- Pro: ₹2,500/month (gym + group classes)
-- Premium: ₹4,000/month (gym + classes + personal trainer)
-
-Timings: Mon-Sat 6 AM to 10 PM, Sunday 7 AM to 1 PM
-Facilities: AC gym, locker rooms, shower, parking, juice bar
-Classes: Zumba (6 PM), HIIT (7 PM), Yoga (8 PM)
-Free trial class available for new members.
-Contact: +91 98765 43210
-Address: 2nd Floor, Phoenix Mall, Koregaon Park, Pune 411001`,
-    businessType: "gym",
-    businessHours: {
-      mon: { open: "06:00", close: "22:00", closed: false },
-      tue: { open: "06:00", close: "22:00", closed: false },
-      wed: { open: "06:00", close: "22:00", closed: false },
-      thu: { open: "06:00", close: "22:00", closed: false },
-      fri: { open: "06:00", close: "22:00", closed: false },
-      sat: { open: "06:00", close: "22:00", closed: false },
-      sun: { open: "07:00", close: "13:00", closed: false },
-    },
+    businessName,
+    businessContext,
+    businessType,
+    businessHours,
     tone: "friendly",
     language: "english",
     leadName: contactName,
@@ -81,6 +97,7 @@ Address: 2nd Floor, Phoenix Mall, Koregaon Park, Pune 411001`,
   // 4. Return with debug info
   return NextResponse.json({
     reply: response.reply,
+    response: response.reply, // alias for compatibility
     debug: {
       language: languageResult.language,
       tone: languageResult.tone,
