@@ -26,10 +26,9 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // BYPASS middleware auth for reset-password and callback entirely
-  // These pages handle their own auth via client-side Supabase
-  if (pathname.startsWith("/reset-password") || pathname.startsWith("/callback")) {
-    console.log(`[Middleware] BYPASS for ${pathname} (handles own auth)`);
+  // BYPASS middleware auth for reset-password, callback, and admin
+  if (pathname.startsWith("/reset-password") || pathname.startsWith("/callback") || pathname.startsWith("/admin")) {
+    console.log(`[Middleware] BYPASS for ${pathname}`);
     return supabaseResponse;
   }
 

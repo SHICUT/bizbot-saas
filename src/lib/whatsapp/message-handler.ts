@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { WhatsAppClient } from "./client";
 import { generateAIReply } from "@/lib/ai/reply-engine";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import type {
   WebhookPayload,
   IncomingMessage,
@@ -56,46 +57,43 @@ async function processIncomingMessage(
 ): Promise<void> {
   const supabase = createAdminClient();
 
-  // 1. Find the business by phone_number_id
-  const { data: business, error: bizError } = await supabase
-    .from("businesses")
-    .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
-    .eq("whatsapp_phone_number_id", phoneNumberId)
-    .eq("is_active", true)
-    .single();
+  // 1. Find business (cached for 5 min to avoid repeated lookups)
+  const cacheKey = `biz_${phoneNumberId}`;
+  let business = cacheGet<{ id: string; name: string; type: string; ai_enabled: boolean; ai_tone: string; ai_language: string; ai_pause_duration: number; business_context: string; whatsapp_access_token: string }>(cacheKey);
 
-  if (bizError || !business) {
-    console.error(`[Webhook] No business found for phone_number_id: ${phoneNumberId}`);
-    return;
+  if (!business) {
+    const { data, error: bizError } = await supabase
+      .from("businesses")
+      .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
+      .eq("whatsapp_phone_number_id", phoneNumberId)
+      .eq("is_active", true)
+      .single();
+
+    if (bizError || !data) {
+      console.error(`[Webhook] No business for phone_number_id: ${phoneNumberId}`);
+      return;
+    }
+    business = data;
+    cacheSet(cacheKey, business);
   }
 
-  // 2. Check subscription message limit
-  const canSend = await checkMessageLimit(supabase, business.id);
+  // 2-3. Check subscription + Upsert lead (PARALLEL)
+  const [canSend, leadResult] = await Promise.all([
+    checkMessageLimit(supabase, business.id),
+    supabase.from("leads").upsert(
+      { business_id: business.id, wa_id: message.from, phone: message.from, name: contact?.profile?.name || null, source: "whatsapp" },
+      { onConflict: "business_id,wa_id" }
+    ).select("id, ai_paused_until, status").single(),
+  ]);
+
   if (!canSend) {
     console.warn(`[Webhook] Message limit reached for business: ${business.id}`);
     return;
   }
 
-  // 3. Upsert lead
-  const leadData = {
-    business_id: business.id,
-    wa_id: message.from,
-    phone: message.from,
-    name: contact?.profile?.name || null,
-    source: "whatsapp",
-  };
-
-  const { data: lead, error: leadError } = await supabase
-    .from("leads")
-    .upsert(leadData, {
-      onConflict: "business_id,wa_id",
-      ignoreDuplicates: false,
-    })
-    .select("id, ai_paused_until, status")
-    .single();
-
-  if (leadError || !lead) {
-    console.error(`[Webhook] Failed to upsert lead:`, leadError);
+  const lead = leadResult.data;
+  if (!lead) {
+    console.error(`[Webhook] Failed to upsert lead`);
     return;
   }
 

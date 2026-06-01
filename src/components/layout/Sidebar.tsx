@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ import {
   Settings,
   Zap,
   FlaskConical,
+  Shield,
 } from "lucide-react";
 
 const navigation = [
@@ -29,6 +31,13 @@ const navigation = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/check-role").then((r) => r.json()).then((d) => {
+      if (d.role === "super_admin") setIsAdmin(true);
+    }).catch(() => {});
+  }, []);
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-border">
@@ -65,6 +74,12 @@ export default function Sidebar() {
 
       {/* Bottom section */}
       <div className="px-3 py-4 border-t border-border">
+        {isAdmin && (
+          <Link href="/admin" className={cn("sidebar-link mb-1", pathname === "/admin" && "active")}>
+            <Shield className="w-5 h-5 flex-shrink-0" />
+            Admin Panel
+          </Link>
+        )}
         <Link href="/settings" className="sidebar-link">
           <Settings className="w-5 h-5 flex-shrink-0" />
           Settings
