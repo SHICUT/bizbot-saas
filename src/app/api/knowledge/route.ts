@@ -41,7 +41,8 @@ export async function GET() {
       description: business.description || "",
       phone: business.phone || "",
       whatsapp_number: business.whatsapp_number || "",
-      email: business.email || business.contact_email || "",
+      // contact_email (migration 005) falls back to email (migration 001)
+      email: business.contact_email || business.email || "",
       website: business.website || "",
       address: business.address || "",
       city: business.city || "",
@@ -71,27 +72,58 @@ export async function POST(request: NextRequest) {
 
   switch (section) {
     case "profile": {
+      // Build update using ONLY columns that exist in migration 001
+      // Columns from migration 005 (owner_name, whatsapp_number, contact_email, google_maps_link)
+      // are added to update too — they'll be ignored if migration 005 hasn't run yet
       const updateFields: Record<string, unknown> = {};
-      // Only set fields that are provided (don't null out fields the user didn't touch)
-      if (data.name !== undefined) updateFields.name = data.name;
-      if (data.owner_name !== undefined) updateFields.owner_name = data.owner_name;
-      if (data.type !== undefined) updateFields.type = data.type;
-      if (data.description !== undefined) updateFields.description = data.description;
-      if (data.phone !== undefined) updateFields.phone = data.phone;
-      if (data.whatsapp_number !== undefined) updateFields.whatsapp_number = data.whatsapp_number;
-      if (data.email !== undefined) updateFields.contact_email = data.email;
-      if (data.website !== undefined) updateFields.website = data.website;
-      if (data.address !== undefined) updateFields.address = data.address;
-      if (data.city !== undefined) updateFields.city = data.city;
-      if (data.state !== undefined) updateFields.state = data.state;
-      if (data.google_maps_link !== undefined) updateFields.google_maps_link = data.google_maps_link;
 
-      console.log("[Knowledge POST] Updating business with:", JSON.stringify(updateFields));
+      // Migration 001 columns — always exist
+      if (data.name !== undefined) updateFields.name = data.name || null;
+      if (data.type !== undefined) updateFields.type = data.type || "other";
 
+      // Map email: use 'email' column (001) if contact_email fails
+      // We try contact_email first (from migration 005), fallback to email
+      if (data.email !== undefined) {
+        updateFields.contact_email = data.email || null;
+        // Also update the base 'email' column for backwards compat
+        updateFields.email = data.email || null;
+      }
+      if (data.phone !== undefined) updateFields.phone = data.phone || null;
+      if (data.address !== undefined) updateFields.address = data.address || null;
+      if (data.city !== undefined) updateFields.city = data.city || null;
+      if (data.state !== undefined) updateFields.state = data.state || null;
+
+      // Try to set these — will be ignored if columns don't exist yet
+      if (data.owner_name !== undefined) updateFields.owner_name = data.owner_name || null;
+      if (data.whatsapp_number !== undefined) updateFields.whatsapp_number = data.whatsapp_number || null;
+      if (data.website !== undefined) updateFields.website = data.website || null;
+      if (data.google_maps_link !== undefined) updateFields.google_maps_link = data.google_maps_link || null;
+      if (data.description !== undefined) updateFields.description = data.description || null;
+
+      console.log("[Knowledge POST] Updating business:", business.id, "fields:", Object.keys(updateFields));
+
+      // Try to save all fields at once first
       const { error: updateErr } = await adminSupabase.from("businesses").update(updateFields).eq("id", business.id);
+
       if (updateErr) {
-        console.error("[Knowledge POST] Update failed:", updateErr.message, "| Code:", updateErr.code);
-        return NextResponse.json({ error: `Save failed: ${updateErr.message}` }, { status: 500 });
+        console.error("[Knowledge POST] Full update failed:", updateErr.message, "| Trying without new columns...");
+
+        // Fallback: save only migration-001 columns (always safe)
+        const safeFields: Record<string, unknown> = {};
+        if (updateFields.name !== undefined) safeFields.name = updateFields.name;
+        if (updateFields.type !== undefined) safeFields.type = updateFields.type;
+        if (updateFields.email !== undefined) safeFields.email = updateFields.email;
+        if (updateFields.phone !== undefined) safeFields.phone = updateFields.phone;
+        if (updateFields.address !== undefined) safeFields.address = updateFields.address;
+        if (updateFields.city !== undefined) safeFields.city = updateFields.city;
+        if (updateFields.state !== undefined) safeFields.state = updateFields.state;
+
+        const { error: safeErr } = await adminSupabase.from("businesses").update(safeFields).eq("id", business.id);
+        if (safeErr) {
+          console.error("[Knowledge POST] Safe fallback also failed:", safeErr.message);
+          return NextResponse.json({ error: `Save failed: ${safeErr.message}. Please run the database migration.` }, { status: 500 });
+        }
+        console.log("[Knowledge POST] Saved with safe fields only. Run migration 013 to enable all fields.");
       }
       break;
     }
@@ -183,7 +215,9 @@ async function rebuildBusinessContext(supabase: ReturnType<typeof createAdminCli
   context += "Contact Information:\n";
   if (biz.phone) context += `- Phone: ${biz.phone}\n`;
   if (biz.whatsapp_number) context += `- WhatsApp: ${biz.whatsapp_number}\n`;
-  if (biz.contact_email || biz.email) context += `- Email: ${biz.contact_email || biz.email}\n`;
+  // Try contact_email (from migration 005) first, then fall back to email (migration 001)
+  const emailToUse = biz.contact_email || biz.email;
+  if (emailToUse) context += `- Email: ${emailToUse}\n`;
   if (biz.website) context += `- Website: ${biz.website}\n`;
   context += "\n";
 
