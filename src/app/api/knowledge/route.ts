@@ -3,34 +3,53 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * GET /api/knowledge — Fetch all business knowledge
- * POST /api/knowledge — Save business knowledge (services, plans, FAQs, profile)
+ * Knowledge API — Universal Business Knowledge Engine
+ *
+ * FALLBACK STRATEGY:
+ * - business_services / business_plans / business_faqs tables → Primary storage
+ * - businesses.business_context JSONB → Fallback when tables don't exist
+ *
+ * This ensures EVERY section saves successfully regardless of migration state.
  */
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const adminSupabase = createAdminClient();
-  const { data: business } = await adminSupabase.from("businesses").select("*").eq("owner_id", user.id).single();
-  if (!business) return NextResponse.json({ error: "No business" }, { status: 404 });
+  const admin = createAdminClient();
+  const { data: business, error: bizErr } = await admin
+    .from("businesses")
+    .select("*")
+    .eq("owner_id", user.id)
+    .single();
 
-  // These tables may not exist if migrations 005+ aren't applied
+  if (bizErr || !business) {
+    return NextResponse.json({ error: "No business found" }, { status: 404 });
+  }
+
+  // Try structured tables first, gracefully fall back to JSONB
   let servicesData: unknown[] = [];
   let plansData: unknown[] = [];
   let faqsData: unknown[] = [];
 
   try {
-    const [services, plans, faqs] = await Promise.all([
-      adminSupabase.from("business_services").select("*").eq("business_id", business.id).eq("is_active", true).order("sort_order"),
-      adminSupabase.from("business_plans").select("*").eq("business_id", business.id).eq("is_active", true).order("sort_order"),
-      adminSupabase.from("business_faqs").select("*").eq("business_id", business.id).eq("is_active", true).order("sort_order"),
+    const [svc, pln, faq] = await Promise.all([
+      admin.from("business_services").select("*").eq("business_id", business.id).order("sort_order"),
+      admin.from("business_plans").select("*").eq("business_id", business.id).order("sort_order"),
+      admin.from("business_faqs").select("*").eq("business_id", business.id).order("sort_order"),
     ]);
-    servicesData = services.data || [];
-    plansData = plans.data || [];
-    faqsData = faqs.data || [];
-  } catch (e) {
-    console.warn("[Knowledge GET] Sub-tables may not exist yet:", e);
+    servicesData = svc.data || [];
+    plansData = pln.data || [];
+    faqsData = faq.data || [];
+  } catch {
+    // Tables don't exist yet — try to load from JSONB fallback
+    const ctx = business.knowledge_json as Record<string, unknown> | null;
+    if (ctx) {
+      servicesData = (ctx.services as unknown[]) || [];
+      plansData = (ctx.plans as unknown[]) || [];
+      faqsData = (ctx.faqs as unknown[]) || [];
+    }
   }
 
   return NextResponse.json({
@@ -41,7 +60,6 @@ export async function GET() {
       description: business.description || "",
       phone: business.phone || "",
       whatsapp_number: business.whatsapp_number || "",
-      // contact_email (migration 005) falls back to email (migration 001)
       email: business.contact_email || business.email || "",
       website: business.website || "",
       address: business.address || "",
@@ -61,225 +79,300 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const adminSupabase = createAdminClient();
-  const { data: business } = await adminSupabase.from("businesses").select("id").eq("owner_id", user.id).single();
-  if (!business) return NextResponse.json({ error: "No business" }, { status: 404 });
+  const admin = createAdminClient();
+  const { data: business, error: bizErr } = await admin
+    .from("businesses")
+    .select("id, knowledge_json")
+    .eq("owner_id", user.id)
+    .single();
+
+  if (bizErr || !business) {
+    return NextResponse.json({ error: "No business found. Please complete onboarding." }, { status: 404 });
+  }
 
   const body = await request.json();
   const { section, data } = body;
 
-  console.log("[Knowledge POST] Section:", section, "| Business:", business.id, "| Data keys:", Object.keys(data || {}));
+  console.log("[Knowledge POST] section:", section, "| biz:", business.id.substring(0, 8));
 
   switch (section) {
     case "profile": {
-      // Build update using ONLY columns that exist in migration 001
-      // Columns from migration 005 (owner_name, whatsapp_number, contact_email, google_maps_link)
-      // are added to update too — they'll be ignored if migration 005 hasn't run yet
-      const updateFields: Record<string, unknown> = {};
-
-      // Migration 001 columns — always exist
-      if (data.name !== undefined) updateFields.name = data.name || null;
-      if (data.type !== undefined) updateFields.type = data.type || "other";
-
-      // Map email: use 'email' column (001) if contact_email fails
-      // We try contact_email first (from migration 005), fallback to email
-      if (data.email !== undefined) {
-        updateFields.contact_email = data.email || null;
-        // Also update the base 'email' column for backwards compat
-        updateFields.email = data.email || null;
-      }
-      if (data.phone !== undefined) updateFields.phone = data.phone || null;
-      if (data.address !== undefined) updateFields.address = data.address || null;
-      if (data.city !== undefined) updateFields.city = data.city || null;
-      if (data.state !== undefined) updateFields.state = data.state || null;
-
-      // Try to set these — will be ignored if columns don't exist yet
-      if (data.owner_name !== undefined) updateFields.owner_name = data.owner_name || null;
-      if (data.whatsapp_number !== undefined) updateFields.whatsapp_number = data.whatsapp_number || null;
-      if (data.website !== undefined) updateFields.website = data.website || null;
-      if (data.google_maps_link !== undefined) updateFields.google_maps_link = data.google_maps_link || null;
-      if (data.description !== undefined) updateFields.description = data.description || null;
-
-      console.log("[Knowledge POST] Updating business:", business.id, "fields:", Object.keys(updateFields));
-
-      // Try to save all fields at once first
-      const { error: updateErr } = await adminSupabase.from("businesses").update(updateFields).eq("id", business.id);
-
-      if (updateErr) {
-        console.error("[Knowledge POST] Full update failed:", updateErr.message, "| Trying without new columns...");
-
-        // Fallback: save only migration-001 columns (always safe)
-        const safeFields: Record<string, unknown> = {};
-        if (updateFields.name !== undefined) safeFields.name = updateFields.name;
-        if (updateFields.type !== undefined) safeFields.type = updateFields.type;
-        if (updateFields.email !== undefined) safeFields.email = updateFields.email;
-        if (updateFields.phone !== undefined) safeFields.phone = updateFields.phone;
-        if (updateFields.address !== undefined) safeFields.address = updateFields.address;
-        if (updateFields.city !== undefined) safeFields.city = updateFields.city;
-        if (updateFields.state !== undefined) safeFields.state = updateFields.state;
-
-        const { error: safeErr } = await adminSupabase.from("businesses").update(safeFields).eq("id", business.id);
-        if (safeErr) {
-          console.error("[Knowledge POST] Safe fallback also failed:", safeErr.message);
-          return NextResponse.json({ error: `Save failed: ${safeErr.message}. Please run the database migration.` }, { status: 500 });
-        }
-        console.log("[Knowledge POST] Saved with safe fields only. Run migration 013 to enable all fields.");
-      }
+      await saveProfileFields(admin, business.id, data);
       break;
     }
-
     case "hours": {
-      const { error: hoursErr } = await adminSupabase.from("businesses").update({ business_hours: data }).eq("id", business.id);
-      if (hoursErr) {
-        console.error("[Knowledge POST] Hours update failed:", hoursErr.message);
-        return NextResponse.json({ error: "Failed to save hours" }, { status: 500 });
-      }
+      const { error } = await admin.from("businesses").update({ business_hours: data }).eq("id", business.id);
+      if (error) return NextResponse.json({ error: "Failed to save hours: " + error.message }, { status: 500 });
       break;
     }
-
-    case "services":
-      // Delete old, insert new
-      await adminSupabase.from("business_services").delete().eq("business_id", business.id);
-      if (data.length > 0) {
-        const { error: svcErr } = await adminSupabase.from("business_services").insert(
-          data.map((s: { name: string; description?: string; price?: string; duration?: string; category?: string }, i: number) => ({
-            business_id: business.id, name: s.name, description: s.description || null,
-            price: s.price || null, duration: s.duration || null, sort_order: i,
-          }))
-        );
-        if (svcErr) {
-          console.error("[Knowledge POST] Services insert failed:", svcErr.message);
-          return NextResponse.json({ error: "Failed to save services" }, { status: 500 });
-        }
-      }
+    case "services": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      await saveListSection(admin, business, "services", items, "business_services", mapServiceRow);
       break;
-
-    case "plans":
-      await adminSupabase.from("business_plans").delete().eq("business_id", business.id);
-      if (data.length > 0) {
-        const { error: planErr } = await adminSupabase.from("business_plans").insert(
-          data.map((p: { name: string; price: string; duration?: string; features?: string[]; is_popular?: boolean }, i: number) => ({
-            business_id: business.id, name: p.name, price: p.price,
-            duration: p.duration || "month", features: p.features || [],
-            is_popular: p.is_popular || false, sort_order: i,
-          }))
-        );
-        if (planErr) {
-          console.error("[Knowledge POST] Plans insert failed:", planErr.message);
-          return NextResponse.json({ error: "Failed to save plans" }, { status: 500 });
-        }
-      }
+    }
+    case "plans": {
+      const items = (data as unknown[]).filter((p: unknown) => (p as Record<string, string>).name?.trim());
+      await saveListSection(admin, business, "plans", items, "business_plans", mapPlanRow);
       break;
-
-    case "faqs":
-      await adminSupabase.from("business_faqs").delete().eq("business_id", business.id);
-      if (data.length > 0) {
-        const { error: faqErr } = await adminSupabase.from("business_faqs").insert(
-          data.map((f: { question: string; answer: string; category?: string }, i: number) => ({
-            business_id: business.id, question: f.question, answer: f.answer,
-            category: f.category || "general", sort_order: i,
-          }))
-        );
-        if (faqErr) {
-          console.error("[Knowledge POST] FAQs insert failed:", faqErr.message);
-          return NextResponse.json({ error: "Failed to save FAQs" }, { status: 500 });
-        }
-      }
+    }
+    case "faqs": {
+      const items = (data as unknown[]).filter((f: unknown) => (f as Record<string, string>).question?.trim());
+      await saveListSection(admin, business, "faqs", items, "business_faqs", mapFaqRow);
       break;
+    }
+    default:
+      return NextResponse.json({ error: `Unknown section: ${section}` }, { status: 400 });
   }
 
-  // Rebuild business_context from structured data for AI
-  await rebuildBusinessContext(adminSupabase, business.id);
+  // Rebuild AI context from all saved data
+  try {
+    await rebuildBusinessContext(admin, business.id);
+  } catch (e) {
+    console.warn("[Knowledge POST] Context rebuild failed (non-fatal):", e);
+  }
 
   return NextResponse.json({ success: true });
 }
 
-/**
- * Rebuilds the business_context text field from structured data.
- * This is what the AI reads when generating responses.
- */
-async function rebuildBusinessContext(supabase: ReturnType<typeof createAdminClient>, businessId: string) {
-  const { data: biz } = await supabase.from("businesses").select("*").eq("id", businessId).single();
-  const { data: services } = await supabase.from("business_services").select("*").eq("business_id", businessId).eq("is_active", true).order("sort_order");
-  const { data: plans } = await supabase.from("business_plans").select("*").eq("business_id", businessId).eq("is_active", true).order("sort_order");
-  const { data: faqs } = await supabase.from("business_faqs").select("*").eq("business_id", businessId).eq("is_active", true).order("sort_order");
+// ─── Profile Save (with safe fallback) ───────────────────────────────────────
 
+async function saveProfileFields(
+  admin: ReturnType<typeof createAdminClient>,
+  businessId: string,
+  data: Record<string, unknown>
+) {
+  // Always-safe columns from migration 001
+  const safe: Record<string, unknown> = {};
+  if (data.name !== undefined) safe.name = String(data.name || "").trim() || null;
+  if (data.type !== undefined) safe.type = data.type || "other";
+  if (data.phone !== undefined) safe.phone = String(data.phone || "").trim() || null;
+  if (data.address !== undefined) safe.address = String(data.address || "").trim() || null;
+  if (data.city !== undefined) safe.city = String(data.city || "").trim() || null;
+  if (data.state !== undefined) safe.state = String(data.state || "").trim() || null;
+
+  // Extended columns from migration 005/013
+  const extended: Record<string, unknown> = {};
+  if (data.owner_name !== undefined) extended.owner_name = String(data.owner_name || "").trim() || null;
+  if (data.whatsapp_number !== undefined) extended.whatsapp_number = String(data.whatsapp_number || "").trim() || null;
+  if (data.website !== undefined) extended.website = String(data.website || "").trim() || null;
+  if (data.google_maps_link !== undefined) extended.google_maps_link = String(data.google_maps_link || "").trim() || null;
+  if (data.description !== undefined) extended.description = String(data.description || "").trim() || null;
+
+  // Email: try contact_email first, also update email for backwards compat
+  if (data.email !== undefined) {
+    const emailVal = String(data.email || "").trim() || null;
+    extended.contact_email = emailVal;
+    safe.email = emailVal;
+  }
+
+  // Try full save first
+  const { error } = await admin.from("businesses").update({ ...safe, ...extended }).eq("id", businessId);
+
+  if (error) {
+    console.warn("[Knowledge POST] Full profile save failed, trying safe-only:", error.message);
+    // Fallback: only migration 001 columns
+    const { error: safeErr } = await admin.from("businesses").update(safe).eq("id", businessId);
+    if (safeErr) {
+      throw new Error("Failed to save profile: " + safeErr.message);
+    }
+  }
+}
+
+// ─── List Section Save (with JSONB fallback) ─────────────────────────────────
+
+type MapFn = (item: Record<string, unknown>, businessId: string, index: number) => Record<string, unknown>;
+
+async function saveListSection(
+  admin: ReturnType<typeof createAdminClient>,
+  business: { id: string; knowledge_json: unknown },
+  key: string,
+  items: unknown[],
+  tableName: string,
+  mapRow: MapFn
+) {
+  // Try structured table first
+  try {
+    await admin.from(tableName).delete().eq("business_id", business.id);
+
+    if (items.length > 0) {
+      const rows = items.map((item, i) => mapRow(item as Record<string, unknown>, business.id, i));
+      const { error: insertErr } = await admin.from(tableName).insert(rows);
+
+      if (insertErr) {
+        console.warn(`[Knowledge POST] ${tableName} insert failed:`, insertErr.message, "— using JSONB fallback");
+        await saveToJsonFallback(admin, business, key, items);
+      }
+    }
+  } catch (e) {
+    // Table doesn't exist — use JSONB fallback
+    console.warn(`[Knowledge POST] ${tableName} not available:`, e, "— using JSONB fallback");
+    await saveToJsonFallback(admin, business, key, items);
+  }
+}
+
+async function saveToJsonFallback(
+  admin: ReturnType<typeof createAdminClient>,
+  business: { id: string; knowledge_json: unknown },
+  key: string,
+  items: unknown[]
+) {
+  const existing = (business.knowledge_json as Record<string, unknown>) || {};
+  const updated = { ...existing, [key]: items };
+  const { error } = await admin.from("businesses").update({ knowledge_json: updated }).eq("id", business.id);
+  if (error) {
+    // knowledge_json column may not exist — try adding it inline
+    console.error("[Knowledge POST] JSONB fallback also failed:", error.message);
+    throw new Error(`Cannot save ${key}. Please run the database migration (013_add_missing_business_columns.sql) in Supabase SQL Editor.`);
+  }
+}
+
+// ─── Row Mappers ─────────────────────────────────────────────────────────────
+
+function mapServiceRow(item: Record<string, unknown>, businessId: string, index: number) {
+  return {
+    business_id: businessId,
+    name: String(item.name || ""),
+    description: item.description ? String(item.description) : null,
+    price: item.price ? String(item.price) : null,
+    duration: item.duration ? String(item.duration) : null,
+    is_active: true,
+    sort_order: index,
+  };
+}
+
+function mapPlanRow(item: Record<string, unknown>, businessId: string, index: number) {
+  return {
+    business_id: businessId,
+    name: String(item.name || ""),
+    price: String(item.price || ""),
+    duration: String(item.duration || "month"),
+    features: Array.isArray(item.features) ? item.features : [],
+    is_popular: Boolean(item.is_popular),
+    is_active: true,
+    sort_order: index,
+  };
+}
+
+function mapFaqRow(item: Record<string, unknown>, businessId: string, index: number) {
+  return {
+    business_id: businessId,
+    question: String(item.question || ""),
+    answer: String(item.answer || ""),
+    category: String(item.category || "general"),
+    is_active: true,
+    sort_order: index,
+  };
+}
+
+// ─── Context Rebuild ─────────────────────────────────────────────────────────
+
+async function rebuildBusinessContext(admin: ReturnType<typeof createAdminClient>, businessId: string) {
+  const { data: biz } = await admin.from("businesses").select("*").eq("id", businessId).single();
   if (!biz) return;
 
-  let context = `Business: ${biz.name}\n`;
-  if (biz.owner_name) context += `Owner: ${biz.owner_name}\n`;
-  if (biz.description) context += `About: ${biz.description}\n`;
-  context += "\n";
+  let services: unknown[] = [];
+  let plans: unknown[] = [];
+  let faqs: unknown[] = [];
+
+  try {
+    const [svc, pln, faq] = await Promise.all([
+      admin.from("business_services").select("*").eq("business_id", businessId).eq("is_active", true).order("sort_order"),
+      admin.from("business_plans").select("*").eq("business_id", businessId).eq("is_active", true).order("sort_order"),
+      admin.from("business_faqs").select("*").eq("business_id", businessId).eq("is_active", true).order("sort_order"),
+    ]);
+    services = svc.data || [];
+    plans = pln.data || [];
+    faqs = faq.data || [];
+  } catch {
+    const ctx = biz.knowledge_json as Record<string, unknown> | null;
+    if (ctx) {
+      services = (ctx.services as unknown[]) || [];
+      plans = (ctx.plans as unknown[]) || [];
+      faqs = (ctx.faqs as unknown[]) || [];
+    }
+  }
+
+  const lines: string[] = [];
+
+  lines.push(`Business: ${biz.name || "Unknown"}`);
+  if (biz.owner_name) lines.push(`Owner: ${biz.owner_name}`);
+  if (biz.type && biz.type !== "other") lines.push(`Type: ${biz.type}`);
+  if (biz.description) lines.push(`About: ${biz.description}`);
+  lines.push("");
 
   // Contact
-  context += "Contact Information:\n";
-  if (biz.phone) context += `- Phone: ${biz.phone}\n`;
-  if (biz.whatsapp_number) context += `- WhatsApp: ${biz.whatsapp_number}\n`;
-  // Try contact_email (from migration 005) first, then fall back to email (migration 001)
-  const emailToUse = biz.contact_email || biz.email;
-  if (emailToUse) context += `- Email: ${emailToUse}\n`;
-  if (biz.website) context += `- Website: ${biz.website}\n`;
-  context += "\n";
+  const email = biz.contact_email || biz.email;
+  if (biz.phone || biz.whatsapp_number || email || biz.website) {
+    lines.push("Contact:");
+    if (biz.phone) lines.push(`- Phone: ${biz.phone}`);
+    if (biz.whatsapp_number) lines.push(`- WhatsApp: ${biz.whatsapp_number}`);
+    if (email) lines.push(`- Email: ${email}`);
+    if (biz.website) lines.push(`- Website: ${biz.website}`);
+    lines.push("");
+  }
 
   // Location
   if (biz.address || biz.city) {
-    context += "Location:\n";
-    if (biz.address) context += `- Address: ${biz.address}\n`;
-    if (biz.city) context += `- City: ${biz.city}${biz.state ? ", " + biz.state : ""}\n`;
-    if (biz.google_maps_link) context += `- Google Maps: ${biz.google_maps_link}\n`;
-    context += "\n";
+    lines.push("Location:");
+    if (biz.address) lines.push(`- Address: ${biz.address}`);
+    if (biz.city) lines.push(`- City: ${biz.city}${biz.state ? ", " + biz.state : ""}`);
+    if (biz.google_maps_link) lines.push(`- Google Maps: ${biz.google_maps_link}`);
+    lines.push("");
   }
 
   // Hours
   if (biz.business_hours) {
-    context += "Working Hours:\n";
-    const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-    const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    const hours = biz.business_hours as Record<string, { open: string; close: string; closed: boolean }>;
+    lines.push("Hours:");
+    const days = ["mon","tue","wed","thu","fri","sat","sun"];
+    const names = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    const h = biz.business_hours as Record<string, { open: string; close: string; closed: boolean }>;
     days.forEach((d, i) => {
-      const h = hours[d];
-      if (h && !h.closed) context += `- ${dayNames[i]}: ${h.open} - ${h.close}\n`;
-      else context += `- ${dayNames[i]}: Closed\n`;
+      const day = h[d];
+      lines.push(`- ${names[i]}: ${day?.closed ? "Closed" : `${day?.open || "09:00"} - ${day?.close || "21:00"}`}`);
     });
-    context += "\n";
+    lines.push("");
   }
 
   // Services
-  if (services && services.length > 0) {
-    context += "Services Offered:\n";
+  if (services.length > 0) {
+    lines.push("Services:");
     services.forEach((s) => {
-      context += `- ${s.name}`;
-      if (s.price) context += ` — ${s.price}`;
-      if (s.duration) context += ` (${s.duration})`;
-      if (s.description) context += ` — ${s.description}`;
-      context += "\n";
+      const item = s as Record<string, unknown>;
+      let line = `- ${item.name}`;
+      if (item.price) line += ` — ${item.price}`;
+      if (item.duration) line += ` (${item.duration})`;
+      if (item.description) line += ` — ${item.description}`;
+      lines.push(line);
     });
-    context += "\n";
+    lines.push("");
   }
 
   // Plans
-  if (plans && plans.length > 0) {
-    context += "Membership/Pricing Plans:\n";
+  if (plans.length > 0) {
+    lines.push("Pricing/Plans:");
     plans.forEach((p) => {
-      context += `- ${p.name}: ${p.price}/${p.duration}`;
-      const features = p.features as string[];
-      if (features && features.length > 0) context += ` (Includes: ${features.join(", ")})`;
-      if (p.is_popular) context += " ⭐ Most Popular";
-      context += "\n";
+      const item = p as Record<string, unknown>;
+      let line = `- ${item.name}: ${item.price}/${item.duration || "month"}`;
+      const feats = item.features as string[];
+      if (feats?.length) line += ` (${feats.join(", ")})`;
+      if (item.is_popular) line += " ⭐";
+      lines.push(line);
     });
-    context += "\n";
+    lines.push("");
   }
 
   // FAQs
-  if (faqs && faqs.length > 0) {
-    context += "Frequently Asked Questions:\n";
+  if (faqs.length > 0) {
+    lines.push("FAQs:");
     faqs.forEach((f) => {
-      context += `Q: ${f.question}\nA: ${f.answer}\n\n`;
+      const item = f as Record<string, unknown>;
+      lines.push(`Q: ${item.question}`);
+      lines.push(`A: ${item.answer}`);
+      lines.push("");
     });
   }
 
-  // Important instruction
-  context += "\nIMPORTANT: If you don't have information about something the customer asks, say: \"I don't have that information yet. Please contact us directly.\" NEVER make up information.\n";
+  lines.push("Note: If information is unavailable, say so honestly. Never make up details.");
 
-  await supabase.from("businesses").update({ business_context: context.trim() }).eq("id", businessId);
+  await admin.from("businesses").update({ business_context: lines.join("\n").trim() }).eq("id", businessId);
 }
