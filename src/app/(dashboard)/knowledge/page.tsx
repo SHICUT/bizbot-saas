@@ -251,7 +251,10 @@ export default function KnowledgePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Save failed");
+      }
       const sectionDef = allSections.find((s) => s.id === section);
       setSuccessMsg(`${sectionDef?.label || section} saved!`);
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -262,9 +265,10 @@ export default function KnowledgePage() {
         setScore(scoreData.score || 0);
         setScoreSections(scoreData.sections || []);
       }
-    } catch {
-      setErrorMsg("Failed to save. Please try again.");
-      setTimeout(() => setErrorMsg(null), 4000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save. Please try again.";
+      setErrorMsg(msg);
+      setTimeout(() => setErrorMsg(null), 5000);
     }
     setSaving(null);
   }
