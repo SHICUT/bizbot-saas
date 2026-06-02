@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
     if (status && status !== "all") query = query.eq("status", status);
     if (temperature && temperature !== "all") query = query.eq("lead_temperature", temperature);
     if (search) {
-      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+      // Sanitize: escape special PostgREST characters
+      const sanitized = search.replace(/[%_()]/g, "");
+      if (sanitized) {
+        query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
+      }
     }
 
     const { data: leads, error, count } = await query;

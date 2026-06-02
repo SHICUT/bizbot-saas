@@ -130,7 +130,7 @@ async function processIncomingMessage(
   if (!content) return; // Skip unsupported message types
 
   // 6. Store inbound message (dedup by wa_message_id)
-  const { error: msgError } = await supabase.from("messages").upsert(
+  const { error: msgError, count: insertCount } = await supabase.from("messages").upsert(
     {
       business_id: business.id,
       conversation_id: conversation.id,
@@ -141,11 +141,17 @@ async function processIncomingMessage(
       message_type: message.type,
       status: "delivered",
     },
-    { onConflict: "business_id,wa_message_id" }
+    { onConflict: "business_id,wa_message_id", count: "exact" }
   );
 
   if (msgError) {
     console.error(`[Webhook] Failed to store message:`, msgError);
+    return;
+  }
+
+  // DEDUP: If upsert matched existing row (count=0 inserts), skip AI reply
+  if (insertCount === 0) {
+    console.log(`[Webhook] Duplicate message ${message.id} — skipping AI reply`);
     return;
   }
 
@@ -200,7 +206,7 @@ async function processIncomingMessage(
       content: replyText,
       message_type: "text",
       is_ai_generated: true,
-      ai_model: "gpt-4o-mini",
+      ai_model: "gemini-2.0-flash",
       status: "sent",
     });
 

@@ -63,16 +63,26 @@ const BUSINESS_TYPE_SECTIONS: Record<string, SectionDef[]> = {
     { id: "plans", label: "Combos & Offers", icon: Star, description: "Meal deals", type: "dynamic" },
     { id: "facilities", label: "Delivery & Dine-in", icon: Building, description: "Delivery info, seating", type: "dynamic" },
   ],
+  cafe: [
+    { id: "services", label: "Menu", icon: UtensilsCrossed, description: "Beverages & food", type: "dynamic" },
+    { id: "plans", label: "Offers", icon: Star, description: "Special deals", type: "dynamic" },
+    { id: "facilities", label: "Ambience & Seating", icon: Building, description: "Space details", type: "dynamic" },
+  ],
   clinic: [
     { id: "trainers", label: "Doctors", icon: Stethoscope, description: "Specialists & timings", type: "dynamic" },
     { id: "services", label: "Treatments", icon: Stethoscope, description: "Consultations, procedures", type: "dynamic" },
     { id: "plans", label: "Health Packages", icon: Star, description: "Checkup packages", type: "dynamic" },
     { id: "facilities", label: "Specializations", icon: FileText, description: "Departments", type: "dynamic" },
   ],
+  dental: [
+    { id: "trainers", label: "Dentists", icon: Stethoscope, description: "Specialists", type: "dynamic" },
+    { id: "services", label: "Treatments", icon: Stethoscope, description: "Procedures & pricing", type: "dynamic" },
+    { id: "plans", label: "Packages", icon: Star, description: "Dental care plans", type: "dynamic" },
+  ],
   real_estate: [
     { id: "services", label: "Projects", icon: Home, description: "Available properties", type: "dynamic" },
     { id: "plans", label: "Price Sheets", icon: FileText, description: "Pricing & EMI", type: "dynamic" },
-    { id: "facilities", label: "Amenities & Floor Plans", icon: Building, description: "Project details", type: "dynamic" },
+    { id: "facilities", label: "Amenities", icon: Building, description: "Project amenities", type: "dynamic" },
   ],
   coaching: [
     { id: "services", label: "Courses", icon: BookOpen, description: "Programs offered", type: "dynamic" },
@@ -80,53 +90,61 @@ const BUSINESS_TYPE_SECTIONS: Record<string, SectionDef[]> = {
     { id: "trainers", label: "Faculty", icon: Users, description: "Teachers & mentors", type: "dynamic" },
     { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, etc.", type: "dynamic" },
   ],
+  consultancy: [
+    { id: "services", label: "Services", icon: Star, description: "Consulting services", type: "dynamic" },
+    { id: "plans", label: "Packages & Pricing", icon: FileText, description: "Engagement models", type: "dynamic" },
+    { id: "trainers", label: "Team", icon: Users, description: "Consultants & experts", type: "dynamic" },
+  ],
+  repair: [
+    { id: "services", label: "Repair Services", icon: Star, description: "What you fix", type: "dynamic" },
+    { id: "plans", label: "Pricing", icon: FileText, description: "Service charges", type: "dynamic" },
+    { id: "facilities", label: "Brands & Warranty", icon: Building, description: "Supported brands", type: "dynamic" },
+  ],
+  retail: [
+    { id: "services", label: "Products", icon: Star, description: "What you sell", type: "dynamic" },
+    { id: "plans", label: "Offers & Deals", icon: FileText, description: "Discounts, combos", type: "dynamic" },
+    { id: "facilities", label: "Store Info", icon: Building, description: "Delivery, returns", type: "dynamic" },
+  ],
+  agency: [
+    { id: "services", label: "Services", icon: Star, description: "What you offer", type: "dynamic" },
+    { id: "plans", label: "Pricing Plans", icon: FileText, description: "Packages & retainers", type: "dynamic" },
+    { id: "trainers", label: "Team", icon: Users, description: "Your team", type: "dynamic" },
+  ],
+  fitness: [
+    { id: "plans", label: "Membership Plans", icon: Star, description: "Subscriptions", type: "dynamic" },
+    { id: "services", label: "Programs", icon: Dumbbell, description: "Workout programs", type: "dynamic" },
+    { id: "trainers", label: "Coaches", icon: Users, description: "Fitness coaches", type: "dynamic" },
+  ],
+  spa: [
+    { id: "services", label: "Therapies", icon: Scissors, description: "Spa treatments", type: "dynamic" },
+    { id: "plans", label: "Packages", icon: Star, description: "Combo packages", type: "dynamic" },
+    { id: "trainers", label: "Therapists", icon: Users, description: "Your team", type: "dynamic" },
+  ],
   other: [
     { id: "services", label: "Services", icon: Star, description: "What you offer", type: "dynamic" },
     { id: "plans", label: "Pricing", icon: FileText, description: "Your pricing", type: "dynamic" },
   ],
 };
 
-// Business-type specific labels for generic sections
+// Business-type labels (placeholders for each section)
 const TYPE_LABELS: Record<string, Record<string, { title: string; addLabel: string; namePlaceholder: string; pricePlaceholder: string; descPlaceholder: string }>> = {
-  gym: {
-    services: { title: "Classes & Programs", addLabel: "Add Class", namePlaceholder: "e.g. Zumba, HIIT, Yoga", pricePlaceholder: "₹500/session", descPlaceholder: "Schedule, level, duration" },
-    plans: { title: "Membership Plans", addLabel: "Add Plan", namePlaceholder: "e.g. Basic, Pro, Premium", pricePlaceholder: "₹1500/month", descPlaceholder: "" },
-    trainers: { title: "Trainers", addLabel: "Add Trainer", namePlaceholder: "Trainer name", pricePlaceholder: "₹2000/session", descPlaceholder: "Specialization, experience" },
-    facilities: { title: "Facilities & Equipment", addLabel: "Add Facility", namePlaceholder: "e.g. AC Gym, Steam Room", pricePlaceholder: "", descPlaceholder: "Details" },
-  },
-  salon: {
-    services: { title: "Services & Pricing", addLabel: "Add Service", namePlaceholder: "e.g. Haircut, Facial, Bridal", pricePlaceholder: "₹500", descPlaceholder: "Duration, details" },
-    plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Bridal Package, Monthly Care", pricePlaceholder: "₹5000", descPlaceholder: "" },
-    trainers: { title: "Stylists & Team", addLabel: "Add Stylist", namePlaceholder: "Stylist name", pricePlaceholder: "", descPlaceholder: "Specialization, experience" },
-    facilities: { title: "Gallery & Portfolio", addLabel: "Add Item", namePlaceholder: "e.g. Before/After, Bridal Look", pricePlaceholder: "", descPlaceholder: "Description" },
-  },
-  restaurant: {
-    services: { title: "Menu Items", addLabel: "Add Item", namePlaceholder: "e.g. Butter Chicken, Paneer Tikka", pricePlaceholder: "₹350", descPlaceholder: "Category, veg/non-veg" },
-    plans: { title: "Combos & Offers", addLabel: "Add Combo", namePlaceholder: "e.g. Family Meal, Lunch Special", pricePlaceholder: "₹599", descPlaceholder: "" },
-    facilities: { title: "Delivery & Dine-in Info", addLabel: "Add Info", namePlaceholder: "e.g. Free Delivery, AC Seating", pricePlaceholder: "", descPlaceholder: "Details" },
-  },
-  clinic: {
-    services: { title: "Treatments & Consultations", addLabel: "Add Treatment", namePlaceholder: "e.g. General Consultation, X-Ray", pricePlaceholder: "₹500", descPlaceholder: "Duration, preparation" },
-    plans: { title: "Health Packages", addLabel: "Add Package", namePlaceholder: "e.g. Full Body Checkup", pricePlaceholder: "₹2500", descPlaceholder: "" },
-    trainers: { title: "Doctors & Specialists", addLabel: "Add Doctor", namePlaceholder: "Dr. Name", pricePlaceholder: "₹800/consultation", descPlaceholder: "Specialization, timings, qualifications" },
-    facilities: { title: "Specializations & Departments", addLabel: "Add Department", namePlaceholder: "e.g. Cardiology, Orthopedics", pricePlaceholder: "", descPlaceholder: "Details" },
-  },
-  real_estate: {
-    services: { title: "Projects & Properties", addLabel: "Add Project", namePlaceholder: "e.g. Green Valley Phase 2", pricePlaceholder: "₹45L onwards", descPlaceholder: "Location, type, possession" },
-    plans: { title: "Price Sheets & EMI", addLabel: "Add Price Sheet", namePlaceholder: "e.g. 2BHK, 3BHK", pricePlaceholder: "₹55,00,000", descPlaceholder: "" },
-    facilities: { title: "Amenities & Floor Plans", addLabel: "Add Amenity", namePlaceholder: "e.g. Swimming Pool, Club House", pricePlaceholder: "", descPlaceholder: "Details" },
-  },
-  coaching: {
-    services: { title: "Courses & Programs", addLabel: "Add Course", namePlaceholder: "e.g. JEE Prep, NEET Batch", pricePlaceholder: "₹25000/year", descPlaceholder: "Duration, batch timings" },
-    plans: { title: "Fee Structure", addLabel: "Add Fee Plan", namePlaceholder: "e.g. Regular Batch, Weekend Batch", pricePlaceholder: "₹15000/6 months", descPlaceholder: "" },
-    trainers: { title: "Faculty", addLabel: "Add Faculty", namePlaceholder: "Teacher name", pricePlaceholder: "", descPlaceholder: "Subject, experience, qualifications" },
-    facilities: { title: "Facilities", addLabel: "Add Facility", namePlaceholder: "e.g. Computer Lab, Library", pricePlaceholder: "", descPlaceholder: "Details" },
-  },
-  other: {
-    services: { title: "Services", addLabel: "Add Service", namePlaceholder: "Service name", pricePlaceholder: "Price", descPlaceholder: "Description" },
-    plans: { title: "Pricing", addLabel: "Add Plan", namePlaceholder: "Plan name", pricePlaceholder: "Price", descPlaceholder: "" },
-  },
+  gym: { services: { title: "Classes & Programs", addLabel: "Add Class", namePlaceholder: "e.g. Zumba, HIIT, Yoga", pricePlaceholder: "₹500/session", descPlaceholder: "Schedule, level, duration" }, plans: { title: "Membership Plans", addLabel: "Add Plan", namePlaceholder: "e.g. Basic, Pro, Premium", pricePlaceholder: "₹1500/month", descPlaceholder: "" }, trainers: { title: "Trainers", addLabel: "Add Trainer", namePlaceholder: "Trainer name", pricePlaceholder: "₹2000/session", descPlaceholder: "Specialization, experience" }, facilities: { title: "Facilities", addLabel: "Add Facility", namePlaceholder: "e.g. AC Gym, Steam Room", pricePlaceholder: "", descPlaceholder: "Details" } },
+  fitness: { services: { title: "Programs", addLabel: "Add Program", namePlaceholder: "e.g. Weight Loss, HIIT", pricePlaceholder: "₹3000/month", descPlaceholder: "Details" }, plans: { title: "Membership", addLabel: "Add Plan", namePlaceholder: "Plan name", pricePlaceholder: "₹2000/month", descPlaceholder: "" }, trainers: { title: "Coaches", addLabel: "Add Coach", namePlaceholder: "Coach name", pricePlaceholder: "₹1500/session", descPlaceholder: "Specialization" } },
+  salon: { services: { title: "Services & Pricing", addLabel: "Add Service", namePlaceholder: "e.g. Haircut, Facial, Bridal", pricePlaceholder: "₹500", descPlaceholder: "Duration, details" }, plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Bridal Package", pricePlaceholder: "₹5000", descPlaceholder: "" }, trainers: { title: "Stylists", addLabel: "Add Stylist", namePlaceholder: "Stylist name", pricePlaceholder: "", descPlaceholder: "Specialization" }, facilities: { title: "Gallery", addLabel: "Add Item", namePlaceholder: "e.g. Before/After", pricePlaceholder: "", descPlaceholder: "Description" } },
+  spa: { services: { title: "Therapies", addLabel: "Add Therapy", namePlaceholder: "e.g. Swedish Massage, Facial", pricePlaceholder: "₹2000", descPlaceholder: "Duration" }, plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Relaxation Package", pricePlaceholder: "₹5000", descPlaceholder: "" }, trainers: { title: "Therapists", addLabel: "Add Therapist", namePlaceholder: "Name", pricePlaceholder: "", descPlaceholder: "Specialization" } },
+  restaurant: { services: { title: "Menu Items", addLabel: "Add Item", namePlaceholder: "e.g. Butter Chicken, Paneer Tikka", pricePlaceholder: "₹350", descPlaceholder: "Category, veg/non-veg" }, plans: { title: "Combos & Offers", addLabel: "Add Combo", namePlaceholder: "e.g. Family Meal", pricePlaceholder: "₹599", descPlaceholder: "" }, facilities: { title: "Delivery & Dine-in", addLabel: "Add Info", namePlaceholder: "e.g. Free Delivery, AC Seating", pricePlaceholder: "", descPlaceholder: "Details" } },
+  cafe: { services: { title: "Menu", addLabel: "Add Item", namePlaceholder: "e.g. Cappuccino, Sandwich", pricePlaceholder: "₹200", descPlaceholder: "Category" }, plans: { title: "Offers", addLabel: "Add Offer", namePlaceholder: "e.g. Happy Hour", pricePlaceholder: "₹299", descPlaceholder: "" }, facilities: { title: "Ambience", addLabel: "Add Info", namePlaceholder: "e.g. WiFi, Outdoor Seating", pricePlaceholder: "", descPlaceholder: "Details" } },
+  clinic: { services: { title: "Treatments", addLabel: "Add Treatment", namePlaceholder: "e.g. Consultation, X-Ray", pricePlaceholder: "₹500", descPlaceholder: "Duration" }, plans: { title: "Health Packages", addLabel: "Add Package", namePlaceholder: "e.g. Full Body Checkup", pricePlaceholder: "₹2500", descPlaceholder: "" }, trainers: { title: "Doctors", addLabel: "Add Doctor", namePlaceholder: "Dr. Name", pricePlaceholder: "₹800/visit", descPlaceholder: "Specialization, qualifications" }, facilities: { title: "Departments", addLabel: "Add Department", namePlaceholder: "e.g. Cardiology", pricePlaceholder: "", descPlaceholder: "Details" } },
+  dental: { services: { title: "Treatments", addLabel: "Add Treatment", namePlaceholder: "e.g. Cleaning, Root Canal", pricePlaceholder: "₹1500", descPlaceholder: "Duration" }, plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Annual Care Plan", pricePlaceholder: "₹5000/year", descPlaceholder: "" }, trainers: { title: "Dentists", addLabel: "Add Dentist", namePlaceholder: "Dr. Name", pricePlaceholder: "₹500/visit", descPlaceholder: "Specialization" } },
+  real_estate: { services: { title: "Projects", addLabel: "Add Project", namePlaceholder: "e.g. Green Valley Phase 2", pricePlaceholder: "₹45L onwards", descPlaceholder: "Location, type, possession" }, plans: { title: "Price Sheets", addLabel: "Add Configuration", namePlaceholder: "e.g. 2BHK, 3BHK", pricePlaceholder: "₹55,00,000", descPlaceholder: "" }, facilities: { title: "Amenities", addLabel: "Add Amenity", namePlaceholder: "e.g. Swimming Pool", pricePlaceholder: "", descPlaceholder: "Details" } },
+  coaching: { services: { title: "Courses", addLabel: "Add Course", namePlaceholder: "e.g. JEE Prep, NEET", pricePlaceholder: "₹25000/year", descPlaceholder: "Duration, batch" }, plans: { title: "Fee Structure", addLabel: "Add Fee Plan", namePlaceholder: "e.g. Weekend Batch", pricePlaceholder: "₹15000", descPlaceholder: "" }, trainers: { title: "Faculty", addLabel: "Add Faculty", namePlaceholder: "Teacher name", pricePlaceholder: "", descPlaceholder: "Subject, experience" }, facilities: { title: "Facilities", addLabel: "Add Facility", namePlaceholder: "e.g. Computer Lab", pricePlaceholder: "", descPlaceholder: "Details" } },
+  consultancy: { services: { title: "Services", addLabel: "Add Service", namePlaceholder: "e.g. Tax Filing, Audit", pricePlaceholder: "₹5000", descPlaceholder: "Details" }, plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Annual Retainer", pricePlaceholder: "₹50000/year", descPlaceholder: "" }, trainers: { title: "Team", addLabel: "Add Member", namePlaceholder: "Name", pricePlaceholder: "", descPlaceholder: "Role, expertise" } },
+  repair: { services: { title: "Repair Services", addLabel: "Add Service", namePlaceholder: "e.g. Screen Repair, AC Service", pricePlaceholder: "₹500", descPlaceholder: "Turnaround time" }, plans: { title: "Pricing", addLabel: "Add Price", namePlaceholder: "e.g. Basic Service, Premium", pricePlaceholder: "₹1000", descPlaceholder: "" }, facilities: { title: "Brands", addLabel: "Add Brand", namePlaceholder: "e.g. Samsung, LG", pricePlaceholder: "", descPlaceholder: "Warranty info" } },
+  retail: { services: { title: "Products", addLabel: "Add Product", namePlaceholder: "e.g. iPhone 15, T-Shirt", pricePlaceholder: "₹999", descPlaceholder: "Category, brand" }, plans: { title: "Offers", addLabel: "Add Offer", namePlaceholder: "e.g. Buy 2 Get 1", pricePlaceholder: "", descPlaceholder: "Terms" }, facilities: { title: "Store Info", addLabel: "Add Info", namePlaceholder: "e.g. Free Delivery, Returns", pricePlaceholder: "", descPlaceholder: "Policy details" } },
+  agency: { services: { title: "Services", addLabel: "Add Service", namePlaceholder: "e.g. SEO, Social Media", pricePlaceholder: "₹15000/month", descPlaceholder: "Deliverables" }, plans: { title: "Pricing Plans", addLabel: "Add Plan", namePlaceholder: "e.g. Starter, Growth", pricePlaceholder: "₹25000/month", descPlaceholder: "" }, trainers: { title: "Team", addLabel: "Add Member", namePlaceholder: "Name", pricePlaceholder: "", descPlaceholder: "Role, portfolio" } },
+  other: { services: { title: "Services", addLabel: "Add Service", namePlaceholder: "Service name", pricePlaceholder: "Price", descPlaceholder: "Description" }, plans: { title: "Pricing", addLabel: "Add Plan", namePlaceholder: "Plan name", pricePlaceholder: "Price", descPlaceholder: "" } },
 };
+
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -179,6 +197,12 @@ export default function KnowledgePage() {
       if (knowledge.services?.length) {
         setServices(knowledge.services.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
       }
+      if (knowledge.trainers?.length) {
+        setTrainers(knowledge.trainers.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+      }
+      if (knowledge.facilities?.length) {
+        setFacilities(knowledge.facilities.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+      }
       if (knowledge.plans?.length) {
         setPlans(knowledge.plans.map((p: Record<string, unknown>) => ({ name: (p.name as string) || "", price: (p.price as string) || "", duration: (p.duration as string) || "month", features: (p.features as string[]) || [], is_popular: (p.is_popular as boolean) || false })));
       }
@@ -221,25 +245,16 @@ export default function KnowledgePage() {
         payload = { section: "plans", data: plans.filter((p) => p.name.trim()) };
         break;
       case "trainers":
-        // Save trainers as services with category
-        payload = { section: "services", data: [
-          ...services.filter((s) => s.name.trim()),
-          ...trainers.filter((t) => t.name.trim()).map((t) => ({ ...t, category: "trainer" })),
-          ...facilities.filter((f) => f.name.trim()).map((f) => ({ ...f, category: "facility" })),
-        ]};
+        payload = { section: "trainers", data: trainers.filter((t) => t.name.trim()) };
         break;
       case "facilities":
-        payload = { section: "services", data: [
-          ...services.filter((s) => s.name.trim()),
-          ...trainers.filter((t) => t.name.trim()).map((t) => ({ ...t, category: "trainer" })),
-          ...facilities.filter((f) => f.name.trim()).map((f) => ({ ...f, category: "facility" })),
-        ]};
+        payload = { section: "facilities", data: facilities.filter((f) => f.name.trim()) };
         break;
       case "faqs":
         payload = { section: "faqs", data: faqs.filter((f) => f.question.trim()) };
         break;
       case "notes":
-        payload = { section: "profile", data: { ...profile, ...contact, ...location, additional_notes: additionalNotes } };
+        payload = { section: "notes", data: additionalNotes };
         break;
       default:
         payload = { section: "profile", data: {} };
@@ -373,7 +388,7 @@ export default function KnowledgePage() {
             </nav>
             <div className="border-t border-border pt-2 mb-1">
               <p className="text-[10px] uppercase tracking-wider text-text-muted font-semibold px-3 mb-1">
-                {profile.type === "gym" ? "🏋️ Gym" : profile.type === "salon" ? "💇 Salon" : profile.type === "restaurant" ? "🍽️ Restaurant" : profile.type === "clinic" ? "🏥 Clinic" : profile.type === "real_estate" ? "🏠 Real Estate" : profile.type === "coaching" ? "📚 Coaching" : "📋 Business"}
+                {({ gym: "🏋️ Gym", fitness: "💪 Fitness", salon: "💇 Salon", spa: "🧖 Spa", clinic: "🏥 Clinic", dental: "🦷 Dental", restaurant: "🍽️ Restaurant", cafe: "☕ Cafe", real_estate: "🏠 Real Estate", coaching: "📚 Coaching", consultancy: "💼 Consultancy", repair: "🔧 Repair", retail: "🛍️ Retail", agency: "📱 Agency", other: "📋 Business" } as Record<string, string>)[profile.type] || "📋 Business"}
               </p>
               <nav className="space-y-0.5">
                 {(BUSINESS_TYPE_SECTIONS[profile.type] || BUSINESS_TYPE_SECTIONS.other).map((sec) => (
@@ -414,7 +429,21 @@ export default function KnowledgePage() {
                 <div><label className="text-sm font-medium block mb-1.5">Owner Name</label><input value={profile.owner_name} onChange={(e) => setProfile({ ...profile, owner_name: e.target.value })} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
                 <div><label className="text-sm font-medium block mb-1.5">Business Type</label>
                   <select value={profile.type} onChange={(e) => { setProfile({ ...profile, type: e.target.value }); setActiveSection("profile"); }} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                    <option value="gym">🏋️ Gym / Fitness</option><option value="salon">💇 Salon / Spa</option><option value="clinic">🏥 Clinic / Hospital</option><option value="coaching">📚 Coaching Center</option><option value="restaurant">🍽️ Restaurant / Cafe</option><option value="real_estate">🏠 Real Estate</option><option value="other">📋 Other</option>
+                    <option value="gym">🏋️ Gym</option>
+                    <option value="fitness">💪 Fitness Studio</option>
+                    <option value="salon">💇 Salon</option>
+                    <option value="spa">🧖 Spa</option>
+                    <option value="clinic">🏥 Clinic</option>
+                    <option value="dental">🦷 Dental Clinic</option>
+                    <option value="restaurant">🍽️ Restaurant</option>
+                    <option value="cafe">☕ Cafe</option>
+                    <option value="real_estate">🏠 Real Estate</option>
+                    <option value="coaching">📚 Coaching Institute</option>
+                    <option value="consultancy">💼 Consultancy</option>
+                    <option value="repair">🔧 Repair Services</option>
+                    <option value="retail">🛍️ Retail Store</option>
+                    <option value="agency">📱 Agency</option>
+                    <option value="other">📋 Other</option>
                   </select>
                   <p className="text-xs text-text-muted mt-1.5">This determines which sections appear in your knowledge base</p>
                 </div>

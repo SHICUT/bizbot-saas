@@ -45,7 +45,15 @@ export async function generateSalesReply(
   // 5. Build system prompt with detected language
   const systemPrompt = buildSystemPrompt(ctx, languageResult);
 
-  // 6. Call AI (Gemini → Groq → OpenAI fallback)
+  // 6. If no business context at all, add safety guardrail
+  if (!ctx.businessContext || ctx.businessContext.length < 30) {
+    const noCtxReply = languageResult.language === "hinglish"
+      ? "Abhi mere paas aapke business ki poori information nahi hai. Owner jaldi update karenge. Kya main kisi aur cheez mein help kar sakta hoon?"
+      : "I don't have complete information about this business yet. Let me connect you with the team for accurate details. Is there anything else I can help with?";
+    return { reply: noCtxReply, actions: [], intent, confidence: 0.3, shouldEscalate: false, tokensUsed: 0 };
+  }
+
+  // 7. Call AI (Gemini → Groq → OpenAI fallback)
   try {
     const history = ctx.conversationHistory
       .slice(-12)

@@ -300,7 +300,7 @@ export async function getFollowUpStats(businessId: string): Promise<{
     }
   }
 
-  const conversionRate = totalSent > 0 ? Math.round((converted / (repliedBack + converted)) * 100) : 0;
+  const conversionRate = (repliedBack + converted) > 0 ? Math.round((converted / (repliedBack + converted)) * 100) : 0;
 
   return { totalSent, repliedBack, converted, activeSequences, conversionRate };
 }

@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   }
 
+  if (!lead.wa_id) {
+    return NextResponse.json({ error: "This lead has no WhatsApp ID. They need to message you first." }, { status: 400 });
+  }
+
   // 5. Get or create conversation
   const { data: conversation } = await supabase
     .from("conversations")

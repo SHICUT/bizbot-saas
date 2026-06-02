@@ -30,6 +30,10 @@ ALTER TABLE public.businesses
 ALTER TABLE public.businesses
   ADD COLUMN IF NOT EXISTS google_review_link TEXT;
 
+-- Add knowledge_json JSONB as fallback storage when structured tables don't exist
+ALTER TABLE public.businesses
+  ADD COLUMN IF NOT EXISTS knowledge_json JSONB DEFAULT '{}'::jsonb;
+
 -- Create business knowledge tables if not exists (migration 005)
 CREATE TABLE IF NOT EXISTS public.business_services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -30,16 +30,22 @@ export async function GET() {
 
   // Try structured tables first, gracefully fall back to JSONB
   let servicesData: unknown[] = [];
+  let trainersData: unknown[] = [];
+  let facilitiesData: unknown[] = [];
   let plansData: unknown[] = [];
   let faqsData: unknown[] = [];
 
   try {
-    const [svc, pln, faq] = await Promise.all([
+    const [svcAll, pln, faq] = await Promise.all([
       admin.from("business_services").select("*").eq("business_id", business.id).order("sort_order"),
       admin.from("business_plans").select("*").eq("business_id", business.id).order("sort_order"),
       admin.from("business_faqs").select("*").eq("business_id", business.id).order("sort_order"),
     ]);
-    servicesData = svc.data || [];
+
+    const allSvc = svcAll.data || [];
+    servicesData = allSvc.filter((s) => !s.category || s.category === "service");
+    trainersData = allSvc.filter((s) => s.category === "trainer");
+    facilitiesData = allSvc.filter((s) => s.category === "facility");
     plansData = pln.data || [];
     faqsData = faq.data || [];
   } catch {
@@ -47,6 +53,8 @@ export async function GET() {
     const ctx = business.knowledge_json as Record<string, unknown> | null;
     if (ctx) {
       servicesData = (ctx.services as unknown[]) || [];
+      trainersData = (ctx.trainers as unknown[]) || [];
+      facilitiesData = (ctx.facilities as unknown[]) || [];
       plansData = (ctx.plans as unknown[]) || [];
       faqsData = (ctx.faqs as unknown[]) || [];
     }
@@ -69,6 +77,8 @@ export async function GET() {
       business_hours: business.business_hours || null,
     },
     services: servicesData,
+    trainers: trainersData,
+    facilities: facilitiesData,
     plans: plansData,
     faqs: faqsData,
   });
@@ -110,6 +120,19 @@ export async function POST(request: NextRequest) {
       await saveListSection(admin, business, "services", items, "business_services", mapServiceRow);
       break;
     }
+    case "trainers": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      // Store trainers as services with a category tag
+      const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "trainer" }, business.id, i));
+      await saveListSectionWithCategory(admin, business, "trainer", rows);
+      break;
+    }
+    case "facilities": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "facility" }, business.id, i));
+      await saveListSectionWithCategory(admin, business, "facility", rows);
+      break;
+    }
     case "plans": {
       const items = (data as unknown[]).filter((p: unknown) => (p as Record<string, string>).name?.trim());
       await saveListSection(admin, business, "plans", items, "business_plans", mapPlanRow);
@@ -118,6 +141,12 @@ export async function POST(request: NextRequest) {
     case "faqs": {
       const items = (data as unknown[]).filter((f: unknown) => (f as Record<string, string>).question?.trim());
       await saveListSection(admin, business, "faqs", items, "business_faqs", mapFaqRow);
+      break;
+    }
+    case "notes": {
+      // Notes saved directly to business_context field
+      const { error } = await admin.from("businesses").update({ business_context: String(data || "") }).eq("id", business.id);
+      if (error) return NextResponse.json({ error: "Failed to save notes: " + error.message }, { status: 500 });
       break;
     }
     default:
@@ -210,6 +239,31 @@ async function saveListSection(
   }
 }
 
+/**
+ * Save categorized items (trainers, facilities) without touching other categories
+ */
+async function saveListSectionWithCategory(
+  admin: ReturnType<typeof createAdminClient>,
+  business: { id: string; knowledge_json: unknown },
+  category: string,
+  rows: Record<string, unknown>[]
+) {
+  try {
+    // Delete only items of this category, preserve others
+    await admin.from("business_services").delete().eq("business_id", business.id).eq("category", category);
+    if (rows.length > 0) {
+      const { error } = await admin.from("business_services").insert(rows);
+      if (error) throw error;
+    }
+  } catch (e) {
+    // Fallback to JSONB
+    const existing = (business.knowledge_json as Record<string, unknown>) || {};
+    const updated = { ...existing, [category + "s"]: rows };
+    const { error } = await admin.from("businesses").update({ knowledge_json: updated }).eq("id", business.id);
+    if (error) throw new Error(`Cannot save ${category}s. Please run migration 013.`);
+  }
+}
+
 async function saveToJsonFallback(
   admin: ReturnType<typeof createAdminClient>,
   business: { id: string; knowledge_json: unknown },
@@ -235,6 +289,7 @@ function mapServiceRow(item: Record<string, unknown>, businessId: string, index:
     description: item.description ? String(item.description) : null,
     price: item.price ? String(item.price) : null,
     duration: item.duration ? String(item.duration) : null,
+    category: item.category ? String(item.category) : "service",
     is_active: true,
     sort_order: index,
   };
