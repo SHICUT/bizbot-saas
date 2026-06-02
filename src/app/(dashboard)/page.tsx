@@ -165,6 +165,27 @@ export default function DashboardPage() {
               <a href="/billing" className="block mt-4 text-xs text-primary font-medium hover:underline">Unlock all features →</a>
             </Card>
           )}
+
+          {/* WhatsApp Status */}
+          <Card>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${data.business?.whatsapp_connected ? "bg-emerald-50" : "bg-gray-100"}`}>
+                  <MessageSquare className={`w-4 h-4 ${data.business?.whatsapp_connected ? "text-emerald-600" : "text-gray-400"}`} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-text-primary">WhatsApp</p>
+                  <p className="text-[10px] text-text-muted">{data.business?.whatsapp_connected ? "Connected & Active" : "Not connected"}</p>
+                </div>
+              </div>
+              {!data.business?.whatsapp_connected && (
+                <a href="/settings" className="text-[10px] text-primary font-medium hover:underline">Connect →</a>
+              )}
+              {data.business?.whatsapp_connected && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              )}
+            </div>
+          </Card>
         </motion.div>
       </div>
     </div>

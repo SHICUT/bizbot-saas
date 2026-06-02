@@ -59,6 +59,24 @@ export default function AnalyticsPage() {
     <div>
       <PageHeader title="Revenue Intelligence" description="Your AI's business impact at a glance" />
 
+      {/* Empty state when no data */}
+      {funnel && funnel.totalLeads === 0 && (
+        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-indigo-50 border-primary/20">
+          <div className="flex flex-col sm:flex-row items-center gap-4 py-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="w-7 h-7 text-primary" />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="text-base font-bold text-text-primary">Connect WhatsApp to start tracking revenue</h3>
+              <p className="text-sm text-text-muted mt-1">Once connected, AI will automatically capture leads, book appointments, and track conversions. All revenue data appears here.</p>
+            </div>
+            <a href="/settings">
+              <Button><Zap className="w-4 h-4" /> Connect Now</Button>
+            </a>
+          </div>
+        </Card>
+      )}
+
       {/* Hero Revenue KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
