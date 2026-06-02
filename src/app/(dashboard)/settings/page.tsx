@@ -38,11 +38,36 @@ export default function SettingsPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setErrorMsg(null);
-    setTimeout(() => { setSaving(false); setSuccessMsg("Settings saved!"); setTimeout(() => setSuccessMsg(null), 3000); }, 1000);
+    setSuccessMsg(null);
+    try {
+      const res = await fetch("/api/knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "profile",
+          data: {
+            name: bizData.name,
+            owner_name: userData.name,
+            type: bizData.type,
+            address: bizData.address,
+            city: bizData.city,
+            phone: userData.phone,
+            email: userData.email,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      setSuccessMsg("Settings saved!");
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch {
+      setErrorMsg("Failed to save. Please try again.");
+      setTimeout(() => setErrorMsg(null), 4000);
+    }
+    setSaving(false);
   }
 
   async function handleWhatsAppConnect(e: React.FormEvent) {

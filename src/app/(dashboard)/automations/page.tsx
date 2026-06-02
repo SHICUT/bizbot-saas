@@ -37,15 +37,19 @@ export default function AutomationsPage() {
   // Additional Notes
   const [additionalNotes, setAdditionalNotes] = useState("");
 
+  // Follow-up stats
+  const [followUpStats, setFollowUpStats] = useState({ totalSent: 0, repliedBack: 0, converted: 0, activeSequences: 0, conversionRate: 0 });
+
   useEffect(() => {
-    fetch("/api/knowledge/score")
-      .then((r) => r.json())
-      .then((data) => {
-        setScore(data.score || 0);
-        setScoreSections(data.sections || []);
-        setScoreLoading(false);
-      })
-      .catch(() => setScoreLoading(false));
+    Promise.all([
+      fetch("/api/knowledge/score").then((r) => r.json()),
+      fetch("/api/analytics/follow-ups").then((r) => r.json()).catch(() => ({})),
+    ]).then(([scoreData, fuStats]) => {
+      setScore(scoreData.score || 0);
+      setScoreSections(scoreData.sections || []);
+      if (fuStats.totalSent !== undefined) setFollowUpStats(fuStats);
+      setScoreLoading(false);
+    }).catch(() => setScoreLoading(false));
   }, []);
 
   function handleSaveSettings() {
@@ -233,6 +237,56 @@ export default function AutomationsPage() {
                   </div>
                 )}
               </div>
+            )}
+          </Card>
+
+          {/* Follow-Up Automation Stats */}
+          <Card>
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-5 h-5 text-primary" />
+              <div>
+                <h3 className="text-base font-semibold text-text-primary">Follow-Up Automation</h3>
+                <p className="text-xs text-text-muted">Auto re-engages leads who stop replying</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div className="p-3 rounded-lg bg-blue-50/50 text-center">
+                <p className="text-lg font-bold text-blue-600">{followUpStats.totalSent}</p>
+                <p className="text-[10px] text-text-muted">Sent</p>
+              </div>
+              <div className="p-3 rounded-lg bg-emerald-50/50 text-center">
+                <p className="text-lg font-bold text-emerald-600">{followUpStats.repliedBack}</p>
+                <p className="text-[10px] text-text-muted">Replied</p>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-50/50 text-center">
+                <p className="text-lg font-bold text-purple-600">{followUpStats.converted}</p>
+                <p className="text-[10px] text-text-muted">Converted</p>
+              </div>
+              <div className="p-3 rounded-lg bg-amber-50/50 text-center">
+                <p className="text-lg font-bold text-amber-600">{followUpStats.conversionRate}%</p>
+                <p className="text-[10px] text-text-muted">Rate</p>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-gray-50 border border-border">
+              <p className="text-xs font-medium text-text-primary mb-2">How it works:</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">1</span>
+                  <span>After 24h: Gentle reminder about their inquiry</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                  <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold">2</span>
+                  <span>After 3 days: Share an offer or value proposition</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                  <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-bold">3</span>
+                  <span>After 7 days: Final CTA (book trial/visit)</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-text-muted mt-2">Stops automatically when customer replies. Messages are tailored to your business type.</p>
+            </div>
+            {followUpStats.activeSequences > 0 && (
+              <p className="text-xs text-primary font-medium mt-3">🔄 {followUpStats.activeSequences} active sequence{followUpStats.activeSequences > 1 ? "s" : ""} running</p>
             )}
           </Card>
 

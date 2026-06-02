@@ -18,6 +18,7 @@ import {
   Shield,
   Image,
   BookOpen,
+  Megaphone,
 } from "lucide-react";
 
 const navigation = [
@@ -25,11 +26,12 @@ const navigation = [
   { name: "Knowledge", href: "/knowledge", icon: BookOpen },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Conversations", href: "/conversations", icon: MessageSquare },
+  { name: "Broadcasts", href: "/broadcasts", icon: Megaphone },
   { name: "Automations", href: "/automations", icon: Bot },
   { name: "Appointments", href: "/appointments", icon: Calendar },
   { name: "Media", href: "/media", icon: Image },
   { name: "Simulator", href: "/simulator", icon: FlaskConical },
-  { name: "Analytics", href: "/analytics", icon: BarChart2 },
+  { name: "Revenue", href: "/analytics", icon: BarChart2 },
   { name: "Billing", href: "/billing", icon: CreditCard },
 ];
 

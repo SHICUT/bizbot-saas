@@ -7,6 +7,9 @@
 
 const TESTING_MODE = false; // ← Set to true for ₹10/₹20/₹30 testing
 
+/** Trial duration in days — SINGLE SOURCE OF TRUTH */
+export const TRIAL_DURATION_DAYS = 7;
+
 // ─── Production Pricing ─────────────────────────────────────────────────────
 const PRODUCTION_PRICES = {
   starter: { monthly: 799, yearly: 7670, yearlyEquivalent: 639 },

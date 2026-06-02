@@ -104,7 +104,7 @@ export async function getSubscriptionStatus(businessId: string): Promise<Subscri
   const canSendMessage = isActive && messagesRemaining > 0;
 
   const trialDaysRemaining = trialEnd && isTrialing
-    ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+    ? Math.min(7, Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))))
     : null;
 
   const features = isActive ? (PLAN_FEATURES[plan] || PLAN_FEATURES.trial) : getDisabledFeatures();

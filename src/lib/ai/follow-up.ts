@@ -2,132 +2,121 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { WhatsAppClient } from "@/lib/whatsapp/client";
 
 /**
- * Follow-Up Engine
+ * Follow-Up Automation Engine
  *
- * Handles automated follow-up messages for leads that went quiet.
- * Called by a cron job (Vercel Cron or external scheduler).
+ * Automatically re-engages leads who stop replying.
+ * Business-type aware messaging. Stops when customer replies.
  *
- * Follow-up strategy:
- * - Day 1 (24h): Gentle reminder about their inquiry
- * - Day 3 (72h): Offer something (trial, discount, info)
- * - Day 7 (168h): Final check-in, no pressure
+ * Schedule:
+ * - Step 1: 24 hours after last message (gentle reminder)
+ * - Step 2: 3 days after last message (offer/value)
+ * - Step 3: 7 days after last message (final check, book trial)
  *
  * Rules:
- * - Never follow up if lead replied after the follow-up was scheduled
- * - Never follow up if lead is already converted or lost
+ * - Never follow up converted or lost leads
+ * - Stop immediately when customer replies
  * - Max 3 follow-ups per lead
- * - Respect business hours (only send during open hours)
+ * - Respect business hours (IST 9 AM - 9 PM)
+ * - Only follow up leads from WhatsApp/Instagram (have wa_id)
  */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface FollowUpCandidate {
-  lead_id: string;
-  business_id: string;
-  lead_name: string | null;
-  lead_phone: string;
-  wa_id: string;
-  last_message_at: string;
-  follow_up_context: string | null;
-  business_name: string;
-  phone_number_id: string;
-  access_token: string;
-  ai_language: string;
+const FOLLOW_UP_DELAYS_HOURS = [24, 72, 168]; // 1 day, 3 days, 7 days
+
+interface FollowUpResult {
+  sent: number;
+  skipped: number;
+  errors: number;
+  details: Array<{ leadId: string; step: number; status: "sent" | "skipped" | "error"; reason?: string }>;
 }
 
 /**
  * Process all pending follow-ups.
- * Called by cron job every hour.
+ * Called by cron job (daily or hourly).
  */
-export async function processFollowUps(): Promise<{ sent: number; skipped: number }> {
+export async function processFollowUps(): Promise<FollowUpResult> {
   const supabase = createAdminClient();
-  let sent = 0;
-  let skipped = 0;
+  const result: FollowUpResult = { sent: 0, skipped: 0, errors: 0, details: [] };
 
-  // Find leads that need follow-up
-  const { data: candidates } = await supabase
-    .from("leads")
-    .select(`
-      id,
-      business_id,
-      name,
-      phone,
-      wa_id,
-      last_message_at,
-      metadata,
-      businesses!inner (
-        name,
-        whatsapp_phone_number_id,
-        whatsapp_access_token,
-        ai_language,
-        ai_enabled,
-        is_active
-      )
-    `)
-    .in("status", ["new", "contacted"])
-    .not("metadata->follow_up_scheduled", "is", null)
-    .limit(50);
-
-  if (!candidates || candidates.length === 0) {
-    return { sent: 0, skipped: 0 };
+  // Check business hours (IST)
+  const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const hour = nowIST.getHours();
+  if (hour < 9 || hour >= 21) {
+    return { ...result, skipped: 1, details: [{ leadId: "all", step: 0, status: "skipped", reason: "Outside business hours (9AM-9PM IST)" }] };
   }
 
   const now = new Date();
 
-  for (const candidate of candidates) {
-    const metadata = (candidate.metadata || {}) as Record<string, unknown>;
-    const followUpAt = metadata.follow_up_at as string | undefined;
-    const followUpCount = (metadata.follow_up_count as number) || 0;
+  // Find eligible leads: active leads with wa_id, not converted/lost, last message > 24h ago
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-    // Skip if not yet time
-    if (followUpAt && new Date(followUpAt) > now) {
-      skipped++;
-      continue;
-    }
+  const { data: leads } = await supabase
+    .from("leads")
+    .select(`
+      id, name, phone, wa_id, status, lead_temperature, last_message_at, metadata, source,
+      businesses!inner (
+        id, name, type, whatsapp_phone_number_id, whatsapp_access_token,
+        ai_enabled, is_active, ai_language
+      )
+    `)
+    .in("status", ["new", "contacted", "qualified"])
+    .not("wa_id", "is", null)
+    .lt("last_message_at", oneDayAgo)
+    .limit(100);
 
-    // Skip if max follow-ups reached
-    if (followUpCount >= 3) {
-      skipped++;
-      continue;
-    }
+  if (!leads || leads.length === 0) return result;
 
-    // Skip if lead replied after follow-up was scheduled
-    const lastMsg = candidate.last_message_at;
-    const scheduledAt = metadata.follow_up_scheduled_at as string;
-    if (lastMsg && scheduledAt && new Date(lastMsg) > new Date(scheduledAt)) {
-      // Lead replied — clear follow-up
-      await supabase
-        .from("leads")
-        .update({
-          metadata: {
-            ...metadata,
-            follow_up_scheduled: false,
-          },
-        })
-        .eq("id", candidate.id);
-      skipped++;
-      continue;
-    }
-
-    // Get business info
-    const business = candidate.businesses as unknown as {
-      name: string;
-      whatsapp_phone_number_id: string;
-      whatsapp_access_token: string;
-      ai_language: string;
-      ai_enabled: boolean;
-      is_active: boolean;
+  for (const lead of leads) {
+    const business = lead.businesses as unknown as {
+      id: string; name: string; type: string;
+      whatsapp_phone_number_id: string; whatsapp_access_token: string;
+      ai_enabled: boolean; is_active: boolean; ai_language: string;
     };
 
-    if (!business?.is_active || !business?.ai_enabled) {
-      skipped++;
+    // Skip if business inactive or AI disabled
+    if (!business?.is_active || !business?.ai_enabled || !business?.whatsapp_phone_number_id) {
+      result.skipped++;
       continue;
     }
 
-    // Generate follow-up message
+    const metadata = (lead.metadata || {}) as Record<string, unknown>;
+    const followUpCount = (metadata.follow_up_count as number) || 0;
+
+    // Max 3 follow-ups
+    if (followUpCount >= 3) {
+      result.skipped++;
+      continue;
+    }
+
+    // Check if enough time has passed for this step
+    const lastMsgTime = new Date(lead.last_message_at || now).getTime();
+    const lastFollowUp = metadata.last_follow_up_at ? new Date(metadata.last_follow_up_at as string).getTime() : 0;
+    const referenceTime = Math.max(lastMsgTime, lastFollowUp);
+    const hoursSinceReference = (now.getTime() - referenceTime) / (1000 * 60 * 60);
+    const requiredDelay = FOLLOW_UP_DELAYS_HOURS[followUpCount] || 168;
+
+    if (hoursSinceReference < requiredDelay) {
+      result.skipped++;
+      continue;
+    }
+
+    // Check if customer replied after our last follow-up (stop sequence)
+    if (lastFollowUp > 0 && lastMsgTime > lastFollowUp) {
+      // Customer replied — clear follow-up state
+      await supabase.from("leads").update({
+        metadata: { ...metadata, follow_up_active: false },
+      }).eq("id", lead.id);
+      result.skipped++;
+      result.details.push({ leadId: lead.id, step: followUpCount, status: "skipped", reason: "Customer replied" });
+      continue;
+    }
+
+    // Generate message based on step + business type
     const message = generateFollowUpMessage(
       followUpCount,
-      candidate.name,
-      metadata.follow_up_context as string | undefined,
+      lead.name,
+      business.type,
+      business.name,
+      metadata.last_inquiry as string | undefined,
       business.ai_language
     );
 
@@ -136,40 +125,36 @@ export async function processFollowUps(): Promise<{ sent: number; skipped: numbe
       const client = new WhatsAppClient({
         phone_number_id: business.whatsapp_phone_number_id,
         access_token: business.whatsapp_access_token,
-        business_id: candidate.business_id,
+        business_id: business.id,
       });
 
-      await client.sendTextMessage(candidate.wa_id, message);
+      await client.sendTextMessage(lead.wa_id!, message);
 
-      // Update follow-up count
-      await supabase
-        .from("leads")
-        .update({
-          metadata: {
-            ...metadata,
-            follow_up_count: followUpCount + 1,
-            last_follow_up_at: now.toISOString(),
-            follow_up_scheduled: followUpCount + 1 < 3, // Schedule next if under limit
-            follow_up_at: followUpCount === 0
-              ? new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString() // Next: 3 days
-              : new Date(now.getTime() + 168 * 60 * 60 * 1000).toISOString(), // Next: 7 days
-          },
-        })
-        .eq("id", candidate.id);
+      // Update metadata
+      await supabase.from("leads").update({
+        metadata: {
+          ...metadata,
+          follow_up_count: followUpCount + 1,
+          follow_up_active: true,
+          last_follow_up_at: now.toISOString(),
+          last_follow_up_step: followUpCount + 1,
+        },
+      }).eq("id", lead.id);
 
-      // Store the outbound message
+      // Store outbound message
       const { data: conv } = await supabase
         .from("conversations")
         .select("id")
-        .eq("business_id", candidate.business_id)
-        .eq("lead_id", candidate.id)
+        .eq("business_id", business.id)
+        .eq("lead_id", lead.id)
+        .limit(1)
         .single();
 
       if (conv) {
         await supabase.from("messages").insert({
-          business_id: candidate.business_id,
+          business_id: business.id,
           conversation_id: conv.id,
-          lead_id: candidate.id,
+          lead_id: lead.id,
           direction: "outbound",
           content: message,
           message_type: "text",
@@ -178,71 +163,144 @@ export async function processFollowUps(): Promise<{ sent: number; skipped: numbe
         });
       }
 
-      sent++;
-    } catch (error) {
-      console.error(`[FollowUp] Failed to send to lead ${candidate.id}:`, error);
-      skipped++;
+      result.sent++;
+      result.details.push({ leadId: lead.id, step: followUpCount + 1, status: "sent" });
+    } catch (err) {
+      console.error(`[FollowUp] Send failed for lead ${lead.id}:`, err);
+      result.errors++;
+      result.details.push({ leadId: lead.id, step: followUpCount + 1, status: "error", reason: String(err) });
     }
   }
 
-  return { sent, skipped };
+  return result;
 }
 
 /**
- * Generate a follow-up message based on the attempt number.
+ * Business-type aware follow-up message generator
  */
 function generateFollowUpMessage(
-  attemptNumber: number,
+  step: number,
   name: string | null,
-  context: string | undefined,
+  businessType: string,
+  businessName: string,
+  lastInquiry: string | undefined,
   language: string
 ): string {
   const greeting = name ? `Hi ${name}` : "Hi";
 
-  if (language === "hinglish") {
-    return getHinglishFollowUp(attemptNumber, greeting, context);
+  if (language === "hinglish" || language === "hindi") {
+    return generateHinglishFollowUp(step, greeting, businessType, businessName, lastInquiry);
   }
 
-  // English follow-ups
-  switch (attemptNumber) {
-    case 0: // First follow-up (24h)
-      return context
-        ? `${greeting}! 👋 Just following up on your inquiry about ${context}. Would you like me to help you with anything else?`
-        : `${greeting}! 👋 Just checking in — did you have any other questions? Happy to help!`;
-
-    case 1: // Second follow-up (72h)
-      return context
-        ? `${greeting}, hope you're doing well! I wanted to let you know we have some great options for ${context}. Would you like to schedule a visit to check things out? No pressure at all 😊`
-        : `${greeting}, hope you're doing well! Just wanted to remind you that we're here if you need anything. Feel free to reach out anytime!`;
-
-    case 2: // Third follow-up (7 days)
-      return `${greeting}! Just a final check-in from our side. If you ever need help in the future, don't hesitate to message us. We're always here! 🙏`;
-
+  // English follow-ups by business type
+  switch (step) {
+    case 0: // Step 1: 24h — Gentle reminder
+      return getStep1Message(greeting, businessType, businessName, lastInquiry);
+    case 1: // Step 2: 3 days — Offer/value
+      return getStep2Message(greeting, businessType, businessName);
+    case 2: // Step 3: 7 days — Final CTA
+      return getStep3Message(greeting, businessType, businessName);
     default:
-      return `${greeting}! Let us know if there's anything we can help with. 😊`;
+      return `${greeting}! Let us know if we can help with anything. 😊`;
   }
 }
 
-function getHinglishFollowUp(
-  attemptNumber: number,
-  greeting: string,
-  context: string | undefined
-): string {
-  switch (attemptNumber) {
+function getStep1Message(greeting: string, type: string, bizName: string, inquiry?: string): string {
+  const topic = inquiry ? ` about ${inquiry}` : "";
+  const typeMessages: Record<string, string> = {
+    gym: `${greeting}! 👋 Just checking in${topic}. Still thinking about joining? Happy to answer any questions about our plans or schedule a free trial session!`,
+    salon: `${greeting}! 👋 Following up${topic}. Would you like to book an appointment? We have some great slots available this week!`,
+    clinic: `${greeting}! 👋 Just checking in${topic}. Would you like to schedule a consultation? We have availability this week.`,
+    restaurant: `${greeting}! 👋 Hope you're doing well! Still thinking about visiting ${bizName}? We'd love to serve you. Any questions about our menu?`,
+    real_estate: `${greeting}! 👋 Following up on your inquiry${topic}. Would you like to schedule a site visit? I can arrange a convenient time for you.`,
+    coaching: `${greeting}! 👋 Just checking in${topic}. Would you like to attend a free demo class? We have new batches starting soon!`,
+  };
+  return typeMessages[type] || `${greeting}! 👋 Just following up${topic}. Did you have any other questions about ${bizName}? Happy to help!`;
+}
+
+function getStep2Message(greeting: string, type: string, bizName: string): string {
+  const typeMessages: Record<string, string> = {
+    gym: `${greeting}, hope you're doing well! 💪\n\nWanted to let you know — we're offering a complimentary fitness assessment for new members this week. No commitment required!\n\nWould you like me to book a slot for you?`,
+    salon: `${greeting}, hope you're having a great week! ✨\n\nWe have some special offers running at ${bizName} right now. Would you like to hear about them?\n\nI can also help you find the perfect time for your appointment!`,
+    clinic: `${greeting}, hope you're doing well!\n\nJust a reminder that early check-ups can prevent many health issues. At ${bizName}, we offer comprehensive health packages.\n\nWould you like me to share the details?`,
+    restaurant: `${greeting}! 🍽️\n\nWe have some exciting new additions to our menu at ${bizName}! Plus, there's a special offer running for our regular guests.\n\nWould you like to reserve a table?`,
+    real_estate: `${greeting}! 🏠\n\nWanted to share some updates — we have a few new units available with special pre-booking offers.\n\nWould you like me to send you the latest floor plans and pricing?`,
+    coaching: `${greeting}! 📚\n\nQuick update — our new batch is starting soon with limited seats. We're also offering an early enrollment discount.\n\nWould you like me to reserve a spot for you?`,
+  };
+  return typeMessages[type] || `${greeting}, hope you're doing well! 😊\n\nWanted to share that ${bizName} currently has some great offers available. Would you like to know more?\n\nNo pressure at all — just wanted to make sure you don't miss out!`;
+}
+
+function getStep3Message(greeting: string, type: string, bizName: string): string {
+  const typeMessages: Record<string, string> = {
+    gym: `${greeting}! 🙏\n\nThis is just a final check-in from ${bizName}. If you're ever ready to start your fitness journey, we're here for you.\n\nNo pressure — but if you'd like a free trial session, just say the word! We'll make it happen. 💪`,
+    salon: `${greeting}! 🙏\n\nJust a final note from ${bizName}. Whenever you're ready for some self-care time, we'd love to pamper you!\n\nFeel free to reach out anytime for bookings or questions. Take care! ✨`,
+    clinic: `${greeting}! 🙏\n\nJust a final reminder from ${bizName}. Your health is important to us.\n\nWhenever you're ready to schedule a visit, just message us. We're always here to help!`,
+    restaurant: `${greeting}! 🙏\n\nFinal check-in from ${bizName}. We'd love to host you whenever you're ready!\n\nOur doors are always open. Feel free to message us for reservations anytime!`,
+    real_estate: `${greeting}! 🙏\n\nThis is a final check-in from ${bizName}. The property market is always moving, so don't hesitate to reach out when you're ready.\n\nI'm here to help whenever you need. All the best! 🏠`,
+    coaching: `${greeting}! 🙏\n\nFinal reminder from ${bizName}. Education is always a good investment, and we're here whenever you're ready.\n\nFeel free to reach out for demo classes or batch information anytime!`,
+  };
+  return typeMessages[type] || `${greeting}! 🙏\n\nJust a final check-in from ${bizName}. If you ever need help in the future, don't hesitate to reach out.\n\nWe're always here for you. Take care!`;
+}
+
+function generateHinglishFollowUp(step: number, greeting: string, type: string, bizName: string, inquiry?: string): string {
+  const topic = inquiry ? ` ${inquiry} ke baare mein` : "";
+
+  switch (step) {
     case 0:
-      return context
-        ? `${greeting}! 👋 Aapka ${context} ke baare mein inquiry thi — kya main aur kuch help kar sakta/sakti hoon?`
-        : `${greeting}! 👋 Bas check kar raha/rahi thi — koi aur question hai toh batayein!`;
+      if (type === "gym") return `${greeting}! 👋 Bas check kar raha tha${topic}. Abhi bhi join karne ka soch rahe hain? Free trial session book karwa deta hoon! 💪`;
+      if (type === "salon") return `${greeting}! 👋 Aapki inquiry${topic} ke baare mein follow up kar raha tha. Kya appointment book karni hai? Is week achhe slots available hain!`;
+      return `${greeting}! 👋 Bas check kar raha tha${topic}. Kuch aur jaanna hai ${bizName} ke baare mein? Happy to help! 😊`;
 
     case 1:
-      return context
-        ? `${greeting}, hope all is well! ${context} ke liye humari taraf se kuch achhe options hain. Ek baar visit karke dekhna chahenge? 😊`
-        : `${greeting}, sab theek? Agar kuch bhi chahiye toh message kar dijiye, hum yahan hain!`;
+      if (type === "gym") return `${greeting}, kaise hain aap? 💪\n\nAapko batana tha — is week new members ke liye free fitness assessment offer hai. Koi commitment nahi!\n\nSlot book karwa doon?`;
+      if (type === "salon") return `${greeting}! ✨\n\n${bizName} mein abhi kuch special offers chal rahe hain. Sunna chahenge?\n\nAppointment ke liye bhi help kar sakta hoon!`;
+      return `${greeting}! 😊\n\n${bizName} mein abhi kuch achhe offers available hain. Details chahiye?\n\nKoi pressure nahi — bas miss na ho jaaye isliye bata raha tha!`;
 
     case 2:
-      return `${greeting}! Bas ek last check-in. Future mein kabhi bhi help chahiye toh message karna, hum hamesha available hain! 🙏`;
+      if (type === "gym") return `${greeting}! 🙏\n\nYe last check-in hai ${bizName} ki taraf se. Jab bhi ready ho fitness journey start karne ke liye, hum yahan hain.\n\nFree trial session chahiye toh bas bata dena! 💪`;
+      return `${greeting}! 🙏\n\n${bizName} ki taraf se last follow-up. Jab bhi help chahiye, message kar dena. Hamesha available hain!\n\nTake care! 😊`;
 
     default:
-      return `${greeting}! Kuch bhi chahiye toh batayein 😊`;
+      return `${greeting}! Kuch bhi chahiye toh batayein. 😊`;
   }
+}
+
+/**
+ * Get follow-up analytics for a business
+ */
+export async function getFollowUpStats(businessId: string): Promise<{
+  totalSent: number;
+  repliedBack: number;
+  converted: number;
+  activeSequences: number;
+  conversionRate: number;
+}> {
+  const supabase = createAdminClient();
+
+  const { data: leads } = await supabase
+    .from("leads")
+    .select("id, status, metadata")
+    .eq("business_id", businessId);
+
+  if (!leads) return { totalSent: 0, repliedBack: 0, converted: 0, activeSequences: 0, conversionRate: 0 };
+
+  let totalSent = 0;
+  let repliedBack = 0;
+  let converted = 0;
+  let activeSequences = 0;
+
+  for (const lead of leads) {
+    const metadata = (lead.metadata || {}) as Record<string, unknown>;
+    const count = (metadata.follow_up_count as number) || 0;
+    if (count > 0) {
+      totalSent += count;
+      if (metadata.follow_up_active === false && count > 0) repliedBack++;
+      if (lead.status === "converted" && count > 0) converted++;
+      if (metadata.follow_up_active === true) activeSequences++;
+    }
+  }
+
+  const conversionRate = totalSent > 0 ? Math.round((converted / (repliedBack + converted)) * 100) : 0;
+
+  return { totalSent, repliedBack, converted, activeSequences, conversionRate };
 }

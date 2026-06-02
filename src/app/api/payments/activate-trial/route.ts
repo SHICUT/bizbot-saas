@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TRIAL_DURATION_DAYS } from "@/lib/payments/plans";
 
 /**
  * POST /api/payments/activate-trial
@@ -73,7 +74,7 @@ async function activateSubscription(
   plan: string
 ) {
   const now = new Date();
-  const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const trialEnd = new Date(now.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
   const messageLimits: Record<string, number> = {
     trial: 100,

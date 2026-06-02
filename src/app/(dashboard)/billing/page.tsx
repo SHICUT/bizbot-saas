@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, CreditCard, Zap, Loader2, AlertCircle, Info, CheckCircle, Clock } from "lucide-react";
+import { Check, CreditCard, Zap, Loader2, AlertCircle, Info, CheckCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -142,7 +142,7 @@ export default function BillingPage() {
                 {sub?.isTrialing && <Badge variant="info">Trial</Badge>}
               </div>
               <p className="text-sm text-text-secondary mt-0.5">
-                {sub?.isTrialing && sub.trialDaysRemaining !== null && `Trial ends in ${sub.trialDaysRemaining} days • `}
+                {sub?.isTrialing && sub.trialDaysRemaining !== null && `${sub.trialDaysRemaining} of 7 trial days remaining • `}
                 {sub?.expiresAt && !sub.isTrialing && `Renews ${new Date(sub.expiresAt).toLocaleDateString("en-IN")} • `}
                 Messages: {sub?.messagesUsed || 0} / {sub?.messageLimit || 0}
               </p>
@@ -162,7 +162,7 @@ export default function BillingPage() {
           {sub?.isTrialing && sub.trialDaysRemaining !== null && (
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm text-text-secondary">Trial Days</span>
-              <span className="text-sm font-semibold">{7 - (sub.trialDaysRemaining || 0)} / 7 used</span>
+              <span className="text-sm font-semibold">{sub.trialDaysRemaining} of 7 remaining</span>
             </div>
           )}
         </div>

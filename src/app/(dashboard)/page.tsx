@@ -28,12 +28,13 @@ export default function DashboardPage() {
   const sub = data.subscription;
   const now = new Date();
   const trialEnd = sub?.trial_end ? new Date(sub.trial_end) : null;
-  const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (86400000))) : 0;
+  const daysLeft = trialEnd ? Math.min(7, Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (86400000)))) : 0;
   const isTrialing = sub?.status === "trialing";
   const messagesUsed = sub?.messages_used || 0;
   const messageLimit = sub?.message_limit || 100;
   const messagePercent = Math.min(100, Math.round((messagesUsed / messageLimit) * 100));
-  const daysPercent = isTrialing ? Math.round(((7 - daysLeft) / 7) * 100) : 0;
+  const daysUsed = 7 - daysLeft;
+  const daysPercent = isTrialing ? Math.min(100, Math.round((daysUsed / 7) * 100)) : 0;
 
   // Setup progress
   const setupSteps = [
@@ -52,7 +53,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-text-primary">Welcome, {data.user.name} 👋</h1>
         <p className="text-sm text-text-secondary mt-1">
           {data.business?.name || "Your Business"} • <span className="capitalize">{sub?.plan || "Trial"} Plan</span>
-          {isTrialing && <span className="text-amber-600 ml-2">• Trial ends in {daysLeft} days</span>}
+          {isTrialing && <span className="text-amber-600 ml-2">• {daysLeft} of 7 trial days remaining</span>}
         </p>
       </motion.div>
 
@@ -64,7 +65,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-5 h-5 text-amber-600" />
                 <h3 className="text-sm font-bold text-amber-900">7-Day Free Trial</h3>
-                <Badge variant="warning">{daysLeft} days left</Badge>
+                <Badge variant="warning">{daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining</Badge>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -72,7 +73,7 @@ export default function DashboardPage() {
                   <div className="h-2 bg-amber-100 rounded-full overflow-hidden"><motion.div className="h-full bg-amber-500 rounded-full" initial={{ width: 0 }} animate={{ width: `${messagePercent}%` }} transition={{ duration: 0.8 }} /></div>
                 </div>
                 <div>
-                  <div className="flex justify-between text-xs mb-1"><span className="text-amber-700">Days Used</span><span className="font-semibold text-amber-900">{7 - daysLeft}/7</span></div>
+                  <div className="flex justify-between text-xs mb-1"><span className="text-amber-700">Trial Days</span><span className="font-semibold text-amber-900">{daysUsed}/7 used</span></div>
                   <div className="h-2 bg-amber-100 rounded-full overflow-hidden"><motion.div className="h-full bg-orange-500 rounded-full" initial={{ width: 0 }} animate={{ width: `${daysPercent}%` }} transition={{ duration: 0.8 }} /></div>
                 </div>
               </div>

@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  DollarSign, Target,
+  DollarSign, Target, TrendingUp, Users, Calendar,
   AlertTriangle, ArrowRight, Loader2, Heart, Zap,
-  BarChart2, ArrowUpRight
+  BarChart2, ArrowUpRight, Bot, MessageSquare, Clock
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -14,35 +14,41 @@ import PageHeader from "@/components/layout/PageHeader";
 
 interface Funnel { totalLeads: number; contacted: number; qualified: number; appointmentsBooked: number; appointmentsCompleted: number; converted: number; conversionRate: number; }
 interface AIAttribution { aiGeneratedLeads: number; aiGeneratedLeadsThisMonth: number; aiBookedAppointments: number; aiConversions: number; aiGeneratedRevenue: number; aiMessages: number; aiResponseRate: number; }
+interface Monthly { leads: number; appointments: number; revenue: number; appointmentRevenue: number; }
 interface HealthFactor { name: string; score: number; max: number; tip: string | null; }
 interface MissedAlert { id: string; name: string; phone: string; temperature: string; score: number; hoursSinceLastContact: number; urgency: string; message: string; }
 interface KnowledgeGap { field: string; severity: string; }
+interface FollowUpStats { totalSent: number; repliedBack: number; converted: number; activeSequences: number; conversionRate: number; }
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [funnel, setFunnel] = useState<Funnel | null>(null);
-  const [aiAttribution, setAiAttribution] = useState<AIAttribution | null>(null);
+  const [ai, setAi] = useState<AIAttribution | null>(null);
+  const [monthly, setMonthly] = useState<Monthly | null>(null);
   const [healthScore, setHealthScore] = useState(0);
   const [healthGrade, setHealthGrade] = useState("");
   const [healthFactors, setHealthFactors] = useState<HealthFactor[]>([]);
   const [alerts, setAlerts] = useState<MissedAlert[]>([]);
   const [gaps, setGaps] = useState<KnowledgeGap[]>([]);
+  const [followUp, setFollowUp] = useState<FollowUpStats>({ totalSent: 0, repliedBack: 0, converted: 0, activeSequences: 0, conversionRate: 0 });
+  const [aiScore, setAiScore] = useState(0);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/analytics/revenue").then((r) => r.json()).catch(() => ({})),
       fetch("/api/analytics/health").then((r) => r.json()).catch(() => ({})),
       fetch("/api/analytics/alerts").then((r) => r.json()).catch(() => ({})),
-    ]).then(([revenue, health, alertsData]) => {
+      fetch("/api/analytics/follow-ups").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/knowledge/score").then((r) => r.json()).catch(() => ({})),
+    ]).then(([revenue, health, alertsData, fuStats, knowledge]) => {
       if (revenue.funnel) setFunnel(revenue.funnel);
-      if (revenue.aiAttribution) setAiAttribution(revenue.aiAttribution);
-      if (health.score !== undefined) {
-        setHealthScore(health.score);
-        setHealthGrade(health.grade || "");
-        setHealthFactors(health.factors || []);
-      }
+      if (revenue.aiAttribution) setAi(revenue.aiAttribution);
+      if (revenue.monthly) setMonthly(revenue.monthly);
+      if (health.score !== undefined) { setHealthScore(health.score); setHealthGrade(health.grade || ""); setHealthFactors(health.factors || []); }
       if (alertsData.alerts) setAlerts(alertsData.alerts);
       if (alertsData.gaps) setGaps(alertsData.gaps);
+      if (fuStats.totalSent !== undefined) setFollowUp(fuStats);
+      if (knowledge.score !== undefined) setAiScore(knowledge.score);
       setLoading(false);
     });
   }, []);
@@ -51,197 +57,241 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <PageHeader title="Analytics" description="AI performance, revenue & business health" />
+      <PageHeader title="Revenue Intelligence" description="Your AI's business impact at a glance" />
 
-      {/* Business Health Score */}
-      <Card className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Hero Revenue KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Heart className="w-5 h-5 text-primary" />
-            </div>
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-600" /></div>
             <div>
-              <h3 className="text-base font-bold">Business Health Score</h3>
-              <p className="text-xs text-text-muted">Overall performance rating</p>
+              <p className="text-2xl font-bold text-emerald-700">₹{((ai?.aiGeneratedRevenue || 0) / 1000).toFixed(1)}k</p>
+              <p className="text-xs text-emerald-600">AI Revenue</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className={`text-3xl font-bold ${healthScore >= 70 ? "text-emerald-600" : healthScore >= 50 ? "text-amber-600" : "text-red-500"}`}>{healthScore}<span className="text-lg">/100</span></p>
-            <Badge variant={healthScore >= 70 ? "success" : healthScore >= 50 ? "warning" : "danger"}>{healthGrade}</Badge>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {healthFactors.map((f) => (
-            <div key={f.name} className="p-3 rounded-lg bg-gray-50">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-text-muted">{f.name}</span>
-                <span className="text-xs font-bold">{f.score}/{f.max}</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-200 rounded-full">
-                <div className={`h-1.5 rounded-full ${f.score / f.max >= 0.7 ? "bg-emerald-500" : f.score / f.max >= 0.4 ? "bg-amber-500" : "bg-red-400"}`} style={{ width: `${(f.score / f.max) * 100}%` }} />
-              </div>
-              {f.tip && <p className="text-[10px] text-text-muted mt-1">{f.tip}</p>}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="grid lg:grid-cols-2 gap-6 mb-6">
-        {/* AI Revenue Attribution */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-600" /></div>
-            <div>
-              <h3 className="text-sm font-bold">AI Revenue Attribution</h3>
-              <p className="text-xs text-text-muted">Revenue generated by AI</p>
-            </div>
-          </div>
-          {aiAttribution && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-lg bg-emerald-50/50">
-                <p className="text-xs text-text-muted">AI Revenue</p>
-                <p className="text-xl font-bold text-emerald-600">₹{(aiAttribution.aiGeneratedRevenue || 0).toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-blue-50/50">
-                <p className="text-xs text-text-muted">AI Leads</p>
-                <p className="text-xl font-bold text-blue-600">{aiAttribution.aiGeneratedLeads}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-purple-50/50">
-                <p className="text-xs text-text-muted">AI Appointments</p>
-                <p className="text-xl font-bold text-purple-600">{aiAttribution.aiBookedAppointments}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-amber-50/50">
-                <p className="text-xs text-text-muted">AI Conversions</p>
-                <p className="text-xl font-bold text-amber-600">{aiAttribution.aiConversions}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-indigo-50/50 col-span-2">
-                <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-text-muted">AI Messages Sent</p><p className="text-lg font-bold text-indigo-600">{aiAttribution.aiMessages}</p></div>
-                  <div className="text-right"><p className="text-xs text-text-muted">Response Rate</p><p className="text-lg font-bold text-indigo-600">{aiAttribution.aiResponseRate}%</p></div>
-                </div>
-              </div>
-            </div>
-          )}
         </Card>
-
-        {/* Conversion Funnel */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Target className="w-5 h-5 text-primary" /></div>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center"><Users className="w-5 h-5 text-blue-600" /></div>
             <div>
-              <h3 className="text-sm font-bold">Conversion Funnel</h3>
-              <p className="text-xs text-text-muted">Lead → Appointment → Customer</p>
+              <p className="text-2xl font-bold text-blue-700">{ai?.aiGeneratedLeads || 0}</p>
+              <p className="text-xs text-blue-600">AI Leads</p>
             </div>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center"><Calendar className="w-5 h-5 text-purple-600" /></div>
+            <div>
+              <p className="text-2xl font-bold text-purple-700">{ai?.aiBookedAppointments || 0}</p>
+              <p className="text-xs text-purple-600">AI Appointments</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-amber-600" /></div>
+            <div>
+              <p className="text-2xl font-bold text-amber-700">{funnel?.conversionRate || 0}%</p>
+              <p className="text-xs text-amber-600">Conversion Rate</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Customer Journey Funnel */}
+      <div className="grid lg:grid-cols-3 gap-6 mb-6">
+        <Card className="lg:col-span-2">
+          <div className="flex items-center gap-3 mb-5">
+            <Target className="w-5 h-5 text-primary" />
+            <h3 className="text-sm font-bold">Customer Journey Funnel</h3>
           </div>
           {funnel && (
             <div className="space-y-3">
               {[
-                { label: "Total Leads", value: funnel.totalLeads, color: "bg-blue-500" },
-                { label: "Contacted", value: funnel.contacted, color: "bg-indigo-500" },
-                { label: "Qualified", value: funnel.qualified, color: "bg-purple-500" },
-                { label: "Appointments", value: funnel.appointmentsBooked, color: "bg-amber-500" },
-                { label: "Completed", value: funnel.appointmentsCompleted, color: "bg-orange-500" },
-                { label: "Converted", value: funnel.converted, color: "bg-emerald-500" },
+                { label: "Leads Captured", value: funnel.totalLeads, color: "bg-blue-500", icon: "📥" },
+                { label: "Contacted by AI", value: funnel.contacted, color: "bg-indigo-500", icon: "💬" },
+                { label: "Qualified", value: funnel.qualified, color: "bg-purple-500", icon: "⭐" },
+                { label: "Appointment Booked", value: funnel.appointmentsBooked, color: "bg-amber-500", icon: "📅" },
+                { label: "Completed Visit", value: funnel.appointmentsCompleted, color: "bg-orange-500", icon: "✅" },
+                { label: "Customer Converted", value: funnel.converted, color: "bg-emerald-500", icon: "🎉" },
               ].map((step, i) => {
                 const maxVal = funnel.totalLeads || 1;
-                const width = Math.max(10, (step.value / maxVal) * 100);
+                const width = Math.max(8, (step.value / maxVal) * 100);
                 return (
                   <div key={step.label} className="flex items-center gap-3">
-                    <span className="text-xs text-text-muted w-24">{step.label}</span>
-                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${width}%` }}
-                        transition={{ duration: 0.6, delay: i * 0.1 }}
-                        className={`h-full ${step.color} rounded-full`}
-                      />
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white mix-blend-difference">{step.value}</span>
+                    <span className="text-sm w-6">{step.icon}</span>
+                    <span className="text-xs text-text-muted w-32 flex-shrink-0">{step.label}</span>
+                    <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${width}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} className={`h-full ${step.color} rounded-full`} />
+                      <span className="absolute inset-0 flex items-center px-3 text-xs font-bold text-white mix-blend-difference">{step.value}</span>
                     </div>
                   </div>
                 );
               })}
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <span className="text-xs text-text-muted">Conversion Rate</span>
-                <span className="text-lg font-bold text-emerald-600">{funnel.conversionRate}%</span>
+              <div className="pt-3 mt-2 border-t border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-muted">Lead → Customer</span>
+                  <ArrowRight className="w-3 h-3 text-text-muted" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-emerald-600">{funnel.conversionRate}%</span>
+                  <span className="text-xs text-text-muted">conversion</span>
+                </div>
               </div>
             </div>
           )}
         </Card>
+
+        {/* Business Health + AI Readiness */}
+        <div className="space-y-4">
+          {/* Business Health Score */}
+          <Card>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2"><Heart className="w-4 h-4 text-primary" /><h4 className="text-sm font-bold">Business Health</h4></div>
+              <Badge variant={healthScore >= 70 ? "success" : healthScore >= 50 ? "warning" : "danger"}>{healthGrade}</Badge>
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative w-16 h-16">
+                <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="#f3f4f6" strokeWidth="6" />
+                  <circle cx="32" cy="32" r="28" fill="none" stroke={healthScore >= 70 ? "#10b981" : healthScore >= 50 ? "#f59e0b" : "#ef4444"} strokeWidth="6" strokeDasharray={`${(healthScore / 100) * 176} 176`} strokeLinecap="round" />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{healthScore}</span>
+              </div>
+              <div className="flex-1 space-y-1.5">
+                {healthFactors.map((f) => (
+                  <div key={f.name} className="flex items-center gap-2">
+                    <span className="text-[10px] text-text-muted w-20 truncate">{f.name}</span>
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${f.score / f.max >= 0.7 ? "bg-emerald-500" : "bg-amber-400"}`} style={{ width: `${(f.score / f.max) * 100}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* AI Readiness */}
+          <Card>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2"><Bot className="w-4 h-4 text-primary" /><h4 className="text-sm font-bold">AI Readiness</h4></div>
+              <span className={`text-lg font-bold ${aiScore >= 80 ? "text-emerald-600" : aiScore >= 50 ? "text-amber-600" : "text-red-500"}`}>{aiScore}%</span>
+            </div>
+            <div className="w-full h-2 bg-gray-100 rounded-full mb-2">
+              <div className={`h-2 rounded-full transition-all ${aiScore >= 80 ? "bg-emerald-500" : aiScore >= 50 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${aiScore}%` }} />
+            </div>
+            {aiScore < 80 && (
+              <a href="/knowledge" className="text-xs text-primary font-medium hover:underline">Improve score →</a>
+            )}
+          </Card>
+
+          {/* Follow-Up Performance */}
+          <Card>
+            <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-primary" /><h4 className="text-sm font-bold">Follow-Up Performance</h4></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 rounded bg-gray-50 text-center"><p className="text-sm font-bold">{followUp.totalSent}</p><p className="text-[10px] text-text-muted">Sent</p></div>
+              <div className="p-2 rounded bg-gray-50 text-center"><p className="text-sm font-bold">{followUp.repliedBack}</p><p className="text-[10px] text-text-muted">Replied</p></div>
+              <div className="p-2 rounded bg-gray-50 text-center"><p className="text-sm font-bold">{followUp.converted}</p><p className="text-[10px] text-text-muted">Converted</p></div>
+              <div className="p-2 rounded bg-emerald-50 text-center"><p className="text-sm font-bold text-emerald-600">{followUp.conversionRate}%</p><p className="text-[10px] text-text-muted">Rate</p></div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      {/* Missed Lead Alerts + Knowledge Gaps */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Missed Lead Alerts */}
+      {/* Missed Opportunities + AI Impact */}
+      <div className="grid lg:grid-cols-2 gap-6 mb-6">
+        {/* Missed Opportunity Alerts */}
         <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-500" /></div>
-            <div>
-              <h3 className="text-sm font-bold">Missed Lead Alerts</h3>
-              <p className="text-xs text-text-muted">Hot leads waiting for response</p>
-            </div>
-            {alerts.length > 0 && <Badge variant="danger" className="ml-auto">{alerts.length}</Badge>}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-500" /><h3 className="text-sm font-bold">Missed Opportunities</h3></div>
+            {alerts.length > 0 && <Badge variant="danger">{alerts.length}</Badge>}
           </div>
           {alerts.length === 0 ? (
-            <div className="text-center py-6">
-              <Zap className="w-8 h-8 text-emerald-300 mx-auto mb-2" />
-              <p className="text-sm text-text-muted">All caught up! No missed leads.</p>
-            </div>
+            <div className="text-center py-6"><Zap className="w-8 h-8 text-emerald-300 mx-auto mb-2" /><p className="text-sm text-text-muted">No missed opportunities. Great job!</p></div>
           ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {alerts.map((alert) => (
-                <div key={alert.id} className={`p-3 rounded-lg border ${alert.urgency === "critical" ? "border-red-200 bg-red-50/50" : alert.urgency === "high" ? "border-amber-200 bg-amber-50/50" : "border-border bg-gray-50"}`}>
+            <div className="space-y-2 max-h-[260px] overflow-y-auto">
+              {alerts.slice(0, 5).map((a) => (
+                <div key={a.id} className={`p-3 rounded-lg border ${a.urgency === "critical" ? "border-red-200 bg-red-50/50" : "border-amber-200 bg-amber-50/50"}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{alert.name}</span>
-                        <span className="text-xs">{alert.temperature === "hot" ? "🔥" : "🟡"}</span>
+                        <span className="text-sm font-medium">{a.name}</span>
+                        <span className="text-xs">{a.temperature === "hot" ? "🔥" : "🟡"}</span>
+                        {a.score >= 70 && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">High Intent</span>}
                       </div>
-                      <p className="text-xs text-text-muted">{alert.message}</p>
+                      <p className="text-xs text-text-muted mt-0.5">{a.message}</p>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => window.location.assign("/leads")}>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => window.location.assign("/leads")}><ArrowRight className="w-3.5 h-3.5" /></Button>
                   </div>
                 </div>
               ))}
+              {alerts.length > 5 && <p className="text-xs text-text-muted text-center pt-1">+{alerts.length - 5} more</p>}
             </div>
           )}
         </Card>
 
-        {/* Knowledge Gaps */}
+        {/* AI Impact Summary */}
         <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><BarChart2 className="w-5 h-5 text-amber-600" /></div>
-            <div>
-              <h3 className="text-sm font-bold">Knowledge Gaps</h3>
-              <p className="text-xs text-text-muted">Missing info that hurts AI accuracy</p>
+          <div className="flex items-center gap-2 mb-4"><MessageSquare className="w-5 h-5 text-primary" /><h3 className="text-sm font-bold">AI Impact Summary</h3></div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/50">
+              <div className="flex items-center gap-2"><Bot className="w-4 h-4 text-blue-600" /><span className="text-sm">Messages Handled by AI</span></div>
+              <span className="text-sm font-bold text-blue-700">{ai?.aiMessages || 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50/50">
+              <div className="flex items-center gap-2"><Users className="w-4 h-4 text-emerald-600" /><span className="text-sm">Leads Generated</span></div>
+              <span className="text-sm font-bold text-emerald-700">{ai?.aiGeneratedLeadsThisMonth || 0} <span className="text-xs font-normal text-text-muted">this month</span></span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50/50">
+              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-purple-600" /><span className="text-sm">Appointments Booked</span></div>
+              <span className="text-sm font-bold text-purple-700">{ai?.aiBookedAppointments || 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50/50">
+              <div className="flex items-center gap-2"><TrendingUp className="w-4 h-4 text-amber-600" /><span className="text-sm">Response Rate</span></div>
+              <span className="text-sm font-bold text-amber-700">{ai?.aiResponseRate || 0}%</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-100/50 border border-emerald-200">
+              <div className="flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-700" /><span className="text-sm font-medium">Revenue Attributed to AI</span></div>
+              <span className="text-lg font-bold text-emerald-700">₹{(ai?.aiGeneratedRevenue || 0).toLocaleString()}</span>
             </div>
           </div>
-          {gaps.length === 0 ? (
-            <div className="text-center py-6">
-              <Zap className="w-8 h-8 text-emerald-300 mx-auto mb-2" />
-              <p className="text-sm text-text-muted">Knowledge base is complete!</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {gaps.map((gap, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${gap.severity === "high" ? "bg-red-500" : gap.severity === "medium" ? "bg-amber-500" : "bg-gray-400"}`} />
-                    <span className="text-sm">{gap.field}</span>
-                  </div>
-                  <Badge variant={gap.severity === "high" ? "danger" : gap.severity === "medium" ? "warning" : "default"}>
-                    {gap.severity === "high" ? "Missing" : gap.severity === "medium" ? "Incomplete" : "Optional"}
-                  </Badge>
-                </div>
-              ))}
-              <Button variant="secondary" size="sm" className="w-full mt-2" onClick={() => window.location.assign("/knowledge")}>
-                <ArrowUpRight className="w-3.5 h-3.5" /> Fix in Knowledge Base
-              </Button>
-            </div>
-          )}
         </Card>
       </div>
+
+      {/* Knowledge Gaps */}
+      {gaps.length > 0 && (
+        <Card className="bg-amber-50/30 border-amber-100">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2"><BarChart2 className="w-4 h-4 text-amber-600" /><h4 className="text-sm font-bold text-amber-900">Knowledge Gaps Hurting Revenue</h4></div>
+            <Badge variant="warning">{gaps.length} gaps</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {gaps.map((g, i) => (
+              <span key={i} className={`px-2.5 py-1 rounded-full text-xs font-medium ${g.severity === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                ⚠ {g.field} {g.severity === "high" ? "Missing" : "Incomplete"}
+              </span>
+            ))}
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => window.location.assign("/knowledge")}>
+            <ArrowUpRight className="w-3.5 h-3.5" /> Fix in Knowledge Base
+          </Button>
+        </Card>
+      )}
+
+      {/* ROI Summary */}
+      <Card className="mt-6 bg-gradient-to-r from-primary/5 to-indigo-50 border-primary/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-text-primary">Your AI ROI This Month</h4>
+            <p className="text-xs text-text-muted mt-1">
+              {ai?.aiGeneratedLeads || 0} leads captured • {ai?.aiBookedAppointments || 0} appointments booked • {ai?.aiConversions || 0} conversions
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-bold text-primary">₹{((monthly?.revenue || 0) / 1000).toFixed(1)}k</p>
+            <p className="text-xs text-text-muted">total revenue</p>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

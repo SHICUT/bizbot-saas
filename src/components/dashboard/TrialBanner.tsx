@@ -16,7 +16,7 @@ export default function TrialBanner({ plan, status, trialEnd, messagesUsed, mess
 
   const now = new Date();
   const end = trialEnd ? new Date(trialEnd) : null;
-  const daysLeft = end ? Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const daysLeft = end ? Math.min(7, Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))) : 0;
   const isExpired = end ? end < now : false;
 
   if (isExpired) {
@@ -47,10 +47,10 @@ export default function TrialBanner({ plan, status, trialEnd, messagesUsed, mess
           </div>
           <div>
             <p className="text-sm font-semibold text-amber-800">
-              Trial ends in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
+              {daysLeft} of 7 trial days remaining
             </p>
             <p className="text-xs text-amber-600">
-              {messagesUsed}/{messageLimit} messages used • 7-day free trial
+              {messagesUsed}/{messageLimit} messages used
             </p>
           </div>
         </div>

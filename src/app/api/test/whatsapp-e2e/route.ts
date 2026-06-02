@@ -225,7 +225,7 @@ async function testBusinessRouting(
     message_limit: 100,
     messages_used: 0,
     current_period_start: new Date().toISOString(),
-    current_period_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   });
 
   return {
