@@ -12,6 +12,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
 import PageHeader from "@/components/layout/PageHeader";
+import { formatINR, formatINRFull } from "@/lib/utils";
 
 type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost";
 type LeadTemp = "hot" | "warm" | "cold";
@@ -272,7 +273,7 @@ export default function LeadsPage() {
             <p className="text-xs text-text-muted mt-1">✅ Converted</p>
           </Card>
           <Card className="text-center">
-            <p className="text-2xl font-bold text-indigo-600">₹{(stats.totalValue / 1000).toFixed(stats.totalValue >= 1000 ? 1 : 0)}k</p>
+            <p className="text-2xl font-bold text-indigo-600">{formatINR(stats.totalValue)}</p>
             <p className="text-xs text-text-muted mt-1">💰 Pipeline</p>
           </Card>
           <Card className="text-center">
@@ -368,7 +369,7 @@ export default function LeadsPage() {
                 <div className="flex items-center gap-3">
                   <div className="text-right hidden sm:block">
                     <p className="text-xs text-text-muted capitalize">{lead.source}</p>
-                    {lead.estimated_value > 0 && <p className="text-xs font-medium text-emerald-600">₹{lead.estimated_value.toLocaleString()}</p>}
+                    {lead.estimated_value > 0 && <p className="text-xs font-medium text-emerald-600">{formatINR(lead.estimated_value)}</p>}
                   </div>
                   <Badge variant={statusConfig[lead.status].variant}>{statusConfig[lead.status].label}</Badge>
                   <ChevronRight className="w-4 h-4 text-text-muted hidden sm:block" />
@@ -437,7 +438,7 @@ export default function LeadsPage() {
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Phone</p><p className="text-sm font-medium">{selectedLead.phone}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Email</p><p className="text-sm font-medium">{selectedLead.email || "—"}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Source</p><p className="text-sm font-medium capitalize">{selectedLead.source}</p></div>
-                          <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Value</p><p className="text-sm font-medium text-emerald-600">₹{(selectedLead.estimated_value || 0).toLocaleString()}</p></div>
+                          <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Value</p><p className="text-sm font-medium text-emerald-600">{formatINRFull(selectedLead.estimated_value || 0)}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Messages</p><p className="text-sm font-medium">{selectedLead.message_count || 0}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Created</p><p className="text-sm font-medium">{new Date(selectedLead.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p></div>
                         </div>

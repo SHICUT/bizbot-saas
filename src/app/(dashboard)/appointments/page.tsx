@@ -11,6 +11,7 @@ import Badge from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
+import { formatINRFull } from "@/lib/utils";
 
 type AppointmentStatus = "confirmed" | "pending" | "completed" | "cancelled" | "no_show" | "rescheduled";
 type CalendarView = "day" | "week" | "month" | "list";
@@ -218,7 +219,7 @@ export default function AppointmentsPage() {
         <Card>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center"><DollarSign className="w-5 h-5 text-indigo-600" /></div>
-            <div><p className="text-xl font-bold">₹{stats.revenue.toLocaleString()}</p><p className="text-xs text-text-muted">Revenue</p></div>
+            <div><p className="text-xl font-bold">{formatINRFull(stats.revenue)}</p><p className="text-xs text-text-muted">Revenue</p></div>
           </div>
         </Card>
       </div>
@@ -400,7 +401,7 @@ export default function AppointmentsPage() {
                         <Avatar name={apt.customer_name} />
                         <div>
                           <p className="text-sm font-medium">{apt.customer_name}</p>
-                          <p className="text-xs text-text-muted">{apt.service}{apt.service_price ? ` • ₹${apt.service_price}` : ""}</p>
+                          <p className="text-xs text-text-muted">{apt.service}{apt.service_price ? ` • ${formatINRFull(apt.service_price)}` : ""}</p>
                           {apt.staff_assigned && <p className="text-xs text-text-muted">Staff: {apt.staff_assigned}</p>}
                         </div>
                       </div>

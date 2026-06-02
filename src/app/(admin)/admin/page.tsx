@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Users, MessageSquare, Calendar, CreditCard, Building, Eye, StickyNote } from "lucide-react";
+import { Loader2, Users, MessageSquare, Calendar, CreditCard, Building, Eye, StickyNote, DollarSign } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import { formatINR } from "@/lib/utils";
 
 interface AdminData {
-  stats: { totalBusinesses: number; activeBusinesses: number; trialUsers: number; paidUsers: number; totalLeads: number; totalMessages: number; totalAppointments: number };
+  stats: { totalBusinesses: number; activeBusinesses: number; trialUsers: number; paidUsers: number; totalLeads: number; totalMessages: number; totalAppointments: number; totalRevenue?: number; mrr?: number; churnRate?: number };
   businesses: Array<{ id: string; name: string; type: string; plan: string; email: string; phone: string; created_at: string; whatsapp_connected: boolean; onboarding_completed: boolean; subscription: { plan: string; status: string; messages_used: number; message_limit: number } | null }>;
 }
 
@@ -120,7 +121,7 @@ export default function AdminPage() {
         <StatCard icon={Users} label="Total Leads" value={data.stats.totalLeads} />
         <StatCard icon={MessageSquare} label="Total Messages" value={data.stats.totalMessages} />
         <StatCard icon={Calendar} label="Appointments" value={data.stats.totalAppointments} />
-        <StatCard icon={Building} label="Active Biz" value={data.stats.activeBusinesses} />
+        <StatCard icon={DollarSign} label="MRR" value={data.stats.mrr || 0} isCurrency />
       </motion.div>
 
       {/* Businesses Table */}
@@ -155,6 +156,6 @@ export default function AdminPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
-  return <Card><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-4 h-4 text-primary" /></div><div><p className="text-xs text-text-muted">{label}</p><p className="text-xl font-bold">{value}</p></div></div></Card>;
+function StatCard({ icon: Icon, label, value, isCurrency }: { icon: typeof Users; label: string; value: number; isCurrency?: boolean }) {
+  return <Card><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-4 h-4 text-primary" /></div><div><p className="text-xs text-text-muted">{label}</p><p className="text-xl font-bold">{isCurrency ? formatINR(value) : value}</p></div></div></Card>;
 }

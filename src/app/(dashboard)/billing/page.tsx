@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/layout/PageHeader";
 import { isTestingMode } from "@/lib/payments/plans";
+import { formatINRFull } from "@/lib/utils";
 
 interface SubStatus {
   plan: string;
@@ -212,8 +213,8 @@ export default function BillingPage() {
                 </div>
                 {!isMonthly && (
                   <div className="mt-1">
-                    <p className="text-xs text-text-muted">Billed ₹{plan.yearly.totalPrice.toLocaleString()}/year</p>
-                    <p className="text-xs text-emerald-600 font-medium">Save ₹{((plan.monthly.price * 12) - plan.yearly.totalPrice).toLocaleString()}/year</p>
+                    <p className="text-xs text-text-muted">Billed {formatINRFull(plan.yearly.totalPrice)}/year</p>
+                    <p className="text-xs text-emerald-600 font-medium">Save {formatINRFull((plan.monthly.price * 12) - plan.yearly.totalPrice)}/year</p>
                   </div>
                 )}
               </div>

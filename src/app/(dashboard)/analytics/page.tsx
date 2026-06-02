@@ -11,6 +11,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
+import { formatINR, formatINRFull } from "@/lib/utils";
 
 interface Funnel { totalLeads: number; contacted: number; qualified: number; appointmentsBooked: number; appointmentsCompleted: number; converted: number; conversionRate: number; }
 interface AIAttribution { aiGeneratedLeads: number; aiGeneratedLeadsThisMonth: number; aiBookedAppointments: number; aiConversions: number; aiGeneratedRevenue: number; aiMessages: number; aiResponseRate: number; }
@@ -83,7 +84,7 @@ export default function AnalyticsPage() {
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-600" /></div>
             <div>
-              <p className="text-2xl font-bold text-emerald-700">₹{((ai?.aiGeneratedRevenue || 0) / 1000).toFixed(1)}k</p>
+              <p className="text-2xl font-bold text-emerald-700">{formatINR(ai?.aiGeneratedRevenue || 0)}</p>
               <p className="text-xs text-emerald-600">AI Revenue</p>
             </div>
           </div>
@@ -269,7 +270,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-100/50 border border-emerald-200">
               <div className="flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-700" /><span className="text-sm font-medium">Revenue Attributed to AI</span></div>
-              <span className="text-lg font-bold text-emerald-700">₹{(ai?.aiGeneratedRevenue || 0).toLocaleString()}</span>
+              <span className="text-lg font-bold text-emerald-700">{formatINRFull(ai?.aiGeneratedRevenue || 0)}</span>
             </div>
           </div>
         </Card>
@@ -305,7 +306,7 @@ export default function AnalyticsPage() {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-primary">₹{((monthly?.revenue || 0) / 1000).toFixed(1)}k</p>
+            <p className="text-3xl font-bold text-primary">{formatINR(monthly?.revenue || 0)}</p>
             <p className="text-xs text-text-muted">total revenue</p>
           </div>
         </div>
