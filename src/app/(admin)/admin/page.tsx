@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Loader2, Users, MessageSquare, Calendar, CreditCard, Building,
   Search, X, Zap, Clock, Shield, BarChart2, Megaphone, Globe,
-  RefreshCw, Heart, AlertTriangle, CheckCircle, Activity
+  RefreshCw, AlertTriangle, CheckCircle
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -24,7 +24,9 @@ interface Business {
   leads_count: number; messages_used: number; message_limit: number;
   onboarding_completed: boolean;
 }
-interface HealthCheck { name: string; status: "healthy" | "warning" | "offline"; responseMs: number; message: string; }
+interface HealthCheck { name: string; status: "healthy" | "warning" | "offline"; responseMs: number; message: string; category: string; }
+interface HealthAlert { level: "critical" | "high" | "medium"; message: string; }
+interface HealthData { overall: string; checks: HealthCheck[]; errors: { failedMessages1h: number; failedMessages24h: number }; whatsapp: { connected: number; disconnected: number; lastInbound: string | null; lastOutbound: string | null }; alerts: HealthAlert[]; timestamp: string; }
 interface AuditLog { id: string; admin_id: string; business_id: string | null; action: string; metadata: Record<string, unknown>; created_at: string; }
 
 type Tab = "overview" | "health" | "logs";
@@ -40,7 +42,7 @@ export default function AdminPage() {
   const [selectedBiz, setSelectedBiz] = useState<Business | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
-  const [health, setHealth] = useState<{ overall: string; checks: HealthCheck[] } | null>(null);
+  const [health, setHealth] = useState<HealthData | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsPage, setLogsPage] = useState(1);
@@ -67,6 +69,13 @@ export default function AdminPage() {
   }
 
   useEffect(() => { if (tab === "health") loadHealth(); if (tab === "logs") loadLogs(); }, [tab]);
+
+  // Auto-refresh health every 30s
+  useEffect(() => {
+    if (tab !== "health") return;
+    const interval = setInterval(loadHealth, 30000);
+    return () => clearInterval(interval);
+  }, [tab]);
 
   async function runAction(action: string, params: Record<string, unknown> = {}) {
     if (!selectedBiz) return;
@@ -209,26 +218,57 @@ export default function AdminPage() {
             <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
           ) : (
             <>
+              {/* Overall Status */}
               <Card className={`mb-4 ${health.overall === "healthy" ? "bg-emerald-50/50 border-emerald-200" : health.overall === "warning" ? "bg-amber-50/50 border-amber-200" : "bg-red-50/50 border-red-200"}`}>
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${health.overall === "healthy" ? "bg-emerald-100" : health.overall === "warning" ? "bg-amber-100" : "bg-red-100"}`}>
                     {health.overall === "healthy" ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : health.overall === "warning" ? <AlertTriangle className="w-5 h-5 text-amber-600" /> : <X className="w-5 h-5 text-red-600" />}
                   </div>
                   <div>
-                    <p className="text-sm font-bold capitalize">{health.overall === "healthy" ? "All Systems Operational" : health.overall === "warning" ? "Some Services Degraded" : "System Issues Detected"}</p>
-                    <p className="text-xs text-text-muted">Last checked: {new Date().toLocaleTimeString()}</p>
+                    <p className="text-sm font-bold">{health.overall === "healthy" ? "All Systems Operational" : health.overall === "warning" ? "Some Services Degraded" : "Critical Issues Detected"}</p>
+                    <p className="text-xs text-text-muted">Last checked: {new Date(health.timestamp).toLocaleTimeString()}</p>
                   </div>
                 </div>
               </Card>
+
+              {/* Alerts */}
+              {health.alerts.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {health.alerts.map((alert, i) => (
+                    <div key={i} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium ${alert.level === "critical" ? "bg-red-100 text-red-800 border border-red-200" : alert.level === "high" ? "bg-amber-100 text-amber-800 border border-amber-200" : "bg-blue-50 text-blue-800 border border-blue-200"}`}>
+                      {alert.level === "critical" ? "🔴" : alert.level === "high" ? "🟡" : "🔵"} {alert.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Error Counts */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <Card><p className="text-xs text-text-muted">Failed Messages (1h)</p><p className={`text-xl font-bold ${health.errors.failedMessages1h > 0 ? "text-red-600" : "text-emerald-600"}`}>{health.errors.failedMessages1h}</p></Card>
+                <Card><p className="text-xs text-text-muted">Failed Messages (24h)</p><p className={`text-xl font-bold ${health.errors.failedMessages24h > 5 ? "text-red-600" : health.errors.failedMessages24h > 0 ? "text-amber-600" : "text-emerald-600"}`}>{health.errors.failedMessages24h}</p></Card>
+              </div>
+
+              {/* WhatsApp Health */}
+              <Card className="mb-4">
+                <div className="flex items-center gap-2 mb-3"><Globe className="w-4 h-4 text-emerald-600" /><h3 className="text-sm font-bold">WhatsApp Health</h3></div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div><p className="text-xs text-text-muted">Connected</p><p className="text-lg font-bold text-emerald-600">{health.whatsapp.connected}</p></div>
+                  <div><p className="text-xs text-text-muted">Disconnected</p><p className="text-lg font-bold text-text-muted">{health.whatsapp.disconnected}</p></div>
+                  <div><p className="text-xs text-text-muted">Last Inbound</p><p className="text-sm font-medium">{health.whatsapp.lastInbound ? timeAgoStr(health.whatsapp.lastInbound) : "Never"}</p></div>
+                  <div><p className="text-xs text-text-muted">Last Outbound</p><p className="text-sm font-medium">{health.whatsapp.lastOutbound ? timeAgoStr(health.whatsapp.lastOutbound) : "Never"}</p></div>
+                </div>
+              </Card>
+
+              {/* Service Checks */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {health.checks.map((check) => (
                   <Card key={check.name}>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium">{check.name}</span>
                       <span className={`w-3 h-3 rounded-full ${check.status === "healthy" ? "bg-emerald-500" : check.status === "warning" ? "bg-amber-500" : "bg-red-500"}`} />
                     </div>
                     <p className="text-xs text-text-muted">{check.message}</p>
-                    {check.responseMs > 0 && <p className="text-[10px] text-text-muted mt-1">{check.responseMs}ms response</p>}
+                    {check.responseMs > 0 && <p className="text-[10px] text-text-muted mt-1">{check.responseMs}ms</p>}
                   </Card>
                 ))}
               </div>
@@ -320,4 +360,14 @@ function SC({ icon: Icon, label, value, p, c }: { icon: typeof Users; label: str
   return (
     <Card><div className="flex items-center gap-2"><Icon className="w-4 h-4 text-text-muted flex-shrink-0" /><div><p className={`text-lg font-bold ${colors[c || ""] || ""}`}>{p || ""}{value.toLocaleString()}</p><p className="text-[10px] text-text-muted">{label}</p></div></div></Card>
   );
+}
+
+function timeAgoStr(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
