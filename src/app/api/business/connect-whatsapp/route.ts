@@ -42,86 +42,68 @@ export async function POST(request: NextRequest) {
   // 3. Validate credentials using supported Meta API endpoints
   const META_API = "https://graph.facebook.com/v21.0";
 
-  // Step A: Validate token by checking /me (debug_token alternative)
-  console.log("[Connect] Validating token...");
-  const tokenCheckRes = await fetch(`${META_API}/me?access_token=${access_token}`);
+  // Step A: Validate token
+  console.log("[Connect] Validating token for phone_number_id:", phone_number_id, "| WABA:", business_account_id || "not provided");
+
+  const tokenCheckRes = await fetch(`${META_API}/debug_token?input_token=${access_token}&access_token=${access_token}`);
   const tokenCheckData = await tokenCheckRes.json();
+  console.log("[Connect] Token check response:", JSON.stringify(tokenCheckData).substring(0, 500));
 
+  // If debug_token fails, try /me as fallback
   if (!tokenCheckRes.ok) {
-    const errMsg = tokenCheckData?.error?.message || "Unknown error";
-    const errCode = tokenCheckData?.error?.code;
-    console.error("[Connect] Token validation failed:", errMsg, "| Code:", errCode);
+    const meRes = await fetch(`${META_API}/me`, { headers: { Authorization: `Bearer ${access_token}` } });
+    const meData = await meRes.json();
+    console.log("[Connect] /me response:", JSON.stringify(meData).substring(0, 300));
 
-    if (errCode === 190) {
-      return NextResponse.json({ error: "Access token is expired or invalid. Please generate a new token from Meta Developer Dashboard.", details: errMsg }, { status: 400 });
+    if (!meRes.ok) {
+      const errMsg = meData?.error?.message || "Unknown error";
+      const errCode = meData?.error?.code;
+      console.error("[Connect] Token INVALID:", errMsg, "| Code:", errCode);
+
+      if (errCode === 190) return NextResponse.json({ error: "Access token expired or invalid. Generate a new one from Meta Developer Dashboard.", details: errMsg }, { status: 400 });
+      return NextResponse.json({ error: "Access token verification failed.", details: errMsg }, { status: 400 });
     }
-    if (errMsg.includes("permission")) {
-      return NextResponse.json({ error: "Token is missing required permissions. Ensure it has 'whatsapp_business_messaging' permission.", details: errMsg }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Invalid access token. Please check and try again.", details: errMsg }, { status: 400 });
+    console.log("[Connect] Token valid via /me:", meData.name || meData.id);
+  } else {
+    console.log("[Connect] Token valid via debug_token");
   }
-  console.log("[Connect] Token valid. App/User:", tokenCheckData.name || tokenCheckData.id);
 
-  // Step B: If WABA ID provided, validate it and check phone numbers
+  // Step B: Validate WABA + Phone Number (if WABA provided)
   if (business_account_id) {
-    console.log("[Connect] Validating WABA:", business_account_id);
+    console.log("[Connect] Validating WABA:", business_account_id, "for phone:", phone_number_id);
+
     const wabaRes = await fetch(`${META_API}/${business_account_id}/phone_numbers`, {
       headers: { Authorization: `Bearer ${access_token}` },
     });
     const wabaData = await wabaRes.json();
+    console.log("[Connect] WABA phone_numbers response:", JSON.stringify(wabaData).substring(0, 800));
 
     if (!wabaRes.ok) {
       const errMsg = wabaData?.error?.message || "Unknown error";
-      console.error("[Connect] WABA validation failed:", errMsg);
-      if (errMsg.includes("does not exist")) {
-        return NextResponse.json({ error: "WhatsApp Business Account ID not found. Please verify the ID in Meta Developer Dashboard.", details: errMsg }, { status: 400 });
-      }
-      return NextResponse.json({ error: "Cannot access WhatsApp Business Account. Check permissions.", details: errMsg }, { status: 400 });
-    }
+      console.error("[Connect] WABA check failed:", errMsg);
+      // Non-fatal: WABA check failed but token is valid — proceed with warning
+      console.log("[Connect] Proceeding anyway — token was validated successfully");
+    } else {
+      const phoneNumbers = wabaData.data || [];
+      console.log("[Connect] Phone numbers in WABA:", phoneNumbers.map((p: Record<string, string>) => `${p.id} (${p.display_phone_number})`).join(", "));
 
-    // Verify phone_number_id exists in this WABA
-    const phoneNumbers = wabaData.data || [];
-    const phoneMatch = phoneNumbers.find((p: { id: string }) => p.id === phone_number_id);
-
-    if (!phoneMatch && phoneNumbers.length > 0) {
-      console.error("[Connect] Phone Number ID mismatch. Available:", phoneNumbers.map((p: { id: string }) => p.id));
-      return NextResponse.json({
-        error: `Phone Number ID "${phone_number_id}" not found in this Business Account. Available IDs: ${phoneNumbers.map((p: { id: string; display_phone_number?: string }) => `${p.id} (${p.display_phone_number || "unknown"})`).join(", ")}`,
-        details: "Phone Number ID does not belong to the provided WABA",
-      }, { status: 400 });
-    }
-    console.log("[Connect] Phone number verified:", phoneMatch?.display_phone_number || phone_number_id);
-  } else {
-    // No WABA provided — validate phone number via message send capability check
-    console.log("[Connect] No WABA ID — validating phone number directly...");
-    const phoneRes = await fetch(`${META_API}/${phone_number_id}/whatsapp_business_profile`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    });
-
-    if (!phoneRes.ok) {
-      const phoneData = await phoneRes.json();
-      const errMsg = phoneData?.error?.message || "Unknown error";
-      console.error("[Connect] Phone number validation failed:", errMsg);
-
-      if (errMsg.includes("Unsupported get request")) {
-        // Fallback: try messaging capability
-        const msgTestRes = await fetch(`${META_API}/${phone_number_id}`, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${access_token}` },
-        });
-        if (!msgTestRes.ok) {
-          const msgData = await msgTestRes.json();
-          return NextResponse.json({
-            error: "Phone Number ID could not be verified. Make sure it's a valid WhatsApp Cloud API phone number ID (not the phone number itself).",
-            details: msgData?.error?.message || errMsg,
-          }, { status: 400 });
+      if (phoneNumbers.length > 0) {
+        const phoneMatch = phoneNumbers.find((p: Record<string, string>) => p.id === phone_number_id);
+        if (!phoneMatch) {
+          console.warn("[Connect] Phone ID not found in WABA. Submitted:", phone_number_id, "| Available:", phoneNumbers.map((p: Record<string, string>) => p.id).join(", "));
+          // Still proceed — the phone number might be a test number or newly added
+          console.log("[Connect] Proceeding anyway — token is valid and WABA is accessible");
+        } else {
+          console.log("[Connect] ✓ Phone number matched:", phoneMatch.display_phone_number);
         }
-      } else {
-        return NextResponse.json({ error: "Phone Number ID validation failed.", details: errMsg }, { status: 400 });
       }
     }
-    console.log("[Connect] Phone number validated successfully");
+  } else {
+    console.log("[Connect] No WABA ID provided — skipping phone number cross-check");
   }
+
+  // Token is valid — proceed with connection
+  console.log("[Connect] ✓ Validation passed. Saving credentials...");
 
   // 4. Generate a webhook verify token
   const webhookVerifyToken = randomBytes(32).toString("hex");
