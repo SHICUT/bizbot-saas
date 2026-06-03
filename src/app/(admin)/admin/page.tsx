@@ -284,15 +284,18 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-2 gap-3 mb-5">
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Name</p><p className="text-sm font-medium">{selectedBiz.name}</p></div>
-              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Type</p><p className="text-sm font-medium capitalize">{selectedBiz.type}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Owner</p><p className="text-sm font-medium">{selectedBiz.owner_name || "—"}</p></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Email</p><p className="text-sm font-medium truncate">{selectedBiz.email || "—"}</p></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Phone</p><p className="text-sm font-medium">{selectedBiz.phone || "—"}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Type</p><p className="text-sm font-medium capitalize">{selectedBiz.type}</p></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Plan</p><Badge variant={selectedBiz.plan === "business" ? "success" : selectedBiz.plan === "growth" ? "info" : "default"}>{selectedBiz.plan}</Badge></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Status</p><Badge variant={selectedBiz.status === "active" ? "success" : selectedBiz.status === "trialing" ? "warning" : "danger"}>{selectedBiz.status}</Badge></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">WhatsApp</p><p className="text-sm">{selectedBiz.whatsapp_connected ? "✅ Connected" : "❌ Off"}</p></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Remaining</p><p className="text-sm font-medium">{selectedBiz.remaining_days > 0 ? `${selectedBiz.remaining_days} days` : "Expired"}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Expiry</p><p className="text-sm font-medium">{selectedBiz.expiry_date ? new Date(selectedBiz.expiry_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Leads</p><p className="text-sm font-medium">{selectedBiz.leads_count}</p></div>
               <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Messages</p><p className="text-sm font-medium">{selectedBiz.messages_used}/{selectedBiz.message_limit}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50 col-span-2"><p className="text-[10px] text-text-muted uppercase">Created</p><p className="text-sm font-medium">{new Date(selectedBiz.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p></div>
             </div>
 
             <p className="text-xs font-bold text-text-muted uppercase mb-2">Admin Actions</p>
