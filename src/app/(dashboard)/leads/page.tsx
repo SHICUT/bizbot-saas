@@ -113,6 +113,8 @@ export default function LeadsPage() {
   const [newNote, setNewNote] = useState("");
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showLostReason, setShowLostReason] = useState(false);
+  const [lostReason, setLostReason] = useState("");
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -460,13 +462,32 @@ export default function LeadsPage() {
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="flex gap-2 pt-2">
-                          <Button className="flex-1" size="sm" onClick={() => { setSelectedLead(null); window.location.assign("/conversations"); }}>
-                            <MessageSquare className="w-4 h-4" /> View Chat
-                          </Button>
-                          <Button variant="secondary" size="sm" onClick={() => { setSelectedLead(null); window.location.assign("/appointments"); }}>
-                            <Calendar className="w-4 h-4" /> Book
-                          </Button>
+                        <div className="space-y-2 pt-2">
+                          <p className="text-xs font-medium text-text-muted mb-1">Quick Actions</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <a href={`https://wa.me/${selectedLead.phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer">
+                              <Button variant="secondary" size="sm" className="w-full"><MessageSquare className="w-3.5 h-3.5" />WhatsApp</Button>
+                            </a>
+                            <a href={`tel:${selectedLead.phone}`}>
+                              <Button variant="secondary" size="sm" className="w-full"><Phone className="w-3.5 h-3.5" />Call</Button>
+                            </a>
+                            <Button variant="secondary" size="sm" className="w-full" onClick={() => { setSelectedLead(null); window.location.assign("/conversations"); }}>
+                              <MessageSquare className="w-3.5 h-3.5" />View Chat
+                            </Button>
+                            <Button variant="secondary" size="sm" className="w-full" onClick={() => { setSelectedLead(null); window.location.assign("/appointments"); }}>
+                              <Calendar className="w-3.5 h-3.5" />Book Appt
+                            </Button>
+                            {selectedLead.status !== "converted" && (
+                              <Button size="sm" className="w-full" onClick={() => updateLeadStatus(selectedLead.id, "converted")}>
+                                <TrendingUp className="w-3.5 h-3.5" />Convert
+                              </Button>
+                            )}
+                            {selectedLead.status !== "lost" && (
+                              <Button variant="danger" size="sm" className="w-full" onClick={() => { setShowLostReason(true); }}>
+                                <X className="w-3.5 h-3.5" />Mark Lost
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -537,6 +558,48 @@ export default function LeadsPage() {
                     )}
                   </>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Lost Reason Modal */}
+      <AnimatePresence>
+        {showLostReason && selectedLead && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40" onClick={() => setShowLostReason(false)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-base font-bold mb-3">Why is this lead lost?</h3>
+              <div className="space-y-2 mb-4">
+                {["Too Expensive", "No Response", "Competitor Chosen", "Not Interested", "Invalid Lead", "Other"].map((reason) => (
+                  <button key={reason} onClick={() => setLostReason(reason)} className={`w-full px-4 py-2.5 text-sm rounded-lg border text-left transition-colors ${lostReason === reason ? "border-primary bg-primary/5 font-medium" : "border-border hover:bg-gray-50"}`}>
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => setShowLostReason(false)}>Cancel</Button>
+                <Button variant="danger" className="flex-1" disabled={!lostReason} onClick={async () => {
+                  await fetch("/api/leads", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: selectedLead.id, status: "lost" }),
+                  });
+                  // Add note with reason
+                  await fetch("/api/leads/notes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ leadId: selectedLead.id, note: `Lost Reason: ${lostReason}` }),
+                  });
+                  setLeads((prev) => prev.map((l) => l.id === selectedLead.id ? { ...l, status: "lost" as LeadStatus } : l));
+                  setSelectedLead({ ...selectedLead, status: "lost" });
+                  setShowLostReason(false);
+                  setLostReason("");
+                  setSuccessMsg("Lead marked as lost");
+                  setTimeout(() => setSuccessMsg(null), 2000);
+                }}>
+                  Confirm Lost
+                </Button>
               </div>
             </motion.div>
           </div>

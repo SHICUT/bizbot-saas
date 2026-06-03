@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { plan } = body;
 
-    if (!plan || !["trial", "starter", "pro", "business"].includes(plan)) {
+    if (!plan || !["trial", "starter", "growth", "business"].includes(plan)) {
       return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
     }
 
@@ -79,7 +79,7 @@ async function activateSubscription(
   const messageLimits: Record<string, number> = {
     trial: 100,
     starter: 1000,
-    pro: 5000,
+    growth: 5000,
     business: 20000,
   };
 

@@ -52,10 +52,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 });
     }
 
-    // Get pipeline stats
+    // Get pipeline stats — use select("*") to avoid column-not-found errors
     const { data: allLeads } = await admin
       .from("leads")
-      .select("status, lead_temperature, estimated_value, score")
+      .select("*")
       .eq("business_id", business.id);
 
     const stats = {

@@ -1,101 +1,95 @@
 /**
  * PRICING CONFIGURATION — Single Source of Truth
- *
- * ⚠️ TESTING MODE: ₹10/₹20/₹30
- * To restore production pricing, change TESTING_MODE to false.
+ * Currency: USD
+ * Plans: Starter, Growth, Business
  */
-
-const TESTING_MODE = false; // ← Set to true for ₹10/₹20/₹30 testing
 
 /** Trial duration in days — SINGLE SOURCE OF TRUTH */
 export const TRIAL_DURATION_DAYS = 7;
 
-// ─── Production Pricing ─────────────────────────────────────────────────────
-const PRODUCTION_PRICES = {
-  starter: { monthly: 799, yearly: 7670, yearlyEquivalent: 639 },
-  pro: { monthly: 1999, yearly: 19190, yearlyEquivalent: 1599 },
-  business: { monthly: 3999, yearly: 38390, yearlyEquivalent: 3199 },
-};
+// ─── Plan Pricing ────────────────────────────────────────────────────────────
 
-// ─── Testing Pricing ────────────────────────────────────────────────────────
-const TESTING_PRICES = {
-  starter: { monthly: 10, yearly: 100, yearlyEquivalent: 8 },
-  pro: { monthly: 20, yearly: 200, yearlyEquivalent: 17 },
-  business: { monthly: 30, yearly: 300, yearlyEquivalent: 25 },
+export const PRICES = {
+  starter: { monthly: 9, yearly: 79, yearlySavings: 29 },
+  growth: { monthly: 19, yearly: 179, yearlySavings: 49 },
+  business: { monthly: 39, yearly: 349, yearlySavings: 119 },
 };
-
-const PRICES = TESTING_MODE ? TESTING_PRICES : PRODUCTION_PRICES;
 
 // ─── Plan Definitions ───────────────────────────────────────────────────────
 
 export interface Plan {
   id: string;
   name: string;
-  tier: "starter" | "pro" | "business";
+  tier: "starter" | "growth" | "business";
   billingCycle: "monthly" | "yearly";
   monthlyPrice: number;
   yearlyPrice: number;
   yearlyMonthlyEquivalent: number;
-  priceInPaise: number;
+  yearlySavings: number;
+  priceInCents: number;
   messageLimit: number;
   features: string[];
   popular?: boolean;
+  tagline?: string;
 }
 
 export const PLANS: Plan[] = [
+  // Starter
   {
     id: "starter_monthly", name: "Starter", tier: "starter", billingCycle: "monthly",
-    monthlyPrice: PRICES.starter.monthly,
-    yearlyPrice: PRICES.starter.yearly,
-    yearlyMonthlyEquivalent: PRICES.starter.yearlyEquivalent,
-    priceInPaise: PRICES.starter.monthly * 100,
+    monthlyPrice: PRICES.starter.monthly, yearlyPrice: PRICES.starter.yearly,
+    yearlyMonthlyEquivalent: Math.round((PRICES.starter.yearly / 12) * 100) / 100,
+    yearlySavings: PRICES.starter.yearlySavings,
+    priceInCents: PRICES.starter.monthly * 100,
     messageLimit: 1000,
-    features: ["1,000 messages/month", "AI auto-reply", "Lead capture", "Conversation inbox", "Email support"],
+    features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness", "1,000 Messages/month"],
   },
   {
     id: "starter_yearly", name: "Starter", tier: "starter", billingCycle: "yearly",
-    monthlyPrice: PRICES.starter.monthly,
-    yearlyPrice: PRICES.starter.yearly,
-    yearlyMonthlyEquivalent: PRICES.starter.yearlyEquivalent,
-    priceInPaise: PRICES.starter.yearly * 100,
+    monthlyPrice: PRICES.starter.monthly, yearlyPrice: PRICES.starter.yearly,
+    yearlyMonthlyEquivalent: Math.round((PRICES.starter.yearly / 12) * 100) / 100,
+    yearlySavings: PRICES.starter.yearlySavings,
+    priceInCents: PRICES.starter.yearly * 100,
     messageLimit: 1000,
-    features: ["1,000 messages/month", "AI auto-reply", "Lead capture", "Conversation inbox", "Email support", "2 months free"],
+    features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness", "1,000 Messages/month"],
+  },
+  // Growth
+  {
+    id: "growth_monthly", name: "Growth", tier: "growth", billingCycle: "monthly",
+    monthlyPrice: PRICES.growth.monthly, yearlyPrice: PRICES.growth.yearly,
+    yearlyMonthlyEquivalent: Math.round((PRICES.growth.yearly / 12) * 100) / 100,
+    yearlySavings: PRICES.growth.yearlySavings,
+    priceInCents: PRICES.growth.monthly * 100,
+    messageLimit: 5000, popular: true, tagline: "Most Popular",
+    features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export", "5,000 Messages/month"],
   },
   {
-    id: "pro_monthly", name: "Pro", tier: "pro", billingCycle: "monthly",
-    monthlyPrice: PRICES.pro.monthly,
-    yearlyPrice: PRICES.pro.yearly,
-    yearlyMonthlyEquivalent: PRICES.pro.yearlyEquivalent,
-    priceInPaise: PRICES.pro.monthly * 100,
-    messageLimit: 5000, popular: true,
-    features: ["5,000 messages/month", "Everything in Starter", "Appointment booking", "Follow-up sequences", "Priority support", "Analytics dashboard"],
+    id: "growth_yearly", name: "Growth", tier: "growth", billingCycle: "yearly",
+    monthlyPrice: PRICES.growth.monthly, yearlyPrice: PRICES.growth.yearly,
+    yearlyMonthlyEquivalent: Math.round((PRICES.growth.yearly / 12) * 100) / 100,
+    yearlySavings: PRICES.growth.yearlySavings,
+    priceInCents: PRICES.growth.yearly * 100,
+    messageLimit: 5000, popular: true, tagline: "Most Popular",
+    features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export", "5,000 Messages/month"],
   },
-  {
-    id: "pro_yearly", name: "Pro", tier: "pro", billingCycle: "yearly",
-    monthlyPrice: PRICES.pro.monthly,
-    yearlyPrice: PRICES.pro.yearly,
-    yearlyMonthlyEquivalent: PRICES.pro.yearlyEquivalent,
-    priceInPaise: PRICES.pro.yearly * 100,
-    messageLimit: 5000, popular: true,
-    features: ["5,000 messages/month", "Everything in Starter", "Appointment booking", "Follow-up sequences", "Priority support", "Analytics dashboard", "2 months free"],
-  },
+  // Business
   {
     id: "business_monthly", name: "Business", tier: "business", billingCycle: "monthly",
-    monthlyPrice: PRICES.business.monthly,
-    yearlyPrice: PRICES.business.yearly,
-    yearlyMonthlyEquivalent: PRICES.business.yearlyEquivalent,
-    priceInPaise: PRICES.business.monthly * 100,
-    messageLimit: 20000,
-    features: ["20,000 messages/month", "Everything in Pro", "Custom AI training", "Multi-agent support", "Campaign broadcasts", "Dedicated account manager"],
+    monthlyPrice: PRICES.business.monthly, yearlyPrice: PRICES.business.yearly,
+    yearlyMonthlyEquivalent: Math.round((PRICES.business.yearly / 12) * 100) / 100,
+    yearlySavings: PRICES.business.yearlySavings,
+    priceInCents: PRICES.business.monthly * 100,
+    messageLimit: 20000, tagline: "Best for Growing Businesses",
+    features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools", "20,000 Messages/month"],
   },
   {
     id: "business_yearly", name: "Business", tier: "business", billingCycle: "yearly",
-    monthlyPrice: PRICES.business.monthly,
-    yearlyPrice: PRICES.business.yearly,
-    yearlyMonthlyEquivalent: PRICES.business.yearlyEquivalent,
-    priceInPaise: PRICES.business.yearly * 100,
-    messageLimit: 20000,
-    features: ["20,000 messages/month", "Everything in Pro", "Custom AI training", "Multi-agent support", "Campaign broadcasts", "Dedicated account manager", "2 months free"],
+    monthlyPrice: PRICES.business.monthly, yearlyPrice: PRICES.business.yearly,
+    yearlyMonthlyEquivalent: Math.round((PRICES.business.yearly / 12) * 100) / 100,
+    yearlySavings: PRICES.business.yearlySavings,
+    priceInCents: PRICES.business.yearly * 100,
+    messageLimit: 20000, tagline: "Best for Growing Businesses",
+    features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools", "20,000 Messages/month"],
   },
 ];
 
@@ -122,5 +116,13 @@ export function getPlansByTier(tier: string): Plan[] {
 }
 
 export function isTestingMode(): boolean {
-  return TESTING_MODE;
+  return false;
 }
+
+/** Message limits by plan tier */
+export const MESSAGE_LIMITS: Record<string, number> = {
+  trial: 100,
+  starter: 1000,
+  growth: 5000,
+  business: 20000,
+};

@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, CreditCard, Zap, Loader2, AlertCircle, Info, CheckCircle } from "lucide-react";
+import { Check, CreditCard, Zap, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/layout/PageHeader";
-import { isTestingMode } from "@/lib/payments/plans";
-import { formatINRFull } from "@/lib/utils";
 
 interface SubStatus {
   plan: string;
@@ -42,9 +40,9 @@ export default function BillingPage() {
   const [pageLoading, setPageLoading] = useState(true);
 
   const plans: PlanData[] = [
-    { id: "starter", name: "Starter", tier: "starter", monthly: { price: isTestingMode() ? 10 : 799 }, yearly: { totalPrice: isTestingMode() ? 100 : 7670, monthlyEquivalent: isTestingMode() ? 8 : 639 }, messageLimit: "1,000/month", features: ["1,000 messages/month", "AI auto-reply", "Lead capture", "Conversation inbox", "Email support"] },
-    { id: "pro", name: "Pro", tier: "pro", popular: true, monthly: { price: isTestingMode() ? 20 : 1999 }, yearly: { totalPrice: isTestingMode() ? 200 : 19190, monthlyEquivalent: isTestingMode() ? 17 : 1599 }, messageLimit: "5,000/month", features: ["5,000 messages/month", "Everything in Starter", "Appointment booking", "Follow-up sequences", "Priority support", "Analytics"] },
-    { id: "business", name: "Business", tier: "business", monthly: { price: isTestingMode() ? 30 : 3999 }, yearly: { totalPrice: isTestingMode() ? 300 : 38390, monthlyEquivalent: isTestingMode() ? 25 : 3199 }, messageLimit: "20,000/month", features: ["20,000 messages/month", "Everything in Pro", "Custom AI training", "Multi-agent", "Campaigns", "Dedicated manager"] },
+    { id: "starter", name: "Starter", tier: "starter", monthly: { price: 9 }, yearly: { totalPrice: 79, monthlyEquivalent: 6.58 }, messageLimit: "1,000/month", features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness"] },
+    { id: "growth", name: "Growth", tier: "growth", popular: true, monthly: { price: 19 }, yearly: { totalPrice: 179, monthlyEquivalent: 14.92 }, messageLimit: "5,000/month", features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export"] },
+    { id: "business", name: "Business", tier: "business", monthly: { price: 39 }, yearly: { totalPrice: 349, monthlyEquivalent: 29.08 }, messageLimit: "20,000/month", features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools"] },
   ];
 
   useEffect(() => {
@@ -172,13 +170,10 @@ export default function BillingPage() {
       {/* Error */}
       {error && <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3"><AlertCircle className="w-5 h-5 text-red-600" /><p className="text-sm text-red-700">{error}</p></div>}
 
-      {/* Testing Mode Banner */}
-      {isTestingMode() && (
-        <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-center gap-2">
-          <Info className="w-4 h-4 text-blue-600" />
-          <span className="text-xs text-blue-700 font-medium">Testing Mode — Prices reduced for testing (₹10/₹20/₹30)</span>
-        </div>
-      )}
+      {/* Yearly Savings Banner */}
+      <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-2">
+        <span className="text-xs text-emerald-700 font-medium">💰 Save up to 25% with yearly billing</span>
+      </div>
 
       {/* Billing Toggle */}
       <div className="flex items-center justify-center gap-2 mb-6">
@@ -208,13 +203,13 @@ export default function BillingPage() {
                 <h3 className="text-lg font-bold">{plan.name}</h3>
                 <p className="text-xs text-text-muted mt-1">{plan.messageLimit}</p>
                 <div className="mt-3">
-                  <span className="text-3xl font-bold">₹{isMonthly ? plan.monthly.price : plan.yearly.monthlyEquivalent}</span>
+                  <span className="text-3xl font-bold">${isMonthly ? plan.monthly.price : plan.yearly.monthlyEquivalent}</span>
                   <span className="text-text-muted text-sm">/mo</span>
                 </div>
                 {!isMonthly && (
                   <div className="mt-1">
-                    <p className="text-xs text-text-muted">Billed {formatINRFull(plan.yearly.totalPrice)}/year</p>
-                    <p className="text-xs text-emerald-600 font-medium">Save {formatINRFull((plan.monthly.price * 12) - plan.yearly.totalPrice)}/year</p>
+                    <p className="text-xs text-text-muted">Billed ${plan.yearly.totalPrice}/year</p>
+                    <p className="text-xs text-emerald-600 font-medium">Save ${(plan.monthly.price * 12) - plan.yearly.totalPrice}/year</p>
                   </div>
                 )}
               </div>

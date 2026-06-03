@@ -1,161 +1,320 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Users, MessageSquare, Calendar, CreditCard, Building, Eye, StickyNote, DollarSign } from "lucide-react";
+import {
+  Loader2, Users, MessageSquare, Calendar, CreditCard, Building,
+  Search, X, Zap, Clock, Shield, BarChart2, Megaphone, Globe,
+  RefreshCw, Heart, AlertTriangle, CheckCircle, Activity
+} from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { formatINR } from "@/lib/utils";
 
-interface AdminData {
-  stats: { totalBusinesses: number; activeBusinesses: number; trialUsers: number; paidUsers: number; totalLeads: number; totalMessages: number; totalAppointments: number; totalRevenue?: number; mrr?: number; churnRate?: number };
-  businesses: Array<{ id: string; name: string; type: string; plan: string; email: string; phone: string; created_at: string; whatsapp_connected: boolean; onboarding_completed: boolean; subscription: { plan: string; status: string; messages_used: number; message_limit: number } | null }>;
+interface Stats {
+  totalBusinesses: number; activeBusinesses: number; trialUsers: number;
+  paidUsers: number; expiredUsers: number; whatsappConnected: number;
+  totalLeads: number; totalConversations: number; totalBroadcasts: number;
+  totalAppointments: number; totalMessages: number; mrr: number; arr: number;
 }
+interface Business {
+  id: string; name: string; owner_name: string; email: string; phone: string;
+  type: string; plan: string; status: string; whatsapp_connected: boolean;
+  created_at: string; expiry_date: string | null; remaining_days: number;
+  leads_count: number; messages_used: number; message_limit: number;
+  onboarding_completed: boolean;
+}
+interface HealthCheck { name: string; status: "healthy" | "warning" | "offline"; responseMs: number; message: string; }
+interface AuditLog { id: string; admin_id: string; business_id: string | null; action: string; metadata: Record<string, unknown>; created_at: string; }
 
-interface BusinessDetail {
-  business: Record<string, unknown>;
-  leads: Array<{ id: string; name: string; phone: string; status: string; source: string; created_at: string }>;
-  conversations: Array<{ id: string; last_message_text: string; last_message_at: string; leads: { name: string; phone: string } }>;
-  appointments: Array<{ id: string; title: string; scheduled_at: string; status: string }>;
-  totalMessages: number;
-  subscription: Record<string, unknown>;
-  adminNotes: Array<{ id: string; note: string; created_at: string }>;
-}
+type Tab = "overview" | "health" | "logs";
 
 export default function AdminPage() {
-  const [data, setData] = useState<AdminData | null>(null);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [data, setData] = useState<{ stats: Stats; businesses: Business[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBiz, setSelectedBiz] = useState<BusinessDetail | null>(null);
-  const [viewingBizId, setViewingBizId] = useState<string | null>(null);
-  const [noteText, setNoteText] = useState("");
+  const [search, setSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedBiz, setSelectedBiz] = useState<Business | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [health, setHealth] = useState<{ overall: string; checks: HealthCheck[] } | null>(null);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logsPage, setLogsPage] = useState(1);
 
-  useEffect(() => {
-    fetch("/api/admin").then((r) => r.json()).then((d) => {
-      if (d.error) { setError(d.error); setLoading(false); return; }
-      setData(d);
-      setLoading(false);
-    }).catch(() => { setError("Failed to load admin data"); setLoading(false); });
+  const loadData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin");
+      if (res.status === 403) { setError("Access denied. Super Admin only."); setLoading(false); return; }
+      setData(await res.json());
+    } catch { setError("Failed to load"); }
+    setLoading(false);
   }, []);
 
-  async function viewBusiness(id: string) {
-    setViewingBizId(id);
-    const res = await fetch(`/api/admin/business?id=${id}`);
-    const d = await res.json();
-    if (!res.ok) { setError(d.error); setViewingBizId(null); return; }
-    setSelectedBiz(d);
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function loadHealth() {
+    const res = await fetch("/api/admin/health");
+    if (res.ok) setHealth(await res.json());
   }
 
-  async function addNote(businessId: string) {
-    if (!noteText.trim()) return;
-    await fetch("/api/admin/business", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: businessId, note: noteText }) });
-    setNoteText("");
-    viewBusiness(businessId); // Refresh
+  async function loadLogs(page = 1) {
+    const res = await fetch(`/api/admin/audit-logs?page=${page}`);
+    if (res.ok) { const d = await res.json(); setLogs(d.logs || []); setLogsTotal(d.total || 0); setLogsPage(page); }
+  }
+
+  useEffect(() => { if (tab === "health") loadHealth(); if (tab === "logs") loadLogs(); }, [tab]);
+
+  async function runAction(action: string, params: Record<string, unknown> = {}) {
+    if (!selectedBiz) return;
+    setActionLoading(true); setActionMsg(null);
+    try {
+      const res = await fetch("/api/admin/actions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, businessId: selectedBiz.id, ...params }) });
+      const d = await res.json();
+      setActionMsg(res.ok ? `✓ ${d.message}` : `✗ ${d.error}`);
+      if (res.ok) loadData();
+    } catch { setActionMsg("✗ Action failed"); }
+    setActionLoading(false);
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><p className="text-lg font-bold text-red-600 mb-2">Access Denied</p><p className="text-sm text-text-muted">{error}</p><a href="/" className="text-primary text-sm mt-4 inline-block">← Back to Dashboard</a></div></div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><Shield className="w-12 h-12 text-red-300 mx-auto mb-3" /><p className="text-lg font-bold text-red-600">{error}</p></div></div>;
   if (!data) return null;
 
-  // Drill-down view
-  if (selectedBiz) {
-    return (
-      <div className="max-w-6xl mx-auto p-6">
-        <button onClick={() => setSelectedBiz(null)} className="text-sm text-primary mb-4 hover:underline">← Back to All Businesses</button>
-        <h1 className="text-2xl font-bold mb-6">{(selectedBiz.business as { name?: string }).name || "Business"}</h1>
+  const { stats, businesses } = data;
+  const filtered = businesses.filter((b) => {
+    if (search && !b.name.toLowerCase().includes(search.toLowerCase()) && !b.email.toLowerCase().includes(search.toLowerCase())) return false;
+    if (planFilter !== "all" && b.plan !== planFilter) return false;
+    if (statusFilter === "active" && b.status !== "active") return false;
+    if (statusFilter === "trialing" && b.status !== "trialing") return false;
+    if (statusFilter === "expired" && b.status !== "expired") return false;
+    if (statusFilter === "whatsapp" && !b.whatsapp_connected) return false;
+    return true;
+  });
+  const expiringSoon = businesses.filter((b) => b.remaining_days > 0 && b.remaining_days <= 7);
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card><p className="text-xs text-text-muted">Leads</p><p className="text-xl font-bold">{selectedBiz.leads.length}</p></Card>
-          <Card><p className="text-xs text-text-muted">Messages</p><p className="text-xl font-bold">{selectedBiz.totalMessages}</p></Card>
-          <Card><p className="text-xs text-text-muted">Appointments</p><p className="text-xl font-bold">{selectedBiz.appointments.length}</p></Card>
-          <Card><p className="text-xs text-text-muted">Conversations</p><p className="text-xl font-bold">{selectedBiz.conversations.length}</p></Card>
-        </div>
-
-        {/* Leads */}
-        <Card className="mb-4" padding="none">
-          <div className="p-4 border-b border-border"><h3 className="text-sm font-bold">Leads ({selectedBiz.leads.length})</h3></div>
-          <div className="divide-y divide-border max-h-64 overflow-y-auto">
-            {selectedBiz.leads.map((l) => (
-              <div key={l.id} className="p-3 flex items-center justify-between">
-                <div><p className="text-sm font-medium">{l.name || l.phone}</p><p className="text-xs text-text-muted">{l.source} • {new Date(l.created_at).toLocaleDateString()}</p></div>
-                <Badge variant={l.status === "qualified" ? "success" : l.status === "new" ? "info" : "default"}>{l.status}</Badge>
-              </div>
-            ))}
-            {selectedBiz.leads.length === 0 && <p className="p-4 text-sm text-text-muted">No leads</p>}
-          </div>
-        </Card>
-
-        {/* Admin Notes */}
-        <Card className="mb-4">
-          <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Internal Notes</h3>
-          <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
-            {selectedBiz.adminNotes.map((n) => (
-              <div key={n.id} className="p-2 bg-yellow-50 rounded-lg text-xs"><p>{n.note}</p><p className="text-text-muted mt-1">{new Date(n.created_at).toLocaleString()}</p></div>
-            ))}
-            {selectedBiz.adminNotes.length === 0 && <p className="text-xs text-text-muted">No notes yet</p>}
-          </div>
-          <div className="flex gap-2">
-            <input value={noteText} onChange={(e) => setNoteText(e.target.value)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-border" placeholder="Add internal note..." />
-            <Button size="sm" onClick={() => addNote(viewingBizId!)}>Add</Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Main admin dashboard
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-bold">Super Admin</h1><p className="text-sm text-text-muted">BizBot Platform Overview</p></div>
-        <Badge variant="info">Admin</Badge>
+    <div className="max-w-7xl mx-auto p-4 lg:p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div><h1 className="text-2xl font-bold">Super Admin</h1><p className="text-sm text-text-muted">Platform Control Center</p></div>
+        <div className="flex items-center gap-2">
+          <Badge variant="info">Admin</Badge>
+          <Button size="sm" variant="secondary" onClick={loadData}><RefreshCw className="w-3.5 h-3.5" /></Button>
+        </div>
       </div>
 
-      {/* Platform Stats */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Building} label="Total Businesses" value={data.stats.totalBusinesses} />
-        <StatCard icon={Users} label="Active" value={data.stats.activeBusinesses} />
-        <StatCard icon={CreditCard} label="Paid Users" value={data.stats.paidUsers} />
-        <StatCard icon={Users} label="Trial Users" value={data.stats.trialUsers} />
-        <StatCard icon={Users} label="Total Leads" value={data.stats.totalLeads} />
-        <StatCard icon={MessageSquare} label="Total Messages" value={data.stats.totalMessages} />
-        <StatCard icon={Calendar} label="Appointments" value={data.stats.totalAppointments} />
-        <StatCard icon={DollarSign} label="MRR" value={data.stats.mrr || 0} isCurrency />
-      </motion.div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-border">
+        {([["overview", "Overview"], ["health", "System Health"], ["logs", "Audit Logs"]] as [Tab, string][]).map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === id ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-text-primary"}`}>{label}</button>
+        ))}
+      </div>
 
-      {/* Businesses Table */}
-      <Card padding="none">
-        <div className="p-4 border-b border-border"><h2 className="text-sm font-bold">All Businesses ({data.businesses.length})</h2></div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead><tr className="border-b border-border bg-gray-50/50">
-              <th className="text-left text-xs font-medium text-text-muted py-3 px-4">Business</th>
-              <th className="text-left text-xs font-medium text-text-muted py-3 px-4">Type</th>
-              <th className="text-left text-xs font-medium text-text-muted py-3 px-4">Plan</th>
-              <th className="text-left text-xs font-medium text-text-muted py-3 px-4">Usage</th>
-              <th className="text-left text-xs font-medium text-text-muted py-3 px-4">WhatsApp</th>
-              <th className="text-left text-xs font-medium text-text-muted py-3 px-4">Action</th>
-            </tr></thead>
-            <tbody>
-              {data.businesses.map((b) => (
-                <tr key={b.id} className="border-b border-border hover:bg-gray-50/50">
-                  <td className="py-3 px-4"><p className="text-sm font-medium">{b.name}</p><p className="text-xs text-text-muted">{b.email}</p></td>
-                  <td className="py-3 px-4"><span className="text-xs capitalize">{b.type}</span></td>
-                  <td className="py-3 px-4"><Badge variant={b.subscription?.status === "active" ? "success" : b.subscription?.status === "trialing" ? "warning" : "default"}>{b.plan}</Badge></td>
-                  <td className="py-3 px-4"><span className="text-xs">{b.subscription?.messages_used || 0}/{b.subscription?.message_limit || 0}</span></td>
-                  <td className="py-3 px-4"><Badge variant={b.whatsapp_connected ? "success" : "default"}>{b.whatsapp_connected ? "Yes" : "No"}</Badge></td>
-                  <td className="py-3 px-4"><button onClick={() => viewBusiness(b.id)} className="text-xs text-primary font-medium hover:underline flex items-center gap-1"><Eye className="w-3 h-3" /> View</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* ─── OVERVIEW TAB ─── */}
+      {tab === "overview" && (
+        <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+            <SC icon={Building} label="Businesses" value={stats.totalBusinesses} />
+            <SC icon={Users} label="Active" value={stats.activeBusinesses} c="emerald" />
+            <SC icon={Clock} label="Trial" value={stats.trialUsers} c="amber" />
+            <SC icon={CreditCard} label="Paid" value={stats.paidUsers} c="indigo" />
+            <SC icon={Zap} label="Expired" value={stats.expiredUsers} c="red" />
+            <SC icon={Globe} label="WhatsApp" value={stats.whatsappConnected} c="emerald" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <SC icon={Users} label="Leads" value={stats.totalLeads} />
+            <SC icon={MessageSquare} label="Messages" value={stats.totalMessages} />
+            <SC icon={Megaphone} label="Broadcasts" value={stats.totalBroadcasts} />
+            <SC icon={Calendar} label="Appointments" value={stats.totalAppointments} />
+            <SC icon={BarChart2} label="MRR" value={stats.mrr} p="$" c="emerald" />
+            <SC icon={BarChart2} label="ARR" value={stats.arr} p="$" c="indigo" />
+          </div>
+
+          {/* Subscription Alerts */}
+          {expiringSoon.length > 0 && (
+            <Card className="mb-4 bg-amber-50/50 border-amber-200">
+              <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-amber-600" /><span className="text-sm font-bold text-amber-900">Expiring Soon ({expiringSoon.length})</span></div>
+              <div className="flex flex-wrap gap-2">
+                {expiringSoon.slice(0, 5).map((b) => (
+                  <span key={b.id} className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">{b.name} — {b.remaining_days}d left</span>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 bg-white border border-border rounded-lg px-3 py-1.5 w-full sm:w-56">
+              <Search className="w-4 h-4 text-text-muted" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="bg-transparent text-sm focus:outline-none w-full" />
+              {search && <button onClick={() => setSearch("")}><X className="w-3.5 h-3.5 text-text-muted" /></button>}
+            </div>
+            <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="px-3 py-1.5 text-xs rounded-lg border border-border bg-white">
+              <option value="all">All Plans</option><option value="trial">Trial</option><option value="starter">Starter</option><option value="growth">Growth</option><option value="business">Business</option>
+            </select>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-xs rounded-lg border border-border bg-white">
+              <option value="all">All Status</option><option value="active">Active</option><option value="trialing">Trial</option><option value="expired">Expired</option><option value="whatsapp">WhatsApp</option>
+            </select>
+            <span className="text-xs text-text-muted ml-auto">{filtered.length} results</span>
+          </div>
+
+          {/* Business Table */}
+          <Card padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-border">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted">Business</th>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted hidden md:table-cell">Plan</th>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted hidden lg:table-cell">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted hidden lg:table-cell">WA</th>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted hidden md:table-cell">Leads</th>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted hidden lg:table-cell">Expires</th>
+                    <th className="text-left px-4 py-3 font-medium text-text-muted">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map((biz) => (
+                    <tr key={biz.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-3"><p className="font-medium truncate max-w-[140px]">{biz.name}</p><p className="text-xs text-text-muted truncate max-w-[140px]">{biz.email}</p></td>
+                      <td className="px-4 py-3 hidden md:table-cell"><Badge variant={biz.plan === "business" ? "success" : biz.plan === "growth" ? "info" : "default"}>{biz.plan}</Badge></td>
+                      <td className="px-4 py-3 hidden lg:table-cell"><Badge variant={biz.status === "active" ? "success" : biz.status === "trialing" ? "warning" : "danger"}>{biz.status}</Badge></td>
+                      <td className="px-4 py-3 hidden lg:table-cell"><span className={`w-2.5 h-2.5 rounded-full inline-block ${biz.whatsapp_connected ? "bg-emerald-500" : "bg-gray-300"}`} /></td>
+                      <td className="px-4 py-3 hidden md:table-cell text-xs">{biz.leads_count}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs">{biz.remaining_days > 0 ? `${biz.remaining_days}d` : <span className="text-red-500">Expired</span>}</td>
+                      <td className="px-4 py-3"><Button size="sm" variant="ghost" onClick={() => { setSelectedBiz(biz); setActionMsg(null); }}>Manage</Button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length === 0 && <p className="p-8 text-center text-sm text-text-muted">No results</p>}
+          </Card>
+        </>
+      )}
+
+      {/* ─── HEALTH TAB ─── */}
+      {tab === "health" && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold">System Health</h2>
+            <Button size="sm" variant="secondary" onClick={loadHealth}><RefreshCw className="w-3.5 h-3.5" /> Refresh</Button>
+          </div>
+          {!health ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+          ) : (
+            <>
+              <Card className={`mb-4 ${health.overall === "healthy" ? "bg-emerald-50/50 border-emerald-200" : health.overall === "warning" ? "bg-amber-50/50 border-amber-200" : "bg-red-50/50 border-red-200"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${health.overall === "healthy" ? "bg-emerald-100" : health.overall === "warning" ? "bg-amber-100" : "bg-red-100"}`}>
+                    {health.overall === "healthy" ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : health.overall === "warning" ? <AlertTriangle className="w-5 h-5 text-amber-600" /> : <X className="w-5 h-5 text-red-600" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold capitalize">{health.overall === "healthy" ? "All Systems Operational" : health.overall === "warning" ? "Some Services Degraded" : "System Issues Detected"}</p>
+                    <p className="text-xs text-text-muted">Last checked: {new Date().toLocaleTimeString()}</p>
+                  </div>
+                </div>
+              </Card>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {health.checks.map((check) => (
+                  <Card key={check.name}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">{check.name}</span>
+                      <span className={`w-3 h-3 rounded-full ${check.status === "healthy" ? "bg-emerald-500" : check.status === "warning" ? "bg-amber-500" : "bg-red-500"}`} />
+                    </div>
+                    <p className="text-xs text-text-muted">{check.message}</p>
+                    {check.responseMs > 0 && <p className="text-[10px] text-text-muted mt-1">{check.responseMs}ms response</p>}
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      </Card>
+      )}
+
+      {/* ─── AUDIT LOGS TAB ─── */}
+      {tab === "logs" && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold">Audit Logs</h2>
+            <span className="text-xs text-text-muted">{logsTotal} total entries</span>
+          </div>
+          {logs.length === 0 ? (
+            <Card><p className="text-center py-8 text-sm text-text-muted">No audit logs yet. Actions will be recorded here.</p></Card>
+          ) : (
+            <Card padding="none">
+              <div className="divide-y divide-border">
+                {logs.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="text-sm font-medium capitalize">{log.action.replace(/_/g, " ")}</p>
+                      <p className="text-xs text-text-muted">{new Date(log.created_at).toLocaleString("en-IN")}</p>
+                    </div>
+                    <Badge variant="default">{log.action}</Badge>
+                  </div>
+                ))}
+              </div>
+              {logsTotal > 20 && (
+                <div className="flex items-center justify-center gap-2 p-3 border-t border-border">
+                  <Button size="sm" variant="ghost" disabled={logsPage <= 1} onClick={() => loadLogs(logsPage - 1)}>Prev</Button>
+                  <span className="text-xs text-text-muted">Page {logsPage}</span>
+                  <Button size="sm" variant="ghost" disabled={logsPage * 20 >= logsTotal} onClick={() => loadLogs(logsPage + 1)}>Next</Button>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ─── BUSINESS MANAGE MODAL ─── */}
+      {selectedBiz && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30" onClick={() => setSelectedBiz(null)}>
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold">Manage Business</h3>
+              <button onClick={() => setSelectedBiz(null)}><X className="w-5 h-5 text-text-muted" /></button>
+            </div>
+
+            {actionMsg && <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${actionMsg.startsWith("✓") ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>{actionMsg}</div>}
+
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Name</p><p className="text-sm font-medium">{selectedBiz.name}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Type</p><p className="text-sm font-medium capitalize">{selectedBiz.type}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Email</p><p className="text-sm font-medium truncate">{selectedBiz.email || "—"}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Phone</p><p className="text-sm font-medium">{selectedBiz.phone || "—"}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Plan</p><Badge variant={selectedBiz.plan === "business" ? "success" : selectedBiz.plan === "growth" ? "info" : "default"}>{selectedBiz.plan}</Badge></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Status</p><Badge variant={selectedBiz.status === "active" ? "success" : selectedBiz.status === "trialing" ? "warning" : "danger"}>{selectedBiz.status}</Badge></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">WhatsApp</p><p className="text-sm">{selectedBiz.whatsapp_connected ? "✅ Connected" : "❌ Off"}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Remaining</p><p className="text-sm font-medium">{selectedBiz.remaining_days > 0 ? `${selectedBiz.remaining_days} days` : "Expired"}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Leads</p><p className="text-sm font-medium">{selectedBiz.leads_count}</p></div>
+              <div className="p-3 rounded-lg bg-gray-50"><p className="text-[10px] text-text-muted uppercase">Messages</p><p className="text-sm font-medium">{selectedBiz.messages_used}/{selectedBiz.message_limit}</p></div>
+            </div>
+
+            <p className="text-xs font-bold text-text-muted uppercase mb-2">Admin Actions</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="secondary" disabled={actionLoading} onClick={() => runAction("extend_trial", { days: 7 })}>+7 Days</Button>
+              <Button size="sm" variant="secondary" disabled={actionLoading} onClick={() => runAction("extend_trial", { days: 30 })}>+30 Days</Button>
+              <Button size="sm" disabled={actionLoading} onClick={() => runAction("upgrade_plan", { plan: "starter" })}>→ Starter</Button>
+              <Button size="sm" disabled={actionLoading} onClick={() => runAction("upgrade_plan", { plan: "growth" })}>→ Growth</Button>
+              <Button size="sm" disabled={actionLoading} onClick={() => runAction("upgrade_plan", { plan: "business" })}>→ Business</Button>
+              <Button size="sm" variant="secondary" disabled={actionLoading} onClick={() => runAction("reset_messages")}>Reset Msgs</Button>
+            </div>
+            <Button size="sm" variant="danger" className="w-full mt-3" disabled={actionLoading} onClick={() => runAction("cancel_subscription")}>Cancel Subscription</Button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, isCurrency }: { icon: typeof Users; label: string; value: number; isCurrency?: boolean }) {
-  return <Card><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-4 h-4 text-primary" /></div><div><p className="text-xs text-text-muted">{label}</p><p className="text-xl font-bold">{isCurrency ? formatINR(value) : value}</p></div></div></Card>;
+function SC({ icon: Icon, label, value, p, c }: { icon: typeof Users; label: string; value: number; p?: string; c?: string }) {
+  const colors: Record<string, string> = { emerald: "text-emerald-600", indigo: "text-indigo-600", amber: "text-amber-600", red: "text-red-500" };
+  return (
+    <Card><div className="flex items-center gap-2"><Icon className="w-4 h-4 text-text-muted flex-shrink-0" /><div><p className={`text-lg font-bold ${colors[c || ""] || ""}`}>{p || ""}{value.toLocaleString()}</p><p className="text-[10px] text-text-muted">{label}</p></div></div></Card>
+  );
 }

@@ -79,7 +79,7 @@ export async function createRazorpaySubscription(
       plan: plan.tier,
       status: "created", // will become "active" after payment
       billing_cycle: plan.billingCycle,
-      amount: plan.priceInPaise,
+      amount: plan.priceInCents,
       currency: "INR",
       provider: "razorpay",
       razorpay_subscription_id: subscription.id,
@@ -205,7 +205,7 @@ async function getOrCreateRazorpayPlan(
     interval: 1,
     item: {
       name: `BizBot ${plan.name} (${plan.billingCycle})`,
-      amount: plan.priceInPaise,
+      amount: plan.priceInCents,
       currency: "INR",
       description: `${plan.messageLimit.toLocaleString()} messages/month`,
     },

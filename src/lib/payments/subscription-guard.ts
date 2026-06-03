@@ -30,13 +30,13 @@ const PLAN_FEATURES: Record<string, FeatureAccess> = {
   },
   starter: {
     aiReply: true, leadCapture: true, conversationInbox: true,
-    appointmentBooking: false, followUpSequences: false, analytics: false,
+    appointmentBooking: false, followUpSequences: false, analytics: true,
     customAiTraining: false, multiAgent: false, campaigns: false, prioritySupport: false,
   },
-  pro: {
+  growth: {
     aiReply: true, leadCapture: true, conversationInbox: true,
     appointmentBooking: true, followUpSequences: true, analytics: true,
-    customAiTraining: false, multiAgent: false, campaigns: false, prioritySupport: true,
+    customAiTraining: false, multiAgent: false, campaigns: true, prioritySupport: true,
   },
   business: {
     aiReply: true, leadCapture: true, conversationInbox: true,
@@ -48,7 +48,7 @@ const PLAN_FEATURES: Record<string, FeatureAccess> = {
 const PLAN_MESSAGE_LIMITS: Record<string, number> = {
   trial: 100,
   starter: 1000,
-  pro: 5000,
+  growth: 5000,
   business: 20000,
 };
 
