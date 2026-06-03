@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Create Razorpay Order
     const order = await razorpay.orders.create({
-      amount: plan.priceInCents,
+      amount: plan.priceInPaise,
       currency: "INR",
       receipt: `bb_${Date.now()}`,
       notes: {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
     await adminSupabase.from("payments").insert({
       business_id: business.id,
-      amount: plan.priceInCents,
+      amount: plan.priceInPaise,
       currency: "INR",
       status: "pending",
       provider: "razorpay",
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       success: true,
       order_id: order.id,
       key_id: razorpayKeyId,
-      amount: plan.priceInCents,
+      amount: plan.priceInPaise,
       currency: "INR",
       plan: {
         name: plan.name,

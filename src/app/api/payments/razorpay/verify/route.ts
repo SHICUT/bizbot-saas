@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     plan: tier,
     status: "active",
     billing_cycle: billingCycle,
-    amount: plan?.priceInCents || 0,
+    amount: plan?.priceInPaise || 0,
     message_limit: messageLimit,
     messages_used: 0,
     current_period_start: now.toISOString(),
