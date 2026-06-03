@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { randomBytes } from "crypto";
 
 /**
  * POST /api/business/connect-whatsapp
@@ -105,17 +104,18 @@ export async function POST(request: NextRequest) {
   // Token is valid — proceed with connection
   console.log("[Connect] ✓ Validation passed. Saving credentials...");
 
-  // 4. Generate a webhook verify token
-  const webhookVerifyToken = randomBytes(32).toString("hex");
+  // Platform-level webhook — all businesses share one webhook URL and verify token
+  // The WHATSAPP_VERIFY_TOKEN env var is configured in Meta Developer Dashboard once
+  const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "bizbot-webhook-verify";
 
-  // 5. Update business with WhatsApp credentials
+  // 4. Update business with WhatsApp credentials
   const { error: updateError } = await supabase
     .from("businesses")
     .update({
       whatsapp_phone_number_id: phone_number_id,
       whatsapp_business_account_id: business_account_id || null,
       whatsapp_access_token: access_token,
-      whatsapp_webhook_verify_token: webhookVerifyToken,
+      whatsapp_webhook_verify_token: platformVerifyToken,
       whatsapp_connected: true,
       whatsapp_connected_at: new Date().toISOString(),
     })
@@ -123,22 +123,22 @@ export async function POST(request: NextRequest) {
 
   if (updateError) {
     console.error("[Connect] Failed to update business:", updateError);
-    return NextResponse.json(
-      { error: "Failed to save credentials" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to save credentials" }, { status: 500 });
   }
+
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://bizbot-saasnew.vercel.app"}/api/webhooks/whatsapp`;
 
   return NextResponse.json({
     success: true,
-    webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/whatsapp`,
-    verify_token: webhookVerifyToken,
+    webhook_url: webhookUrl,
+    verify_token: platformVerifyToken,
+    message: "WhatsApp connected successfully! Configure the webhook in Meta Developer Dashboard if not already done.",
     instructions: [
       "1. Go to Meta Developer Dashboard → Your App → WhatsApp → Configuration",
-      "2. Set Webhook URL to the webhook_url above",
-      "3. Set Verify Token to the verify_token above",
+      `2. Set Webhook URL to: ${webhookUrl}`,
+      `3. Set Verify Token to: ${platformVerifyToken}`,
       "4. Subscribe to 'messages' webhook field",
-      "5. Send a test message to your WhatsApp number",
+      "5. You're all set! Messages will be received automatically.",
     ],
   });
 }
