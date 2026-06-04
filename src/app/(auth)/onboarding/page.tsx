@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Loader2, Check, ArrowRight, ArrowLeft, CheckCircle, Sparkles } from "lucide-react";
+import { Zap, Loader2, Check, ArrowRight, ArrowLeft, CheckCircle, Sparkles, MessageSquare } from "lucide-react";
 
 const BUSINESS_TYPES = [
   { id: "gym", label: "Gym / Fitness", emoji: "🏋️" },
@@ -270,14 +270,47 @@ export default function OnboardingPage() {
 
               {/* Step 7: WhatsApp */}
               {step === 7 && (
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">Connect WhatsApp</h2>
-                  <p className="text-text-secondary mb-6">Optional — you can do this later from Settings.</p>
-                  <div className="space-y-4 mb-8">
-                    <InputField label="Phone Number ID" value={formData.waPhoneNumberId} onChange={(v) => setFormData({ ...formData, waPhoneNumberId: v })} placeholder="From Meta Developer Dashboard" />
-                    <InputField label="Access Token" type="password" value={formData.waAccessToken} onChange={(v) => setFormData({ ...formData, waAccessToken: v })} placeholder="Permanent access token" />
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-5">
+                    <MessageSquare className="w-8 h-8 text-emerald-600" />
                   </div>
-                  <NavButtons onBack={goBack} onNext={goNext} nextLabel={formData.waPhoneNumberId ? "Connect & Continue" : "Skip for Now"} />
+                  <h2 className="text-2xl font-bold mb-2">Connect WhatsApp</h2>
+                  <p className="text-text-secondary mb-8 max-w-sm mx-auto">
+                    Connect your WhatsApp Business account so your AI assistant can reply to customers automatically.
+                  </p>
+
+                  <div className="space-y-3 mb-8">
+                    <button
+                      onClick={() => {
+                        // Try Embedded Signup if configured
+                        const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+                        if (appId) {
+                          const redirectUri = `${window.location.origin}/api/business/whatsapp-signup/callback`;
+                          window.open(`https://www.facebook.com/v23.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=whatsapp_business_management,whatsapp_business_messaging&response_type=code`, "wa_connect", "width=600,height=700");
+                        } else {
+                          // Skip for now — they'll connect from Settings later
+                          goNext();
+                        }
+                      }}
+                      className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-medium text-base hover:bg-emerald-700 transition-all shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <MessageSquare className="w-4 h-4" /> Connect WhatsApp
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFormData({ ...formData, waPhoneNumberId: "", waAccessToken: "" });
+                        goNext();
+                      }}
+                      className="w-full py-3 rounded-xl border border-border text-text-secondary font-medium text-sm hover:bg-gray-50 transition-all"
+                    >
+                      Skip for Now
+                    </button>
+                    <a href="https://wa.me/919572495969?text=Hi%2C%20I%20need%20help%20setting%20up%20BizBot%20and%20connecting%20my%20WhatsApp%20Business%20account." target="_blank" rel="noopener noreferrer" className="w-full py-3 rounded-xl border border-emerald-200 text-emerald-700 font-medium text-sm hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
+                      📞 Setup For Me (Free)
+                    </a>
+                  </div>
+
+                  <p className="text-xs text-text-muted">You can always connect WhatsApp later from Settings.</p>
                 </div>
               )}
 

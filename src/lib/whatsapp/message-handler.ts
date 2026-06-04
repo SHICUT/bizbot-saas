@@ -61,6 +61,10 @@ async function processIncomingMessage(
   const cacheKey = `biz_${phoneNumberId}`;
   let business = cacheGet<{ id: string; name: string; type: string; ai_enabled: boolean; ai_tone: string; ai_language: string; ai_pause_duration: number; business_context: string; whatsapp_access_token: string }>(cacheKey);
 
+  console.log(`[Webhook] === INCOMING MESSAGE ===`);
+  console.log(`[Webhook] Phone Number ID (from webhook): ${phoneNumberId}`);
+  console.log(`[Webhook] From: ${message.from} | Type: ${message.type}`);
+
   if (!business) {
     const { data, error: bizError } = await supabase
       .from("businesses")
@@ -70,11 +74,16 @@ async function processIncomingMessage(
       .single();
 
     if (bizError || !data) {
-      console.error(`[Webhook] No business for phone_number_id: ${phoneNumberId}`);
+      console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId}`);
+      console.error(`[Webhook] DB error:`, bizError?.message || "No matching record");
       return;
     }
     business = data;
     cacheSet(cacheKey, business);
+    console.log(`[Webhook] ✓ Business found: ${business.name} (${business.id.substring(0, 8)})`);
+    console.log(`[Webhook] Token loaded: ${business.whatsapp_access_token ? business.whatsapp_access_token.substring(0, 15) + "... (" + business.whatsapp_access_token.length + " chars)" : "NO TOKEN"}`);
+  } else {
+    console.log(`[Webhook] ✓ Business from cache: ${business.name} (${business.id.substring(0, 8)})`);
   }
 
   // 2-3. Check subscription + Upsert lead (PARALLEL)
@@ -183,41 +192,52 @@ async function processIncomingMessage(
     if (!replyText) return;
 
     // 10. Send reply via WhatsApp
+    console.log(`[Webhook] === SENDING REPLY ===`);
+    console.log(`[Webhook] To: ${message.from}`);
+    console.log(`[Webhook] Reply text: "${replyText.substring(0, 80)}..."`);
+    console.log(`[Webhook] Using phone_number_id: ${phoneNumberId}`);
+    console.log(`[Webhook] Using token: ${business.whatsapp_access_token?.substring(0, 15)}... (${business.whatsapp_access_token?.length || 0} chars)`);
+
     const client = new WhatsAppClient({
       phone_number_id: phoneNumberId,
       access_token: business.whatsapp_access_token,
       business_id: business.id,
     });
 
-    const sendResult = await client.sendTextMessage(
-      message.from,
-      replyText,
-      message.id // reply to the specific message
-    );
+    try {
+      const sendResult = await client.sendTextMessage(
+        message.from,
+        replyText,
+        message.id
+      );
+      console.log(`[Webhook] ✓ Reply sent! Message ID: ${sendResult.messages?.[0]?.id}`);
 
-    // 11. Store outbound message
-    const waMessageId = sendResult.messages[0]?.id;
-    await supabase.from("messages").insert({
-      business_id: business.id,
-      conversation_id: conversation.id,
-      lead_id: lead.id,
-      wa_message_id: waMessageId,
-      direction: "outbound",
-      content: replyText,
-      message_type: "text",
-      is_ai_generated: true,
-      ai_model: "gemini-2.0-flash",
-      status: "sent",
-    });
+      // 11. Store outbound message
+      const waMessageId = sendResult.messages[0]?.id;
+      await supabase.from("messages").insert({
+        business_id: business.id,
+        conversation_id: conversation.id,
+        lead_id: lead.id,
+        wa_message_id: waMessageId,
+        direction: "outbound",
+        content: replyText,
+        message_type: "text",
+        is_ai_generated: true,
+        ai_model: "gemini-2.0-flash",
+        status: "sent",
+      });
 
-    // 12. Increment usage for outbound
-    await supabase.rpc("increment_message_usage", { p_business_id: business.id });
+      // 12. Increment usage for outbound
+      await supabase.rpc("increment_message_usage", { p_business_id: business.id });
 
-    // 13. Mark incoming message as read
-    await client.markAsRead(message.id);
+      // 13. Mark incoming message as read
+      await client.markAsRead(message.id);
+    } catch (sendErr) {
+      console.error(`[Webhook] ❌ Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
+      console.error(`[Webhook] This usually means the access token doesn't have permission for this phone_number_id`);
+    }
   } catch (error) {
-    console.error(`[Webhook] AI reply failed:`, error);
-    // Don't throw — we already stored the inbound message successfully
+    console.error(`[Webhook] AI reply generation failed:`, error);
   }
 }
 

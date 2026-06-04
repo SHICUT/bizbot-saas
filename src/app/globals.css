@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-primary-light: #eff6ff;
-  --color-success: #10b981;
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-primary-light: #ecfdf5;
+  --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-surface: #ffffff;
@@ -18,9 +18,7 @@
 }
 
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   html {
     scroll-behavior: smooth;
@@ -32,12 +30,12 @@
     font-family: var(--font-sans);
     background-color: var(--color-background);
     color: var(--color-text-primary);
-    line-height: 1.5;
-    letter-spacing: -0.01em;
+    line-height: 1.6;
+    letter-spacing: -0.011em;
   }
 
   ::selection {
-    background-color: rgba(59, 130, 246, 0.12);
+    background-color: rgba(16, 185, 129, 0.12);
   }
 }
 
@@ -46,9 +44,9 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.625rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--color-text-secondary);
     transition: all 150ms ease;
@@ -56,12 +54,20 @@
 
   .sidebar-link:hover {
     background-color: var(--color-primary-light);
-    color: var(--color-primary);
+    color: var(--color-primary-hover);
   }
 
   .sidebar-link.active {
     background-color: var(--color-primary-light);
     color: var(--color-primary);
     font-weight: 600;
+  }
+
+  .card-hover {
+    transition: all 200ms ease;
+  }
+  .card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transform: translateY(-1px);
   }
 }
