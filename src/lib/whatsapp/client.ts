@@ -142,6 +142,8 @@ export class WhatsAppClient {
 
     const url = `${WHATSAPP_API_BASE}/${this.phoneNumberId}/messages`;
 
+    console.log(`[WA Send] To: ${payload.to} | Type: ${payload.type} | Business: ${this.businessId.substring(0, 8)}`);
+
     const response = await this.fetchWithRetry(url, {
       method: "POST",
       headers: {
@@ -155,6 +157,7 @@ export class WhatsAppClient {
 
     if (!response.ok) {
       const error = data as WhatsAppAPIError;
+      console.error(`[WA Send] FAILED to ${payload.to}: ${error.error.message} (code: ${error.error.code})`);
       throw new WhatsAppSendError(
         error.error.message,
         error.error.code,
@@ -163,6 +166,7 @@ export class WhatsAppClient {
       );
     }
 
+    console.log(`[WA Send] ✓ Sent to ${payload.to} | Message ID: ${(data as SendMessageResponse).messages?.[0]?.id}`);
     return data as SendMessageResponse;
   }
 

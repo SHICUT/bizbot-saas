@@ -71,29 +71,34 @@ export async function POST(request: NextRequest) {
   if (business_account_id) {
     console.log("[Connect] Validating WABA:", business_account_id, "for phone:", phone_number_id);
 
-    const wabaRes = await fetch(`${META_API}/${business_account_id}/phone_numbers`, {
+    // Use fields=id,name which is always supported
+    const wabaRes = await fetch(`${META_API}/${business_account_id}?fields=id,name`, {
       headers: { Authorization: `Bearer ${access_token}` },
     });
-    const wabaData = await wabaRes.json();
-    console.log("[Connect] WABA phone_numbers response:", JSON.stringify(wabaData).substring(0, 800));
+    const wabaInfo = await wabaRes.json();
+    console.log("[Connect] WABA info response:", JSON.stringify(wabaInfo).substring(0, 300));
 
     if (!wabaRes.ok) {
-      const errMsg = wabaData?.error?.message || "Unknown error";
-      console.error("[Connect] WABA check failed:", errMsg);
-      // Non-fatal: WABA check failed but token is valid — proceed with warning
-      console.log("[Connect] Proceeding anyway — token was validated successfully");
+      console.warn("[Connect] WABA validation failed:", wabaInfo?.error?.message || "Unknown error");
+      // Non-fatal — proceed anyway since token is valid
     } else {
-      const phoneNumbers = wabaData.data || [];
-      console.log("[Connect] Phone numbers in WABA:", phoneNumbers.map((p: Record<string, string>) => `${p.id} (${p.display_phone_number})`).join(", "));
+      console.log("[Connect] ✓ WABA verified:", wabaInfo.name || wabaInfo.id);
 
-      if (phoneNumbers.length > 0) {
+      // Now try to list phone numbers
+      const phonesRes = await fetch(`${META_API}/${business_account_id}/phone_numbers`, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const phonesData = await phonesRes.json();
+      console.log("[Connect] Phone numbers response:", JSON.stringify(phonesData).substring(0, 500));
+
+      if (phonesRes.ok && phonesData.data) {
+        const phoneNumbers = phonesData.data || [];
+        console.log("[Connect] Available phones:", phoneNumbers.map((p: Record<string, string>) => `${p.id} (${p.display_phone_number})`).join(", "));
         const phoneMatch = phoneNumbers.find((p: Record<string, string>) => p.id === phone_number_id);
-        if (!phoneMatch) {
-          console.warn("[Connect] Phone ID not found in WABA. Submitted:", phone_number_id, "| Available:", phoneNumbers.map((p: Record<string, string>) => p.id).join(", "));
-          // Still proceed — the phone number might be a test number or newly added
-          console.log("[Connect] Proceeding anyway — token is valid and WABA is accessible");
-        } else {
+        if (phoneMatch) {
           console.log("[Connect] ✓ Phone number matched:", phoneMatch.display_phone_number);
+        } else if (phoneNumbers.length > 0) {
+          console.warn("[Connect] Phone ID not in WABA list. Submitted:", phone_number_id, "| Available:", phoneNumbers.map((p: Record<string, string>) => p.id).join(", "));
         }
       }
     }

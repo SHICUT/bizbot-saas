@@ -18,6 +18,19 @@ import type { WebhookPayload } from "@/lib/whatsapp/types";
 // Hardcoded fallback — if env var is wrong (e.g. contains access token), use this
 const FALLBACK_VERIFY_TOKEN = "bizbot_verify_123";
 
+// Startup config validation (logs once when module loads)
+(() => {
+  const vt = process.env.WHATSAPP_VERIFY_TOKEN || "";
+  console.log(`[Webhook Config] Raw WHATSAPP_VERIFY_TOKEN: "${vt.substring(0, 10)}..." (length: ${vt.length})`);
+  if (!vt) console.warn("[Webhook Config] ⚠ WHATSAPP_VERIFY_TOKEN not set — using fallback 'bizbot_verify_123'");
+  else if (vt.startsWith("EAAN") || vt.length > 100) console.error(`[Webhook Config] 🔴 WRONG VALUE! WHATSAPP_VERIFY_TOKEN is "${vt.substring(0, 15)}..." (${vt.length} chars). This is an ACCESS TOKEN, not a verify token! Fix in Vercel env vars. Using fallback.`);
+  else console.log(`[Webhook Config] ✓ WHATSAPP_VERIFY_TOKEN = "${vt}" (length: ${vt.length})`);
+
+  const as = process.env.WHATSAPP_APP_SECRET;
+  if (!as) console.warn("[Webhook Config] ⚠ WHATSAPP_APP_SECRET not set — signature validation disabled");
+  else console.log("[Webhook Config] ✓ WHATSAPP_APP_SECRET configured");
+})();
+
 function getVerifyToken(): string {
   const envToken = process.env.WHATSAPP_VERIFY_TOKEN || "";
   // If env token looks like an access token (too long), use fallback
@@ -90,11 +103,15 @@ export async function POST(request: NextRequest) {
   let payload: WebhookPayload;
   try {
     const parsed = JSON.parse(rawBody);
+    console.log("[Webhook POST] Payload received:", JSON.stringify(parsed).substring(0, 500));
+
     if (!validatePayloadStructure(parsed)) {
+      console.error("[Webhook POST] Invalid payload structure");
       return new Response("Invalid payload", { status: 400 });
     }
     payload = parsed;
   } catch {
+    console.error("[Webhook POST] Invalid JSON body");
     return new Response("Invalid JSON", { status: 400 });
   }
 
