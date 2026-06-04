@@ -20,24 +20,48 @@ export async function GET(request: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+  const verifyToken = (process.env.WHATSAPP_VERIFY_TOKEN || "").trim();
+
+  // Debug logging
+  console.log("[Webhook GET] Verification attempt:");
+  console.log("[Webhook GET] hub.mode:", mode);
+  console.log("[Webhook GET] hub.verify_token received:", JSON.stringify(token));
+  console.log("[Webhook GET] WHATSAPP_VERIFY_TOKEN env:", JSON.stringify(verifyToken));
+  console.log("[Webhook GET] hub.challenge:", challenge?.substring(0, 20));
+  console.log("[Webhook GET] Token match:", token?.trim() === verifyToken);
+
   if (!verifyToken) {
-    console.error("[Webhook] WHATSAPP_VERIFY_TOKEN not configured");
-    return NextResponse.json(
-      { error: "Server misconfigured" },
-      { status: 500 }
-    );
+    console.error("[Webhook GET] WHATSAPP_VERIFY_TOKEN is empty or not set!");
+    return NextResponse.json({ error: "Server misconfigured: WHATSAPP_VERIFY_TOKEN not set" }, { status: 500 });
   }
 
-  const result = verifyWebhookSubscription(mode, token, challenge, verifyToken);
+  // Trim both tokens before comparison
+  const receivedToken = (token || "").trim();
+  const expectedToken = verifyToken;
 
-  if (result.valid && result.challenge) {
-    // Must return the challenge as plain text (not JSON)
-    return new NextResponse(result.challenge, {
+  if (mode === "subscribe" && receivedToken === expectedToken && challenge) {
+    console.log("[Webhook GET] ✓ Verification SUCCESS. Returning challenge.");
+    return new NextResponse(challenge, {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
   }
+
+  // Detailed failure logging
+  console.error("[Webhook GET] ✗ Verification FAILED.");
+  if (mode !== "subscribe") console.error("[Webhook GET] Reason: mode is not 'subscribe', got:", mode);
+  if (receivedToken !== expectedToken) {
+    console.error("[Webhook GET] Reason: token mismatch.");
+    console.error("[Webhook GET] Received length:", receivedToken.length, "| Expected length:", expectedToken.length);
+    // Character-by-character comparison for debugging
+    for (let i = 0; i < Math.max(receivedToken.length, expectedToken.length); i++) {
+      if (receivedToken[i] !== expectedToken[i]) {
+        console.error(`[Webhook GET] First diff at position ${i}: received '${receivedToken[i]}' (${receivedToken.charCodeAt(i)}) vs expected '${expectedToken[i]}' (${expectedToken.charCodeAt(i)})`);
+        break;
+      }
+    }
+  }
+  if (!challenge) console.error("[Webhook GET] Reason: no challenge provided");
 
   return NextResponse.json({ error: "Verification failed" }, { status: 403 });
 }
