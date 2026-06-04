@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 3. Validate credentials using supported Meta API endpoints
-  const META_API = "https://graph.facebook.com/v21.0";
+  const META_API = "https://graph.facebook.com/v23.0";
 
   // Step A: Validate token
   console.log("[Connect] Validating token for phone_number_id:", phone_number_id, "| WABA:", business_account_id || "not provided");

@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [userData, setUserData] = useState({ name: "", email: "", phone: "" });
   const [bizData, setBizData] = useState({ name: "", type: "other", address: "", city: "" });
   const [waData, setWaData] = useState({ phoneNumberId: "", businessAccountId: "", accessToken: "", connected: false, connectedAt: "" });
+  const [showManualSetup, setShowManualSetup] = useState(false);
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -181,91 +182,113 @@ export default function SettingsPage() {
 
       {activeTab === "whatsapp" && (
         <div className="max-w-2xl space-y-6">
-          {/* Connection Status */}
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {waData.connected ? (
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>
-                ) : (
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><XCircle className="w-5 h-5 text-gray-400" /></div>
-                )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-text-primary">WhatsApp Business</h3>
-                    <Badge variant={waData.connected ? "success" : "default"}>
-                      {waData.connected ? "Connected" : "Not Connected"}
-                    </Badge>
+          {waData.connected ? (
+            <>
+              {/* Connected State — Clean Status View */}
+              <Card>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-emerald-600" />
                   </div>
-                  {waData.connected && waData.connectedAt && (
-                    <p className="text-xs text-text-muted mt-0.5">Connected on {new Date(waData.connectedAt).toLocaleDateString()}</p>
-                  )}
-                  {!waData.connected && (
-                    <p className="text-xs text-text-muted mt-0.5">Connect your WhatsApp Business account to start receiving messages</p>
-                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-text-primary">WhatsApp Connected</h3>
+                      <Badge variant="success">Active</Badge>
+                    </div>
+                    <p className="text-sm text-text-muted mt-0.5">Your AI assistant is replying to customer messages automatically.</p>
+                  </div>
                 </div>
+              </Card>
+
+              {/* Connection Details */}
+              <Card>
+                <h3 className="text-sm font-semibold text-text-primary mb-4">Connection Details</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-border">
+                    <span className="text-sm text-text-muted">Status</span>
+                    <span className="text-sm font-medium text-emerald-600">● Connected</span>
+                  </div>
+                  {waData.connectedAt && (
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-sm text-text-muted">Connected Since</span>
+                      <span className="text-sm font-medium">{new Date(waData.connectedAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm text-text-muted">AI Auto-Reply</span>
+                    <Badge variant="success">Enabled</Badge>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={handleWhatsAppDisconnect} disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  Disconnect
+                </Button>
               </div>
-              {waData.connected && (
-                <Button variant="ghost" size="sm" onClick={handleWhatsAppDisconnect} disabled={saving}>Disconnect</Button>
+            </>
+          ) : (
+            <>
+              {/* Not Connected State — Simple Setup */}
+              <Card>
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-text-primary mb-2">Connect WhatsApp</h3>
+                  <p className="text-sm text-text-muted max-w-md mx-auto mb-6">
+                    Connect your WhatsApp Business number to start receiving messages and let AI reply to your customers automatically.
+                  </p>
+
+                  {/* Embedded Signup Button */}
+                  <Button onClick={() => {
+                    const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+                    if (appId) {
+                      const redirectUri = `${window.location.origin}/api/business/whatsapp-signup/callback`;
+                      const scope = "whatsapp_business_management,whatsapp_business_messaging,business_management";
+                      window.open(`https://www.facebook.com/v23.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`, "meta_signup", "width=600,height=700");
+                    } else {
+                      setShowManualSetup(true);
+                    }
+                  }} className="mb-4">
+                    <MessageSquare className="w-4 h-4" /> Connect with Facebook
+                  </Button>
+
+                  <p className="text-xs text-text-muted">or</p>
+                  <button onClick={() => setShowManualSetup(!showManualSetup)} className="text-xs text-primary font-medium hover:underline mt-2">
+                    {showManualSetup ? "Hide manual setup" : "Connect manually (advanced)"}
+                  </button>
+                </div>
+              </Card>
+
+              {/* Manual Setup (hidden by default) */}
+              {showManualSetup && (
+                <Card>
+                  <h3 className="text-sm font-semibold text-text-primary mb-4">Manual Setup (Advanced)</h3>
+                  <form onSubmit={handleWhatsAppConnect} className="space-y-4">
+                    <Input id="phoneNumberId" name="phoneNumberId" label="Phone Number ID" placeholder="From Meta Developer Dashboard" required />
+                    <Input id="businessAccountId" name="businessAccountId" label="Business Account ID" placeholder="Optional" />
+                    <Input id="accessToken" name="accessToken" label="Access Token" type="password" placeholder="System User token" required />
+                    <Button type="submit" disabled={saving}>
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {saving ? "Verifying..." : "Connect"}
+                    </Button>
+                  </form>
+                </Card>
               )}
-            </div>
-          </Card>
 
-          {/* Connection Form */}
-          <Card>
-            <h3 className="text-sm font-semibold text-text-primary mb-4">
-              {waData.connected ? "Update Credentials" : "Connect WhatsApp"}
-            </h3>
-            <form onSubmit={handleWhatsAppConnect} className="space-y-4">
-              <Input
-                id="phoneNumberId"
-                name="phoneNumberId"
-                label="Phone Number ID"
-                placeholder="e.g. 123456789012345"
-                defaultValue={waData.phoneNumberId}
-                required
-              />
-              <Input
-                id="businessAccountId"
-                name="businessAccountId"
-                label="Business Account ID (optional)"
-                placeholder="e.g. 987654321098765"
-                defaultValue={waData.businessAccountId}
-              />
-              <Input
-                id="accessToken"
-                name="accessToken"
-                label="Permanent Access Token"
-                type="password"
-                placeholder={waData.connected ? "Enter new token to update" : "Enter your access token"}
-                required={!waData.connected}
-              />
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                <p className="text-xs text-blue-800 font-medium mb-1">How to get these credentials:</p>
-                <ol className="text-xs text-blue-700 space-y-0.5 list-decimal list-inside">
-                  <li>Go to Meta Developer Dashboard → Your App → WhatsApp</li>
-                  <li>Copy Phone Number ID from Getting Started</li>
-                  <li>Create a System User token with whatsapp_business_messaging permission</li>
-                </ol>
-              </div>
-              <Button type="submit" disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saving ? "Verifying..." : waData.connected ? "Update & Verify" : "Connect & Verify"}
-              </Button>
-            </form>
-          </Card>
-
-          {/* Webhook Info (shown after connection) */}
-          {waData.connected && (
-            <Card>
-              <h3 className="text-sm font-semibold text-text-primary mb-3">Webhook Configuration</h3>
-              <p className="text-xs text-text-muted mb-3">Configure these in your Meta Developer Dashboard → WhatsApp → Configuration:</p>
-              <div className="space-y-2 bg-gray-50 rounded-lg p-3 font-mono text-xs">
-                <div><span className="text-text-muted">Callback URL:</span><br /><span className="text-text-primary select-all">{typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/whatsapp</span></div>
-                <div><span className="text-text-muted">Verify Token:</span><br /><span className="text-text-primary select-all">Set in your Vercel environment variables (WHATSAPP_VERIFY_TOKEN)</span></div>
-                <div><span className="text-text-muted">Subscribe to:</span><br /><span className="text-text-primary">messages</span></div>
-              </div>
-            </Card>
+              {/* How it works */}
+              <Card className="bg-blue-50/50 border-blue-100">
+                <h4 className="text-sm font-semibold text-blue-900 mb-2">How it works</h4>
+                <div className="space-y-2 text-xs text-blue-700">
+                  <p>1. Click "Connect with Facebook" and log in</p>
+                  <p>2. Select your WhatsApp Business account</p>
+                  <p>3. Your AI assistant starts replying instantly</p>
+                </div>
+              </Card>
+            </>
           )}
         </div>
       )}

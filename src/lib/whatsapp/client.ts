@@ -5,7 +5,7 @@ import type {
   BusinessWhatsAppConfig,
 } from "./types";
 
-const WHATSAPP_API_BASE = "https://graph.facebook.com/v21.0";
+const WHATSAPP_API_BASE = "https://graph.facebook.com/v23.0";
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 3000, 10000]; // exponential backoff in ms
 
@@ -142,7 +142,10 @@ export class WhatsAppClient {
 
     const url = `${WHATSAPP_API_BASE}/${this.phoneNumberId}/messages`;
 
+    console.log(`[WA Send] URL: ${url}`);
+    console.log(`[WA Send] Phone Number ID: ${this.phoneNumberId}`);
     console.log(`[WA Send] To: ${payload.to} | Type: ${payload.type} | Business: ${this.businessId.substring(0, 8)}`);
+    console.log(`[WA Send] Token preview: ${this.accessToken.substring(0, 15)}... (length: ${this.accessToken.length})`);
 
     const response = await this.fetchWithRetry(url, {
       method: "POST",
