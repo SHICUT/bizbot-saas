@@ -25,7 +25,17 @@ export async function GET() {
     .single();
 
   if (bizErr || !business) {
-    return NextResponse.json({ error: "No business found" }, { status: 404 });
+    console.error("[Knowledge GET] Business lookup failed:", bizErr?.message || "no data", "| User:", user.id);
+    // Try a minimal query as fallback
+    const { data: minBiz } = await admin.from("businesses").select("id, name, type, phone, email, address, city, state, business_hours, business_context").eq("owner_id", user.id).single();
+    if (!minBiz) {
+      return NextResponse.json({ error: "No business found", business: null }, { status: 404 });
+    }
+    // Return minimal business data
+    return NextResponse.json({
+      business: { name: minBiz.name || "", type: minBiz.type || "other", phone: minBiz.phone || "", email: minBiz.email || "", address: minBiz.address || "", city: minBiz.city || "", state: minBiz.state || "", business_hours: minBiz.business_hours || null, owner_name: "", whatsapp_number: "", website: "", google_maps_link: "", description: "" },
+      services: [], trainers: [], facilities: [], plans: [], faqs: [],
+    });
   }
 
   // Try structured tables first, gracefully fall back to JSONB

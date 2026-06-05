@@ -185,14 +185,25 @@ export default function KnowledgePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/knowledge").then((r) => r.json()),
+      fetch("/api/knowledge").then(async (r) => {
+        const data = await r.json();
+        return { ...data, _ok: r.ok };
+      }),
       fetch("/api/knowledge/score").then((r) => r.json()),
     ]).then(([knowledge, scoreData]) => {
-      if (knowledge.error) {
+      console.log("[Knowledge Base] API response ok:", knowledge._ok, "| Has business:", !!knowledge.business);
+
+      if (!knowledge._ok && !knowledge.business) {
+        console.log("[Knowledge Base] Banner State: noBusiness");
         setNoBusiness(true);
+        setScore(scoreData.score || 0);
+        setScoreSections(scoreData.sections || []);
         setLoading(false);
         return;
       }
+
+      // Business exists — load data
+      setNoBusiness(false);
       if (knowledge.business) {
         const b = knowledge.business;
         setProfile({ name: b.name || "", owner_name: b.owner_name || "", type: b.type || "other", description: b.description || "" });
@@ -342,7 +353,7 @@ export default function KnowledgePage() {
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
-  if (noBusiness) {
+  if (noBusiness && score === 0) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center max-w-md">
@@ -354,7 +365,7 @@ export default function KnowledgePage() {
             Finish onboarding to unlock the Knowledge Base. This is where you train your AI assistant with your business information.
           </p>
           <a href="/onboarding">
-            <Button size="lg">Complete Onboarding</Button>
+            <Button size="lg">Start Onboarding</Button>
           </a>
         </div>
       </div>
