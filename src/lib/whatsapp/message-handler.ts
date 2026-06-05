@@ -79,6 +79,7 @@ async function processIncomingMessage(
   console.log(`[Webhook] AI Enabled: ${business.ai_enabled} | Context: ${business.business_context?.length || 0} chars`);
 
   // 2-3. Check subscription + Upsert lead (PARALLEL)
+  console.log(`[Webhook] Step 2: Checking subscription + upserting lead...`);
   const [canSend, leadResult] = await Promise.all([
     checkMessageLimit(supabase, business.id),
     supabase.from("leads").upsert(
@@ -88,53 +89,50 @@ async function processIncomingMessage(
   ]);
 
   if (!canSend) {
-    console.warn(`[Webhook] Message limit reached for business: ${business.id}`);
+    console.error(`[Webhook] ❌ STOPPED: Message limit reached for business: ${business.id}`);
     return;
   }
+  console.log(`[Webhook] ✓ Subscription OK — can send`);
 
   const lead = leadResult.data;
   if (!lead) {
-    console.error(`[Webhook] Failed to upsert lead`);
+    console.error(`[Webhook] ❌ STOPPED: Failed to upsert lead. Error: ${leadResult.error?.message || "unknown"}`);
     return;
   }
+  console.log(`[Webhook] ✓ Lead: ${lead.id.substring(0, 8)} | Status: ${lead.status} | Paused: ${lead.ai_paused_until || "no"}`);
 
   // Update lead first_message_at if new
   if (lead.status === "new") {
-    await supabase
-      .from("leads")
-      .update({ first_message_at: new Date().toISOString(), status: "contacted" })
-      .eq("id", lead.id);
+    await supabase.from("leads").update({ first_message_at: new Date().toISOString(), status: "contacted" }).eq("id", lead.id);
   }
 
   // 4. Upsert conversation
+  console.log(`[Webhook] Step 4: Upserting conversation...`);
   const { data: conversation, error: convError } = await supabase
     .from("conversations")
     .upsert(
-      {
-        business_id: business.id,
-        lead_id: lead.id,
-        channel: "whatsapp",
-        status: "active",
-      },
+      { business_id: business.id, lead_id: lead.id, channel: "whatsapp", status: "active" },
       { onConflict: "business_id,lead_id,channel" }
     )
     .select("id, is_ai_active")
     .single();
 
   if (convError || !conversation) {
-    console.error(`[Webhook] Failed to upsert conversation:`, convError);
+    console.error(`[Webhook] ❌ STOPPED: Conversation upsert failed:`, convError?.message || "no data");
     return;
   }
+  console.log(`[Webhook] ✓ Conversation: ${conversation.id.substring(0, 8)} | AI Active: ${conversation.is_ai_active}`);
 
   // 5. Extract message content
   const content = extractMessageContent(message);
   if (!content) {
-    console.log(`[Webhook] ⏭ Unsupported message type: ${message.type} — skipping`);
+    console.log(`[Webhook] ⏭ STOPPED: Unsupported message type: ${message.type}`);
     return;
   }
-  console.log(`[Webhook] Message text: "${content.substring(0, 100)}"`);
+  console.log(`[Webhook] ✓ Content: "${content.substring(0, 80)}"`);
 
   // 6. Store inbound message (dedup by wa_message_id)
+  console.log(`[Webhook] Step 6: Storing message (dedup check)...`);
   const { error: msgError, count: insertCount } = await supabase.from("messages").upsert(
     {
       business_id: business.id,
@@ -150,28 +148,30 @@ async function processIncomingMessage(
   );
 
   if (msgError) {
-    console.error(`[Webhook] Failed to store message:`, msgError);
+    console.error(`[Webhook] ❌ STOPPED: Message store failed:`, msgError.message);
     return;
   }
 
-  // DEDUP: If upsert matched existing row (count=0 inserts), skip AI reply
   if (insertCount === 0) {
-    console.log(`[Webhook] Duplicate message ${message.id} — skipping AI reply`);
+    console.log(`[Webhook] ⏭ STOPPED: Duplicate message ${message.id} — already processed`);
     return;
   }
+  console.log(`[Webhook] ✓ Message stored (new, not duplicate)`);
 
   // 7. Increment message usage
   await supabase.rpc("increment_message_usage", { p_business_id: business.id });
 
   // 8. Check if AI should reply
+  console.log(`[Webhook] Step 8: Checking shouldAIReply...`);
   const shouldReply = await shouldAIReply(business, lead, conversation);
   if (!shouldReply) {
-    console.log(`[Webhook] ⏭ AI reply SKIPPED (shouldAIReply=false)`);
+    console.log(`[Webhook] ⏭ STOPPED: shouldAIReply returned false`);
     return;
   }
-  console.log(`[Webhook] ✓ AI should reply — generating response...`);
+  console.log(`[Webhook] ✓ AI should reply`);
 
-  // 9. Generate AI reply (full sales assistant context)
+  // 9. Generate AI reply
+  console.log(`[Webhook] Step 9: Generating AI response...`);
   try {
     const replyText = await generateAIReply({
       businessContext: business.business_context || "",
@@ -189,14 +189,18 @@ async function processIncomingMessage(
       leadStatus: lead.status,
     });
 
-    if (!replyText) return;
+    console.log(`[Webhook] Step 9 complete. AI reply: ${replyText ? `"${replyText.substring(0, 60)}..." (${replyText.length} chars)` : "NULL/EMPTY — skipping send"}`);
+
+    if (!replyText) {
+      console.log(`[Webhook] ⏭ STOPPED: AI returned empty/null reply (message was likely an acknowledgment like 'ok', 'thanks')`);
+      return;
+    }
 
     // 10. Send reply via WhatsApp
-    console.log(`[Webhook] === SENDING REPLY ===`);
+    console.log(`[Webhook] Step 10: Sending WhatsApp reply...`);
     console.log(`[Webhook] To: ${message.from}`);
-    console.log(`[Webhook] Reply text: "${replyText.substring(0, 80)}..."`);
-    console.log(`[Webhook] Using phone_number_id: ${phoneNumberId}`);
-    console.log(`[Webhook] Using token: ${business.whatsapp_access_token?.substring(0, 15)}... (${business.whatsapp_access_token?.length || 0} chars)`);
+    console.log(`[Webhook] Phone Number ID: ${phoneNumberId}`);
+    console.log(`[Webhook] Token: ${business.whatsapp_access_token?.substring(0, 12)}...(${business.whatsapp_access_token?.length || 0})`);
 
     const client = new WhatsAppClient({
       phone_number_id: phoneNumberId,
