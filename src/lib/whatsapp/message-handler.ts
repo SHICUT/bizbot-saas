@@ -1,7 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { WhatsAppClient } from "./client";
 import { generateAIReply } from "@/lib/ai/reply-engine";
-import { cacheGet, cacheSet } from "@/lib/cache";
 import type {
   WebhookPayload,
   IncomingMessage,
@@ -57,34 +56,27 @@ async function processIncomingMessage(
 ): Promise<void> {
   const supabase = createAdminClient();
 
-  // 1. Find business (cached for 5 min to avoid repeated lookups)
-  const cacheKey = `biz_${phoneNumberId}`;
-  let business = cacheGet<{ id: string; name: string; type: string; ai_enabled: boolean; ai_tone: string; ai_language: string; ai_pause_duration: number; business_context: string; whatsapp_access_token: string }>(cacheKey);
-
+  // 1. Find business (ALWAYS fresh from DB — no cache on serverless)
   console.log(`[Webhook] === INCOMING MESSAGE ===`);
   console.log(`[Webhook] Phone Number ID (from webhook): ${phoneNumberId}`);
-  console.log(`[Webhook] From: ${message.from} | Type: ${message.type}`);
+  console.log(`[Webhook] From: ${message.from} | Type: ${message.type} | MsgID: ${message.id}`);
 
-  if (!business) {
-    const { data, error: bizError } = await supabase
-      .from("businesses")
-      .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
-      .eq("whatsapp_phone_number_id", phoneNumberId)
-      .eq("is_active", true)
-      .single();
+  const { data: bizData, error: bizError } = await supabase
+    .from("businesses")
+    .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
+    .eq("whatsapp_phone_number_id", phoneNumberId)
+    .eq("is_active", true)
+    .single();
 
-    if (bizError || !data) {
-      console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId}`);
-      console.error(`[Webhook] DB error:`, bizError?.message || "No matching record");
-      return;
-    }
-    business = data;
-    cacheSet(cacheKey, business);
-    console.log(`[Webhook] ✓ Business found: ${business.name} (${business.id.substring(0, 8)})`);
-    console.log(`[Webhook] Token loaded: ${business.whatsapp_access_token ? business.whatsapp_access_token.substring(0, 15) + "... (" + business.whatsapp_access_token.length + " chars)" : "NO TOKEN"}`);
-  } else {
-    console.log(`[Webhook] ✓ Business from cache: ${business.name} (${business.id.substring(0, 8)})`);
+  if (bizError || !bizData) {
+    console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId} | Error: ${bizError?.message || "no match"}`);
+    return;
   }
+
+  const business = bizData;
+  console.log(`[Webhook] ✓ Business: ${business.name} (${business.id.substring(0, 8)})`);
+  console.log(`[Webhook] Token: ${business.whatsapp_access_token ? business.whatsapp_access_token.substring(0, 12) + "...(" + business.whatsapp_access_token.length + ")" : "NONE"}`);
+  console.log(`[Webhook] AI Enabled: ${business.ai_enabled} | Context: ${business.business_context?.length || 0} chars`);
 
   // 2-3. Check subscription + Upsert lead (PARALLEL)
   const [canSend, leadResult] = await Promise.all([
@@ -136,7 +128,11 @@ async function processIncomingMessage(
 
   // 5. Extract message content
   const content = extractMessageContent(message);
-  if (!content) return; // Skip unsupported message types
+  if (!content) {
+    console.log(`[Webhook] ⏭ Unsupported message type: ${message.type} — skipping`);
+    return;
+  }
+  console.log(`[Webhook] Message text: "${content.substring(0, 100)}"`);
 
   // 6. Store inbound message (dedup by wa_message_id)
   const { error: msgError, count: insertCount } = await supabase.from("messages").upsert(
@@ -169,7 +165,11 @@ async function processIncomingMessage(
 
   // 8. Check if AI should reply
   const shouldReply = await shouldAIReply(business, lead, conversation);
-  if (!shouldReply) return;
+  if (!shouldReply) {
+    console.log(`[Webhook] ⏭ AI reply SKIPPED (shouldAIReply=false)`);
+    return;
+  }
+  console.log(`[Webhook] ✓ AI should reply — generating response...`);
 
   // 9. Generate AI reply (full sales assistant context)
   try {
@@ -284,18 +284,21 @@ async function shouldAIReply(
   lead: { ai_paused_until: string | null },
   conversation: { is_ai_active: boolean }
 ): Promise<boolean> {
-  // AI globally disabled
-  if (!business.ai_enabled) return false;
-
-  // AI disabled for this conversation
-  if (!conversation.is_ai_active) return false;
-
-  // AI paused (owner recently replied manually)
+  if (!business.ai_enabled) {
+    console.log(`[Webhook] Skip reason: ai_enabled=false`);
+    return false;
+  }
+  if (!conversation.is_ai_active) {
+    console.log(`[Webhook] Skip reason: conversation.is_ai_active=false`);
+    return false;
+  }
   if (lead.ai_paused_until) {
     const pausedUntil = new Date(lead.ai_paused_until);
-    if (pausedUntil > new Date()) return false;
+    if (pausedUntil > new Date()) {
+      console.log(`[Webhook] Skip reason: AI paused until ${pausedUntil.toISOString()}`);
+      return false;
+    }
   }
-
   return true;
 }
 
