@@ -118,6 +118,10 @@ export default function MediaPage() {
       setSuccessMsg("Media added! AI will use it in conversations.");
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchMedia();
+    } else {
+      const errData = await res.json().catch(() => ({ error: "Upload failed" }));
+      setSuccessMsg(`❌ ${errData.error || "Upload failed. Please try again."}`);
+      setTimeout(() => setSuccessMsg(null), 5000);
     }
   }
 

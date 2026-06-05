@@ -97,3 +97,27 @@ END $$;
 
 -- Refresh PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
+
+-- Business media table
+CREATE TABLE IF NOT EXISTS public.business_media (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT DEFAULT 'general',
+    url TEXT NOT NULL,
+    trigger_keywords TEXT[] DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_media ON public.business_media(business_id, is_active);
+ALTER TABLE public.business_media ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "Users can manage own media" ON public.business_media FOR ALL
+    USING (business_id = public.get_user_business_id());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Add category column to business_services (for trainers, facilities)
+ALTER TABLE public.business_services
+  ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'service';
