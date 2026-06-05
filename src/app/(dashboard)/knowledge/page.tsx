@@ -159,6 +159,7 @@ export default function KnowledgePage() {
   const [activeSection, setActiveSection] = useState<Section>("profile");
   const [score, setScore] = useState(0);
   const [scoreSections, setScoreSections] = useState<ScoreSection[]>([]);
+  const [noBusiness, setNoBusiness] = useState(false);
 
   // Data states
   const [profile, setProfile] = useState({ name: "", owner_name: "", type: "other", description: "" });
@@ -187,6 +188,11 @@ export default function KnowledgePage() {
       fetch("/api/knowledge").then((r) => r.json()),
       fetch("/api/knowledge/score").then((r) => r.json()),
     ]).then(([knowledge, scoreData]) => {
+      if (knowledge.error) {
+        setNoBusiness(true);
+        setLoading(false);
+        return;
+      }
       if (knowledge.business) {
         const b = knowledge.business;
         setProfile({ name: b.name || "", owner_name: b.owner_name || "", type: b.type || "other", description: b.description || "" });
@@ -335,6 +341,25 @@ export default function KnowledgePage() {
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  if (noBusiness) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Complete Your Setup</h2>
+          <p className="text-sm text-text-muted mb-6">
+            Finish onboarding to unlock the Knowledge Base. This is where you train your AI assistant with your business information.
+          </p>
+          <a href="/onboarding">
+            <Button size="lg">Complete Onboarding</Button>
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
