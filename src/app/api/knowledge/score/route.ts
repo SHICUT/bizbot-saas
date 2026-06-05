@@ -31,8 +31,13 @@ export async function GET() {
     faqCount = faqs.count || 0;
     mediaCount = media.count || 0;
   } catch {
-    // Tables don't exist yet — use knowledge_json fallback counts
-    const kj = business.knowledge_json as Record<string, unknown[]> | null;
+    // Tables don't exist — use knowledge_json or business_context JSON fallback
+    let kj: Record<string, unknown[]> | null = business.knowledge_json as Record<string, unknown[]> | null;
+    if (!kj && business.business_context) {
+      try {
+        if (business.business_context.startsWith("{")) kj = JSON.parse(business.business_context);
+      } catch { /* not JSON */ }
+    }
     if (kj) {
       svcCount = Array.isArray(kj.services) ? kj.services.length : 0;
       planCount = Array.isArray(kj.plans) ? kj.plans.length : 0;

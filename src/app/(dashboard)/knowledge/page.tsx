@@ -443,13 +443,29 @@ export default function KnowledgePage() {
           <div className={`h-2 rounded-full transition-all duration-500 ${score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${score}%` }} />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          {scoreSections.map((s) => (
-            <div key={s.name} className="flex items-center gap-1.5 text-xs">
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.score === 100 ? "bg-emerald-500" : s.score > 0 ? "bg-amber-500" : "bg-gray-300"}`} />
-              <span className="text-text-muted truncate">{s.name}</span>
-              <span className="font-medium ml-auto">{s.score === 100 ? "✓" : `${s.score}%`}</span>
-            </div>
-          ))}
+          {scoreSections.map((s) => {
+            const sectionMap: Record<string, string> = {
+              "Business Profile": "profile", "Description": "profile", "Contact Info": "contact",
+              "Location": "location", "Working Hours": "hours", "Services": "services",
+              "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "services", "WhatsApp": "contact",
+            };
+            const target = sectionMap[s.name];
+            const isClickable = !!target;
+            return (
+              <button
+                key={s.name}
+                onClick={() => { if (target) setActiveSection(target); }}
+                disabled={!isClickable}
+                className={`flex items-center gap-1.5 text-xs rounded-lg px-2 py-1.5 text-left transition-all ${isClickable ? "hover:bg-gray-100 cursor-pointer" : ""} ${s.score === 0 ? "hover:ring-1 hover:ring-amber-300" : ""}`}
+              >
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.score === 100 ? "bg-emerald-500" : s.score > 0 ? "bg-amber-500" : "bg-gray-300"}`} />
+                <span className="text-text-muted truncate">{s.name}</span>
+                <span className={`font-medium ml-auto ${s.score === 0 ? "text-amber-600" : ""}`}>
+                  {s.score === 100 ? "✓" : s.score === 0 ? "Add →" : `${s.score}%`}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Card>
 

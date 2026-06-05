@@ -59,14 +59,26 @@ export async function GET() {
     plansData = pln.data || [];
     faqsData = faq.data || [];
   } catch {
-    // Tables don't exist yet — try to load from JSONB fallback
-    const ctx = business.knowledge_json as Record<string, unknown> | null;
-    if (ctx) {
-      servicesData = (ctx.services as unknown[]) || [];
-      trainersData = (ctx.trainers as unknown[]) || [];
-      facilitiesData = (ctx.facilities as unknown[]) || [];
-      plansData = (ctx.plans as unknown[]) || [];
-      faqsData = (ctx.faqs as unknown[]) || [];
+    // Tables don't exist — try to load from knowledge_json or business_context JSON
+    const kj = business.knowledge_json as Record<string, unknown> | null;
+    if (kj) {
+      servicesData = (kj.services as unknown[]) || [];
+      trainersData = (kj.trainers as unknown[]) || [];
+      facilitiesData = (kj.facilities as unknown[]) || [];
+      plansData = (kj.plans as unknown[]) || [];
+      faqsData = (kj.faqs as unknown[]) || [];
+    } else if (business.business_context) {
+      // Try parsing business_context as JSON (fallback storage)
+      try {
+        if (business.business_context.startsWith("{")) {
+          const parsed = JSON.parse(business.business_context);
+          servicesData = (parsed.services as unknown[]) || [];
+          trainersData = (parsed.trainers as unknown[]) || [];
+          facilitiesData = (parsed.facilities as unknown[]) || [];
+          plansData = (parsed.plans as unknown[]) || [];
+          faqsData = (parsed.faqs as unknown[]) || [];
+        }
+      } catch { /* not JSON — it's plain text context, ignore */ }
     }
   }
 
@@ -260,18 +272,14 @@ async function saveListSectionWithCategory(
   rows: Record<string, unknown>[]
 ) {
   try {
-    // Delete only items of this category, preserve others
     await admin.from("business_services").delete().eq("business_id", business.id).eq("category", category);
     if (rows.length > 0) {
       const { error } = await admin.from("business_services").insert(rows);
       if (error) throw error;
     }
-  } catch (e) {
-    // Fallback to JSONB
-    const existing = (business.knowledge_json as Record<string, unknown>) || {};
-    const updated = { ...existing, [category + "s"]: rows };
-    const { error } = await admin.from("businesses").update({ knowledge_json: updated }).eq("id", business.id);
-    if (error) throw new Error(`Cannot save ${category}s. Please run migration 013.`);
+  } catch {
+    // Fallback to JSON storage
+    await saveToJsonFallback(admin, business, category + "s", rows);
   }
 }
 
@@ -281,13 +289,35 @@ async function saveToJsonFallback(
   key: string,
   items: unknown[]
 ) {
+  // Try knowledge_json column first
   const existing = (business.knowledge_json as Record<string, unknown>) || {};
   const updated = { ...existing, [key]: items };
+
   const { error } = await admin.from("businesses").update({ knowledge_json: updated }).eq("id", business.id);
+
   if (error) {
-    // knowledge_json column may not exist — try adding it inline
-    console.error("[Knowledge POST] JSONB fallback also failed:", error.message);
-    throw new Error(`Cannot save ${key}. Please run the database migration (013_add_missing_business_columns.sql) in Supabase SQL Editor.`);
+    // knowledge_json column doesn't exist — use business_context as JSON storage
+    console.warn(`[Knowledge POST] knowledge_json column missing. Storing ${key} in business_context as JSON.`);
+
+    // Load current business_context, try to parse as JSON, or start fresh
+    const { data: biz } = await admin.from("businesses").select("business_context").eq("id", business.id).single();
+    let contextJson: Record<string, unknown> = {};
+    try {
+      if (biz?.business_context?.startsWith("{")) {
+        contextJson = JSON.parse(biz.business_context);
+      }
+    } catch { /* not JSON, start fresh */ }
+
+    contextJson[key] = items;
+
+    const { error: ctxErr } = await admin.from("businesses")
+      .update({ business_context: JSON.stringify(contextJson) })
+      .eq("id", business.id);
+
+    if (ctxErr) {
+      console.error(`[Knowledge POST] Final fallback failed:`, ctxErr.message);
+      throw new Error(`Cannot save ${key}. Database columns missing. Please run migration 013.`);
+    }
   }
 }
 
@@ -350,7 +380,13 @@ async function rebuildBusinessContext(admin: ReturnType<typeof createAdminClient
     plans = pln.data || [];
     faqs = faq.data || [];
   } catch {
-    const ctx = biz.knowledge_json as Record<string, unknown> | null;
+    // Load from knowledge_json or business_context JSON
+    let ctx: Record<string, unknown> | null = biz.knowledge_json as Record<string, unknown> | null;
+    if (!ctx && biz.business_context) {
+      try {
+        if (biz.business_context.startsWith("{")) ctx = JSON.parse(biz.business_context);
+      } catch { /* not JSON */ }
+    }
     if (ctx) {
       services = (ctx.services as unknown[]) || [];
       plans = (ctx.plans as unknown[]) || [];
