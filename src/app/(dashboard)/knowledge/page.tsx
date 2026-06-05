@@ -395,15 +395,32 @@ export default function KnowledgePage() {
 
       {/* Setup Progress Banner (when incomplete) */}
       {score > 0 && score < 80 && !loading && (
-        <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-amber-900">Setup {score}% complete</p>
-            <p className="text-xs text-amber-700 mt-0.5">Complete remaining sections to improve AI responses</p>
+        <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">Setup {score}% complete</p>
+              <p className="text-xs text-amber-700 mt-0.5">Complete remaining sections to improve AI responses</p>
+            </div>
+            <Button size="sm" onClick={() => {
+              const firstIncomplete = scoreSections.find((s) => s.score === 0);
+              if (firstIncomplete) {
+                const sectionMap: Record<string, string> = { "Services": "services", "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "services", "Description": "profile", "Contact Info": "contact", "Location": "location", "Working Hours": "hours", "WhatsApp": "hours" };
+                setActiveSection(sectionMap[firstIncomplete.name] || "services");
+              }
+            }}>Continue Setup</Button>
           </div>
-          <div className="flex items-center gap-2">
-            {scoreSections.filter((s) => s.score === 0).slice(0, 3).map((s) => (
-              <span key={s.name} className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">✗ {s.name}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {scoreSections.filter((s) => s.score === 100).map((s) => (
+              <span key={s.name} className="text-[11px] text-emerald-700 flex items-center gap-1">✓ {s.name}</span>
             ))}
+            {scoreSections.filter((s) => s.score < 100).map((s) => {
+              const sectionMap: Record<string, string> = { "Services": "services", "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "services", "Description": "profile", "Contact Info": "contact", "Location": "location", "Working Hours": "hours", "Business Profile": "profile", "WhatsApp": "hours" };
+              return (
+                <button key={s.name} onClick={() => setActiveSection(sectionMap[s.name] || "services")} className="text-[11px] text-amber-800 flex items-center gap-1 hover:text-amber-950 hover:underline text-left">
+                  ✗ {s.name} {s.score > 0 ? `(${s.score}%)` : ""}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
