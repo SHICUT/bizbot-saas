@@ -106,12 +106,12 @@ async function processIncomingMessage(
     await supabase.from("leads").update({ first_message_at: new Date().toISOString(), status: "contacted" }).eq("id", lead.id);
   }
 
-  // 4. Upsert conversation
+  // 4. Upsert conversation (always set AI active when customer messages)
   console.log(`[Webhook] Step 4: Upserting conversation...`);
   const { data: conversation, error: convError } = await supabase
     .from("conversations")
     .upsert(
-      { business_id: business.id, lead_id: lead.id, channel: "whatsapp", status: "active" },
+      { business_id: business.id, lead_id: lead.id, channel: "whatsapp", status: "active", is_ai_active: true },
       { onConflict: "business_id,lead_id,channel" }
     )
     .select("id, is_ai_active")
@@ -121,6 +121,14 @@ async function processIncomingMessage(
     console.error(`[Webhook] ❌ STOPPED: Conversation upsert failed:`, convError?.message || "no data");
     return;
   }
+
+  // If conversation existed but AI was paused, re-enable it (customer is messaging)
+  if (!conversation.is_ai_active) {
+    console.log(`[Webhook] ⚠ AI was inactive — re-enabling for this conversation`);
+    await supabase.from("conversations").update({ is_ai_active: true }).eq("id", conversation.id);
+    conversation.is_ai_active = true;
+  }
+
   console.log(`[Webhook] ✓ Conversation: ${conversation.id.substring(0, 8)} | AI Active: ${conversation.is_ai_active}`);
 
   // 5. Extract message content
