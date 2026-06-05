@@ -404,8 +404,12 @@ export default function KnowledgePage() {
             <Button size="sm" onClick={() => {
               const firstIncomplete = scoreSections.find((s) => s.score === 0);
               if (firstIncomplete) {
-                const sectionMap: Record<string, string> = { "Services": "services", "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "services", "Description": "profile", "Contact Info": "contact", "Location": "location", "Working Hours": "hours", "WhatsApp": "hours" };
-                setActiveSection(sectionMap[firstIncomplete.name] || "services");
+                const sectionMap: Record<string, string> = { "Services": "services", "Pricing/Plans": "plans", "FAQs": "faqs", "Description": "profile", "Contact Info": "contact", "Location": "location", "Working Hours": "hours", "Business Profile": "profile" };
+                const target = sectionMap[firstIncomplete.name];
+                if (firstIncomplete.name === "Media") window.location.assign("/media");
+                else if (firstIncomplete.name === "WhatsApp") window.location.assign("/settings");
+                else if (target) setActiveSection(target);
+                else setActiveSection("services");
               }
             }}>Continue Setup</Button>
           </div>
@@ -414,9 +418,13 @@ export default function KnowledgePage() {
               <span key={s.name} className="text-[11px] text-emerald-700 flex items-center gap-1">✓ {s.name}</span>
             ))}
             {scoreSections.filter((s) => s.score < 100).map((s) => {
-              const sectionMap: Record<string, string> = { "Services": "services", "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "services", "Description": "profile", "Contact Info": "contact", "Location": "location", "Working Hours": "hours", "Business Profile": "profile", "WhatsApp": "hours" };
+              const sectionMap: Record<string, string> = { "Services": "services", "Pricing/Plans": "plans", "FAQs": "faqs", "Description": "profile", "Contact Info": "contact", "Location": "location", "Working Hours": "hours", "Business Profile": "profile" };
               return (
-                <button key={s.name} onClick={() => setActiveSection(sectionMap[s.name] || "services")} className="text-[11px] text-amber-800 flex items-center gap-1 hover:text-amber-950 hover:underline text-left">
+                <button key={s.name} onClick={() => {
+                  if (s.name === "Media") window.location.assign("/media");
+                  else if (s.name === "WhatsApp") window.location.assign("/settings");
+                  else setActiveSection(sectionMap[s.name] || "services");
+                }} className="text-[11px] text-amber-800 flex items-center gap-1 hover:text-amber-950 hover:underline text-left">
                   ✗ {s.name} {s.score > 0 ? `(${s.score}%)` : ""}
                 </button>
               );
@@ -447,14 +455,18 @@ export default function KnowledgePage() {
             const sectionMap: Record<string, string> = {
               "Business Profile": "profile", "Description": "profile", "Contact Info": "contact",
               "Location": "location", "Working Hours": "hours", "Services": "services",
-              "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "services", "WhatsApp": "contact",
+              "Pricing/Plans": "plans", "FAQs": "faqs", "Media": "__media__", "WhatsApp": "__settings__",
             };
             const target = sectionMap[s.name];
             const isClickable = !!target;
             return (
               <button
                 key={s.name}
-                onClick={() => { if (target) setActiveSection(target); }}
+                onClick={() => {
+                  if (target === "__media__") window.location.assign("/media");
+                  else if (target === "__settings__") window.location.assign("/settings");
+                  else if (target) setActiveSection(target);
+                }}
                 disabled={!isClickable}
                 className={`flex items-center gap-1.5 text-xs rounded-lg px-2 py-1.5 text-left transition-all ${isClickable ? "hover:bg-gray-100 cursor-pointer" : ""} ${s.score === 0 ? "hover:ring-1 hover:ring-amber-300" : ""}`}
               >
