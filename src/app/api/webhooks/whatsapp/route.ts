@@ -115,11 +115,16 @@ export async function POST(request: NextRequest) {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  // Process async (don't block the 200 response)
-  processWebhookPayload(payload).catch((error) => {
+  // 4. Process the message BEFORE responding
+  // On Vercel serverless, fire-and-forget can be killed before completion.
+  // We must process synchronously within the function timeout (5min max).
+  try {
+    await processWebhookPayload(payload);
+    console.log("[Webhook POST] ✓ Processing complete");
+  } catch (error) {
     console.error("[Webhook POST] Processing error:", error);
-  });
+  }
 
-  // Return 200 immediately — Meta requires response within 5s
+  // 5. Return 200
   return new Response("EVENT_RECEIVED", { status: 200 });
 }
