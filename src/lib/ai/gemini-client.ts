@@ -1,8 +1,8 @@
 /**
  * Multi-Provider AI Client
  *
- * Priority: Gemini → Groq → OpenAI
- * Automatically falls back if primary provider fails (quota, error, etc.)
+ * Priority: Groq → Gemini → OpenAI → Fallback
+ * Groq is primary (fast, high quota). Gemini is backup.
  */
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
@@ -16,7 +16,7 @@ export interface AIResponse {
 }
 
 /**
- * Call AI with automatic fallback across providers.
+ * Call AI with automatic fallback: Groq → Gemini → OpenAI → Fallback
  */
 export async function callAI(
   systemPrompt: string,
@@ -27,39 +27,52 @@ export async function callAI(
   const groqKey = process.env.GROQ_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
 
-  // Try Gemini first
-  if (geminiKey) {
+  // Try Groq FIRST (primary provider — fast, reliable)
+  if (groqKey) {
     try {
-      return await callGemini(geminiKey, systemPrompt, messages, userMessage);
+      console.log("[AI] Using Groq (primary)");
+      const result = await callGroq(groqKey, systemPrompt, messages, userMessage);
+      console.log("[AI] ✓ Groq Success");
+      return result;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "";
-      console.warn("[AI] Gemini failed, trying fallback:", msg);
-      // Continue to fallback
+      console.warn("[AI] ❌ Groq Failed:", msg, "→ switching to Gemini");
     }
   }
 
-  // Fallback: Groq
-  if (groqKey) {
+  // Fallback: Gemini
+  if (geminiKey) {
     try {
-      return await callGroq(groqKey, systemPrompt, messages, userMessage);
+      console.log("[AI] Using Gemini (fallback)");
+      const result = await callGemini(geminiKey, systemPrompt, messages, userMessage);
+      console.log("[AI] ✓ Gemini Success");
+      return result;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "";
-      console.warn("[AI] Groq failed, trying fallback:", msg);
+      console.warn("[AI] ❌ Gemini Failed:", msg, "→ switching to OpenAI");
     }
   }
 
   // Fallback: OpenAI
   if (openaiKey) {
     try {
-      return await callOpenAI(openaiKey, systemPrompt, messages, userMessage);
+      console.log("[AI] Using OpenAI (fallback)");
+      const result = await callOpenAI(openaiKey, systemPrompt, messages, userMessage);
+      console.log("[AI] ✓ OpenAI Success");
+      return result;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "";
-      console.error("[AI] OpenAI also failed:", msg);
-      throw new Error("All AI providers failed. Please try again later.");
+      console.error("[AI] ❌ OpenAI Failed:", msg);
     }
   }
 
-  throw new Error("No AI provider configured. Add GEMINI_API_KEY or GROQ_API_KEY to environment variables.");
+  // Final fallback: return a generic helpful reply
+  console.error("[AI] ❌ ALL PROVIDERS FAILED — using static fallback");
+  return {
+    text: "Thanks for your message! I'm having a brief technical issue. Please try again in a moment, or contact us directly for immediate assistance.",
+    tokensUsed: 0,
+    provider: "fallback",
+  };
 }
 
 // ─── Gemini ─────────────────────────────────────────────────────────────────
