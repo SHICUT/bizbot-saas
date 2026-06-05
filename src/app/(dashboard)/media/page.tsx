@@ -99,29 +99,51 @@ export default function MediaPage() {
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const file = fd.get("file") as File | null;
+    const url = fd.get("url") as string;
     const keywords = (fd.get("keywords") as string || "").split(",").map((k) => k.trim()).filter(Boolean);
 
-    const res = await fetch("/api/media", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: fd.get("name"),
-        type: fd.get("category"),
-        url: fd.get("url"),
-        category: fd.get("category"),
-        trigger_keywords: keywords,
-      }),
-    });
+    if (!file?.size && !url) {
+      setSuccessMsg("❌ Please upload a file or paste a URL");
+      setTimeout(() => setSuccessMsg(null), 3000);
+      return;
+    }
+
+    let res: Response;
+
+    if (file && file.size > 0) {
+      // File upload via Storage
+      const uploadForm = new FormData();
+      uploadForm.append("file", file);
+      uploadForm.append("name", fd.get("name") as string || file.name);
+      uploadForm.append("category", fd.get("category") as string || "gallery");
+      uploadForm.append("keywords", keywords.join(","));
+
+      res = await fetch("/api/media/upload", { method: "POST", body: uploadForm });
+    } else {
+      // URL-based upload
+      res = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fd.get("name"),
+          type: fd.get("category"),
+          url,
+          category: fd.get("category"),
+          trigger_keywords: keywords,
+        }),
+      });
+    }
 
     if (res.ok) {
       setShowUpload(false);
-      setSuccessMsg("Media added! AI will use it in conversations.");
+      setSuccessMsg("✓ Media added! AI will use it in conversations.");
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchMedia();
     } else {
       const errData = await res.json().catch(() => ({ error: "Upload failed" }));
       setSuccessMsg(`❌ ${errData.error || "Upload failed. Please try again."}`);
-      setTimeout(() => setSuccessMsg(null), 5000);
+      setTimeout(() => setSuccessMsg(null), 6000);
     }
   }
 
@@ -209,9 +231,19 @@ export default function MediaPage() {
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
                 </select>
               </div>
-              <div><label className="text-sm font-medium block mb-1.5">File URL *</label><input name="url" type="url" required className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="https://..." />
-                <p className="text-xs text-text-muted mt-1">Upload to Supabase Storage or any CDN, then paste the URL here.</p>
+
+              {/* File Upload */}
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Upload File</label>
+                <input name="file" type="file" accept="image/*,.pdf,.doc,.docx" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-emerald-50 file:text-emerald-700" />
+                <p className="text-xs text-text-muted mt-1">JPG, PNG, PDF, DOC supported. Max 10MB.</p>
               </div>
+
+              <div className="flex items-center gap-2 text-xs text-text-muted"><div className="flex-1 h-px bg-border" /><span>or paste URL</span><div className="flex-1 h-px bg-border" /></div>
+
+              {/* URL Paste (alternative) */}
+              <div><label className="text-sm font-medium block mb-1.5">File URL</label><input name="url" type="url" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="https://... (direct link to image/PDF)" /></div>
+
               <div><label className="text-sm font-medium block mb-1.5">AI Trigger Keywords</label><input name="keywords" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="price, cost, plan, membership (comma separated)" />
                 <p className="text-xs text-text-muted mt-1">AI sends this media when customer mentions these words.</p>
               </div>
