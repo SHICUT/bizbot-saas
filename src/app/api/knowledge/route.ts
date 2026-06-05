@@ -107,7 +107,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (bizErr || !business) {
-    return NextResponse.json({ error: "No business found. Please complete onboarding." }, { status: 404 });
+    console.error("[Knowledge POST] Business not found for user:", user.id, "| Error:", bizErr?.message);
+    return NextResponse.json({ error: "Unable to save. Please refresh the page and try again." }, { status: 404 });
   }
 
   const body = await request.json();

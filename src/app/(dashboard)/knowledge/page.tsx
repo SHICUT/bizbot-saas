@@ -378,8 +378,35 @@ export default function KnowledgePage() {
 
       <AnimatePresence>
         {successMsg && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 flex items-center gap-2"><CheckCircle className="w-4 h-4" />{successMsg}</motion.div>}
-        {errorMsg && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-center gap-2"><AlertCircle className="w-4 h-4" />{errorMsg}</motion.div>}
+        {errorMsg && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span className="text-sm text-red-700">{errorMsg}</span>
+              </div>
+              {errorMsg.toLowerCase().includes("business") || errorMsg.toLowerCase().includes("onboarding") || errorMsg.toLowerCase().includes("migration") ? (
+                <a href="/onboarding" className="text-xs font-medium text-red-700 underline hover:text-red-900 whitespace-nowrap ml-3">Complete Setup →</a>
+              ) : null}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
+
+      {/* Setup Progress Banner (when incomplete) */}
+      {score > 0 && score < 80 && !loading && (
+        <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-amber-900">Setup {score}% complete</p>
+            <p className="text-xs text-amber-700 mt-0.5">Complete remaining sections to improve AI responses</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {scoreSections.filter((s) => s.score === 0).slice(0, 3).map((s) => (
+              <span key={s.name} className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">✗ {s.name}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI Readiness Score */}
       <Card className="mb-6">
