@@ -24,9 +24,19 @@ export async function GET() {
 
     return NextResponse.json({ media: media || [] });
   } catch {
-    // Table doesn't exist — return empty
-    console.warn("[Media GET] business_media table may not exist");
-    return NextResponse.json({ media: [] });
+    // Table doesn't exist — load from business_context JSON
+    console.warn("[Media GET] business_media table missing — using JSON fallback");
+    try {
+      const { data: biz } = await admin.from("businesses").select("business_context").eq("id", business.id).single();
+      let mediaList: unknown[] = [];
+      if (biz?.business_context?.startsWith("{")) {
+        const ctx = JSON.parse(biz.business_context);
+        mediaList = Array.isArray(ctx.media) ? ctx.media : [];
+      }
+      return NextResponse.json({ media: mediaList });
+    } catch {
+      return NextResponse.json({ media: [] });
+    }
   }
 }
 
@@ -76,17 +86,31 @@ export async function POST(request: NextRequest) {
   const { data, error } = await admin.from("business_media").insert(insertData).select("id").single();
 
   if (error) {
-    console.error("[Media Upload] Insert FAILED:", error.message, "| Code:", error.code, "| Details:", error.details);
+    console.error("[Media Upload] Insert FAILED:", error.message, "| Code:", error.code);
 
-    // If table doesn't exist, provide clear message
+    // Fallback: store in business_context JSON
     if (error.message.includes("does not exist") || error.message.includes("relation")) {
+      console.log("[Media Upload] Table missing — saving to business_context JSON fallback");
+      try {
+        const { data: biz } = await admin.from("businesses").select("business_context").eq("id", business.id).single();
+        let ctx: Record<string, unknown> = {};
+        try { if (biz?.business_context?.startsWith("{")) ctx = JSON.parse(biz.business_context); } catch {}
+        const mediaList = Array.isArray(ctx.media) ? ctx.media : [];
+        mediaList.push({ name, url, type: category || "general", trigger_keywords: trigger_keywords || [], created_at: new Date().toISOString() });
+        ctx.media = mediaList;
+        await admin.from("businesses").update({ business_context: JSON.stringify(ctx) }).eq("id", business.id);
+        console.log("[Media Upload] ✓ Saved to JSON fallback. Total media:", mediaList.length);
+        return NextResponse.json({ success: true, id: "json-" + Date.now(), fallback: true });
+      } catch (fbErr) {
+        console.error("[Media Upload] JSON fallback also failed:", fbErr);
+      }
+
       return NextResponse.json({
-        error: "Media library table not set up yet. Please run the database migration (migration 013) in Supabase SQL Editor.",
-        details: error.message,
+        error: "Media table not available. Run migration 013 in Supabase SQL Editor for full media support.",
       }, { status: 500 });
     }
 
-    return NextResponse.json({ error: `Upload failed: ${error.message}`, details: error.details }, { status: 500 });
+    return NextResponse.json({ error: `Upload failed: ${error.message}` }, { status: 500 });
   }
 
   console.log("[Media Upload] ✓ Success! ID:", data.id);
