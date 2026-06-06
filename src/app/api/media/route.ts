@@ -14,30 +14,45 @@ export async function GET() {
   const { data: business } = await admin.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!business) return NextResponse.json({ media: [], categories: [] });
 
-  try {
-    const { data: media } = await admin
-      .from("business_media")
-      .select("*")
-      .eq("business_id", business.id)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+  const { data: media, error: mediaErr } = await admin
+    .from("business_media")
+    .select("*")
+    .eq("business_id", business.id)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
 
-    return NextResponse.json({ media: media || [] });
-  } catch {
-    // Table doesn't exist — load from business_context JSON
-    console.warn("[Media GET] business_media table missing — using JSON fallback");
-    try {
-      const { data: biz } = await admin.from("businesses").select("business_context").eq("id", business.id).single();
-      let mediaList: unknown[] = [];
-      if (biz?.business_context?.startsWith("{")) {
-        const ctx = JSON.parse(biz.business_context);
-        mediaList = Array.isArray(ctx.media) ? ctx.media : [];
-      }
-      return NextResponse.json({ media: mediaList });
-    } catch {
-      return NextResponse.json({ media: [] });
-    }
+  console.log(`[Media GET] Business: ${business.id.substring(0, 8)} | Table result: ${media?.length ?? "null"} | Error: ${mediaErr?.message || "none"}`);
+
+  // If table query succeeded and has data, return it
+  if (!mediaErr && media && media.length > 0) {
+    return NextResponse.json({ media });
   }
+
+  // If table query failed (table doesn't exist) OR returned empty, check JSON fallback
+  console.log("[Media GET] Checking JSON fallback...");
+  const { data: biz } = await admin.from("businesses").select("business_context, knowledge_json").eq("id", business.id).single();
+
+  let mediaList: unknown[] = [];
+
+  // Check knowledge_json first
+  if (biz?.knowledge_json) {
+    const kj = biz.knowledge_json as Record<string, unknown>;
+    if (Array.isArray(kj.media)) mediaList = kj.media;
+  }
+
+  // Then check business_context JSON
+  if (mediaList.length === 0 && biz?.business_context?.startsWith("{")) {
+    try {
+      const ctx = JSON.parse(biz.business_context);
+      if (Array.isArray(ctx.media)) mediaList = ctx.media;
+    } catch { /* not JSON */ }
+  }
+
+  // Combine: table results (if any) + JSON fallback
+  const combined = [...(media || []), ...mediaList];
+  console.log(`[Media GET] Final: ${combined.length} items (table: ${media?.length || 0}, json: ${mediaList.length})`);
+
+  return NextResponse.json({ media: combined });
 }
 
 /**
