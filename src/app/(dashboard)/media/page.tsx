@@ -148,8 +148,17 @@ export default function MediaPage() {
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/media?id=${id}`, { method: "DELETE" });
-    setMedia((prev) => prev.filter((m) => m.id !== id));
+    if (!confirm("Delete this media? This cannot be undone.")) return;
+    const res = await fetch(`/api/media?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+      setSuccessMsg("✓ Media deleted");
+      setTimeout(() => setSuccessMsg(null), 2000);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setSuccessMsg(`❌ ${err.error || "Delete failed"}`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    }
   }
 
   const filtered = filter === "all" ? media : media.filter((m) => m.type === filter);

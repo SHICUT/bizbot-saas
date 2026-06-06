@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * DELETE /api/media?id=xxx
+ * Deletes both database record and storage file
  */
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
@@ -147,6 +148,77 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  await admin.from("business_media").update({ is_active: false }).eq("id", id).eq("business_id", business.id);
+  console.log(`[Media Delete] Business: ${business.id.substring(0, 8)} | Media ID: ${id}`);
+
+  // If it's a JSON-stored item (id starts with "json-"), remove from business_context
+  if (id.startsWith("json-")) {
+    try {
+      const { data: biz } = await admin.from("businesses").select("business_context, knowledge_json").eq("id", business.id).single();
+      let updated = false;
+
+      // Try knowledge_json
+      if (biz?.knowledge_json) {
+        const kj = biz.knowledge_json as Record<string, unknown[]>;
+        if (Array.isArray(kj.media)) {
+          kj.media = kj.media.filter((m: unknown) => (m as Record<string, string>).created_at !== id.replace("json-", ""));
+          await admin.from("businesses").update({ knowledge_json: kj }).eq("id", business.id);
+          updated = true;
+        }
+      }
+
+      // Try business_context JSON
+      if (!updated && biz?.business_context?.startsWith("{")) {
+        const ctx = JSON.parse(biz.business_context);
+        if (Array.isArray(ctx.media)) {
+          const before = ctx.media.length;
+          ctx.media = ctx.media.filter((_: unknown, i: number) => `json-${i}` !== id);
+          if (ctx.media.length === before) {
+            // Try matching by timestamp
+            ctx.media = ctx.media.filter((m: Record<string, string>) => !id.includes(m.created_at?.substring(0, 10) || "xxx"));
+          }
+          await admin.from("businesses").update({ business_context: JSON.stringify(ctx) }).eq("id", business.id);
+        }
+      }
+
+      console.log("[Media Delete] ✓ Removed from JSON storage");
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      console.error("[Media Delete] JSON delete failed:", e);
+      return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    }
+  }
+
+  // Standard DB delete — get the record first to find storage path
+  const { data: mediaRecord } = await admin.from("business_media").select("url").eq("id", id).eq("business_id", business.id).single();
+
+  // Delete from database (soft delete)
+  const { error: dbErr } = await admin.from("business_media").delete().eq("id", id).eq("business_id", business.id);
+
+  if (dbErr) {
+    console.error("[Media Delete] DB delete failed:", dbErr.message);
+    return NextResponse.json({ error: `Delete failed: ${dbErr.message}` }, { status: 500 });
+  }
+  console.log("[Media Delete] ✓ DB record deleted");
+
+  // Delete from Supabase Storage (if the URL points to our bucket)
+  if (mediaRecord?.url?.includes("/media-library/")) {
+    try {
+      // Extract path from URL: .../media-library/business_id/category/filename
+      const urlParts = mediaRecord.url.split("/media-library/");
+      if (urlParts[1]) {
+        const storagePath = urlParts[1];
+        console.log(`[Media Delete] Deleting storage file: ${storagePath}`);
+        const { error: storageErr } = await admin.storage.from("media-library").remove([storagePath]);
+        if (storageErr) {
+          console.error("[Media Delete] Storage delete failed:", storageErr.message, "— DB record already removed");
+        } else {
+          console.log("[Media Delete] ✓ Storage file deleted");
+        }
+      }
+    } catch (e) {
+      console.error("[Media Delete] Storage cleanup error:", e);
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
