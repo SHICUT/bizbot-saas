@@ -10,7 +10,7 @@ import {
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { formatINR } from "@/lib/utils";
+import { formatUSD } from "@/lib/utils";
 
 interface DashboardData {
   user: { name: string; email: string };

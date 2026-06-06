@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlanById } from "@/lib/payments/plans";
+import { usdToInrPaiseLive } from "@/lib/payments/exchange-rate";
 import Razorpay from "razorpay";
 
 /**
@@ -58,9 +59,12 @@ export async function POST(request: NextRequest) {
   try {
     const razorpay = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpayKeySecret });
 
+    // Convert USD price to INR paise using live exchange rate
+    const amountInPaise = await usdToInrPaiseLive(plan.priceUSD);
+
     // Create Razorpay Order
     const order = await razorpay.orders.create({
-      amount: plan.priceInPaise,
+      amount: amountInPaise,
       currency: "INR",
       receipt: `bb_${Date.now()}`,
       notes: {
@@ -69,15 +73,16 @@ export async function POST(request: NextRequest) {
         plan_tier: plan.tier,
         billing_cycle: plan.billingCycle,
         user_email: user.email || "",
+        price_usd: String(plan.priceUSD),
       },
     });
 
-    // Store pending payment in database
+    // Store pending payment in database (amount stored in USD cents)
     const adminSupabase = createAdminClient();
     await adminSupabase.from("payments").insert({
       business_id: business.id,
-      amount: plan.priceInPaise,
-      currency: "INR",
+      amount: plan.priceInCents,
+      currency: "USD",
       status: "pending",
       provider: "razorpay",
       razorpay_order_id: order.id,
@@ -88,12 +93,12 @@ export async function POST(request: NextRequest) {
       success: true,
       order_id: order.id,
       key_id: razorpayKeyId,
-      amount: plan.priceInPaise,
+      amount: amountInPaise,
       currency: "INR",
       plan: {
         name: plan.name,
         tier: plan.tier,
-        price: plan.monthlyPrice,
+        price: plan.priceUSD,
         billing_cycle: plan.billingCycle,
       },
       prefill: {

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, MessageSquare, Bot, Calendar,
   CreditCard, BarChart2, Settings, Zap, FlaskConical,
-  Shield, Image, BookOpen, Megaphone,
+  Shield, Image, BookOpen, Megaphone, HelpCircle,
 } from "lucide-react";
 
 const navigation = [
@@ -22,6 +22,7 @@ const navigation = [
   { name: "Simulator", href: "/simulator", icon: FlaskConical },
   { name: "Revenue", href: "/analytics", icon: BarChart2 },
   { name: "Billing", href: "/billing", icon: CreditCard },
+  { name: "Help", href: "/help", icon: HelpCircle },
 ];
 
 export default function Sidebar() {

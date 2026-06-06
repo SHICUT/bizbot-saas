@@ -191,8 +191,10 @@ export default function MediaPage() {
         <Card>
           <div className="py-16 text-center">
             <Image className="w-12 h-12 text-text-muted/20 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No media uploaded</h3>
-            <p className="text-sm text-text-muted max-w-sm mx-auto mb-4">Upload pricing charts, menus, or offer banners. AI will send them to customers automatically.</p>
+            <h3 className="text-lg font-semibold mb-2">No media uploaded</h3>
+            <p className="text-sm text-text-muted max-w-md mx-auto mb-4">
+              Upload menus, pricing charts, offers, and brochures here. When a customer asks about pricing or services on WhatsApp, AI will automatically send the relevant image or document.
+            </p>
             <Button onClick={() => setShowUpload(true)}><Upload className="w-4 h-4" /> Upload First Media</Button>
           </div>
         </Card>

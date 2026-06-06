@@ -5,14 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   UserPlus, Download, Search, X, Loader2, Users, Phone, Mail,
   MessageSquare, Calendar, StickyNote, ChevronRight, TrendingUp,
-  Clock, Send, ArrowRight
+  Clock, Send, ArrowRight, HelpCircle
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
 import PageHeader from "@/components/layout/PageHeader";
-import { formatINR, formatINRFull } from "@/lib/utils";
+import Tooltip from "@/components/ui/Tooltip";
+import { formatUSD, formatUSDFull } from "@/lib/utils";
 
 type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost";
 type LeadTemp = "hot" | "warm" | "cold";
@@ -256,31 +257,49 @@ export default function LeadsPage() {
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold">Sales Pipeline</h3>
+          <Tooltip text="Click any card to filter leads by that category" position="right" showIcon iconSize={14} />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Card className="text-center cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all" onClick={() => setActiveFilter("all")}>
+          <Card className={`text-center cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all ${activeFilter === "all" && tempFilter === "all" ? "ring-2 ring-primary" : ""}`} onClick={() => { setActiveFilter("all"); setTempFilter("all"); }}>
             <p className="text-2xl font-bold">{stats.total}</p>
-            <p className="text-xs text-text-muted mt-1">Total Leads</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-xs text-text-muted">Total Leads</p>
+            </div>
           </Card>
-          <Card className="text-center cursor-pointer hover:ring-2 hover:ring-red-200 transition-all" onClick={() => setTempFilter("hot")}>
+          <Card className={`text-center cursor-pointer hover:ring-2 hover:ring-red-200 transition-all ${tempFilter === "hot" ? "ring-2 ring-red-400" : ""}`} onClick={() => { setTempFilter("hot"); setActiveFilter("all"); }}>
             <p className="text-2xl font-bold text-red-600">{stats.hot}</p>
-            <p className="text-xs text-text-muted mt-1">🔥 Hot</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-xs text-text-muted">🔥 Hot Lead</p>
+              <Tooltip text="Customer showed strong buying intent" position="bottom" showIcon iconSize={12} />
+            </div>
           </Card>
-          <Card className="text-center cursor-pointer hover:ring-2 hover:ring-amber-200 transition-all" onClick={() => setTempFilter("warm")}>
+          <Card className={`text-center cursor-pointer hover:ring-2 hover:ring-amber-200 transition-all ${tempFilter === "warm" ? "ring-2 ring-amber-400" : ""}`} onClick={() => { setTempFilter("warm"); setActiveFilter("all"); }}>
             <p className="text-2xl font-bold text-amber-600">{stats.warm}</p>
-            <p className="text-xs text-text-muted mt-1">🟡 Warm</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-xs text-text-muted">🟡 Warm Lead</p>
+              <Tooltip text="Customer is interested but not ready yet" position="bottom" showIcon iconSize={12} />
+            </div>
           </Card>
-          <Card className="text-center cursor-pointer hover:ring-2 hover:ring-emerald-200 transition-all" onClick={() => setActiveFilter("converted")}>
+          <Card className={`text-center cursor-pointer hover:ring-2 hover:ring-emerald-200 transition-all ${activeFilter === "qualified" ? "ring-2 ring-emerald-400" : ""}`} onClick={() => { setActiveFilter("qualified"); setTempFilter("all"); }}>
+            <p className="text-2xl font-bold text-blue-600">{stats.qualified}</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-xs text-text-muted">✓ Qualified</p>
+              <Tooltip text="Customer meets your target criteria" position="bottom" showIcon iconSize={12} />
+            </div>
+          </Card>
+          <Card className={`text-center cursor-pointer hover:ring-2 hover:ring-emerald-200 transition-all ${activeFilter === "converted" ? "ring-2 ring-emerald-400" : ""}`} onClick={() => { setActiveFilter("converted"); setTempFilter("all"); }}>
             <p className="text-2xl font-bold text-emerald-600">{stats.converted}</p>
-            <p className="text-xs text-text-muted mt-1">✅ Converted</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-xs text-text-muted">✅ Converted</p>
+              <Tooltip text="Customer became a paying customer" position="bottom" showIcon iconSize={12} />
+            </div>
           </Card>
-          <Card className="text-center">
-            <p className="text-2xl font-bold text-indigo-600">{formatINR(stats.totalValue)}</p>
-            <p className="text-xs text-text-muted mt-1">💰 Pipeline</p>
-          </Card>
-          <Card className="text-center">
-            <p className="text-2xl font-bold text-purple-600">{stats.total > 0 ? Math.round((stats.converted / stats.total) * 100) : 0}%</p>
-            <p className="text-xs text-text-muted mt-1">📈 Conversion</p>
+          <Card className={`text-center cursor-pointer hover:ring-2 hover:ring-gray-200 transition-all ${activeFilter === "contacted" ? "ring-2 ring-gray-400" : ""}`} onClick={() => { setActiveFilter("contacted"); setTempFilter("all"); }}>
+            <p className="text-2xl font-bold text-gray-600">{stats.contacted}</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-xs text-text-muted">📞 Contacted</p>
+              <Tooltip text="Business has already contacted the lead" position="bottom" showIcon iconSize={12} />
+            </div>
           </Card>
         </div>
       </div>
@@ -335,11 +354,14 @@ export default function LeadsPage() {
         <Card>
           <div className="py-16 text-center">
             <Users className="w-12 h-12 text-text-muted/20 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No leads yet</h3>
-            <p className="text-sm text-text-muted max-w-sm mx-auto mb-4">
-              Leads are captured automatically when customers message you on WhatsApp or Instagram. You can also add them manually.
+            <h3 className="text-lg font-semibold mb-2">No leads yet</h3>
+            <p className="text-sm text-text-muted max-w-md mx-auto mb-4">
+              Customer conversations on WhatsApp will automatically create leads here. Each new message from a customer becomes a trackable lead in your sales pipeline.
             </p>
-            <Button onClick={() => setShowAddModal(true)}><UserPlus className="w-4 h-4" /> Add Lead Manually</Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button onClick={() => setShowAddModal(true)}><UserPlus className="w-4 h-4" /> Add Lead Manually</Button>
+              <Button variant="secondary" onClick={() => window.location.assign("/settings")}><Phone className="w-4 h-4" /> Connect WhatsApp</Button>
+            </div>
           </div>
         </Card>
       ) : (
@@ -360,20 +382,21 @@ export default function LeadsPage() {
                       <p className="text-sm font-medium">{lead.name || "Unknown"}</p>
                       <span className="text-xs">{tempConfig[lead.lead_temperature || "cold"].icon}</span>
                       {lead.score >= 70 && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">Score: {lead.score}</span>}
+                      {lead.score > 0 && lead.score < 70 && <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">Score: {lead.score}</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-text-muted flex items-center gap-1"><Phone className="w-3 h-3" />{lead.phone}</span>
-                      {lead.email && <span className="text-xs text-text-muted flex items-center gap-1 hidden sm:flex"><Mail className="w-3 h-3" />{lead.email}</span>}
-                      {lead.message_count > 0 && <span className="text-xs text-text-muted flex items-center gap-1 hidden sm:flex"><MessageSquare className="w-3 h-3" />{lead.message_count}</span>}
+                      {lead.message_count > 0 && <span className="text-xs text-text-muted flex items-center gap-1"><MessageSquare className="w-3 h-3" />{lead.message_count} msgs</span>}
+                      {lead.last_message_at && <span className="text-xs text-text-muted flex items-center gap-1 hidden md:flex"><Clock className="w-3 h-3" />{timeAgo(lead.last_message_at)}</span>}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right hidden sm:block">
-                    <p className="text-xs text-text-muted capitalize">{lead.source}</p>
-                    {lead.estimated_value > 0 && <p className="text-xs font-medium text-emerald-600">{formatINR(lead.estimated_value)}</p>}
+                    <Badge variant={statusConfig[lead.status].variant}>{statusConfig[lead.status].label}</Badge>
+                    {lead.last_activity_at && <p className="text-[10px] text-text-muted mt-1">Active {timeAgo(lead.last_activity_at)}</p>}
                   </div>
-                  <Badge variant={statusConfig[lead.status].variant}>{statusConfig[lead.status].label}</Badge>
+                  {lead.estimated_value > 0 && <span className="text-xs font-medium text-emerald-600 hidden lg:block">{formatUSD(lead.estimated_value)}</span>}
                   <ChevronRight className="w-4 h-4 text-text-muted hidden sm:block" />
                 </div>
               </motion.div>
@@ -440,7 +463,7 @@ export default function LeadsPage() {
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Phone</p><p className="text-sm font-medium">{selectedLead.phone}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Email</p><p className="text-sm font-medium">{selectedLead.email || "—"}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Source</p><p className="text-sm font-medium capitalize">{selectedLead.source}</p></div>
-                          <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Value</p><p className="text-sm font-medium text-emerald-600">{formatINRFull(selectedLead.estimated_value || 0)}</p></div>
+                          <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Value</p><p className="text-sm font-medium text-emerald-600">{formatUSDFull(selectedLead.estimated_value || 0)}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Messages</p><p className="text-sm font-medium">{selectedLead.message_count || 0}</p></div>
                           <div className="p-3 rounded-lg bg-gray-50"><p className="text-xs text-text-muted">Created</p><p className="text-sm font-medium">{new Date(selectedLead.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p></div>
                         </div>
@@ -636,7 +659,7 @@ export default function LeadsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-medium block mb-1.5">Value (₹)</label>
+                    <label className="text-sm font-medium block mb-1.5">Value ($)</label>
                     <input name="estimated_value" type="number" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="0" />
                   </div>
                   <div>

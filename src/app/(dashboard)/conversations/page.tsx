@@ -174,14 +174,19 @@ export default function ConversationsPage() {
   if (conversations.length === 0 && !searchQuery) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
-        <div className="text-center">
+        <div className="text-center max-w-sm">
           <MessageSquare className="w-16 h-16 text-text-muted/20 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-text-primary mb-2">Unified Inbox</h2>
-          <p className="text-sm text-text-muted max-w-sm">
-            All customer conversations from WhatsApp, Instagram, and other channels appear here.
-            Connect your WhatsApp number in Settings to get started.
+          <h2 className="text-xl font-semibold text-text-primary mb-2">No conversations yet</h2>
+          <p className="text-sm text-text-muted mb-4">
+            When customers message you on WhatsApp or Instagram, their conversations will appear here.
+            Connect your WhatsApp number to start receiving messages.
           </p>
-          <a href="/settings" className="inline-block mt-4 text-sm text-primary font-medium hover:underline">Go to Settings →</a>
+          <div className="flex flex-col items-center gap-3">
+            <a href="/settings" className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors">
+              <Phone className="w-4 h-4" /> Connect WhatsApp
+            </a>
+            <a href="/help" className="text-sm text-primary font-medium hover:underline">View Help Center →</a>
+          </div>
         </div>
       </div>
     );

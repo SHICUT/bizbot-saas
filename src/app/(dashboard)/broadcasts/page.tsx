@@ -252,8 +252,8 @@ export default function BroadcastsPage() {
         <Card>
           <div className="py-16 text-center">
             <Megaphone className="w-12 h-12 text-text-muted/20 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No campaigns yet</h3>
-            <p className="text-sm text-text-muted max-w-sm mx-auto mb-4">Create your first broadcast campaign to reach your customers.</p>
+            <h3 className="text-lg font-semibold mb-2">No campaigns yet</h3>
+            <p className="text-sm text-text-muted max-w-md mx-auto mb-4">Send promotions, announcements, and offers to your customers via WhatsApp. Campaigns are sent safely with daily limits to protect your number.</p>
             <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4" /> Create Campaign</Button>
           </div>
         </Card>

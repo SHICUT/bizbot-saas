@@ -1,17 +1,13 @@
 /**
  * PRICING CONFIGURATION — Single Source of Truth
- * Display Currency: USD
- * Payment Currency: INR (Razorpay only supports INR)
- * Exchange Rate: Fixed at ₹85 per $1 (update periodically)
+ * All prices are in USD.
+ * Payment processing uses USD cents.
  */
 
 /** Trial duration in days — SINGLE SOURCE OF TRUTH */
 export const TRIAL_DURATION_DAYS = 7;
 
-/** USD to INR exchange rate (update this value periodically) */
-export const USD_TO_INR = 85;
-
-// ─── Plan Pricing ────────────────────────────────────────────────────────────
+// ─── Plan Pricing (USD) ─────────────────────────────────────────────────────
 
 export const PRICES = {
   starter: { monthly: 9, yearly: 79, yearlySavings: 29 },
@@ -20,16 +16,10 @@ export const PRICES = {
 };
 
 /**
- * Convert USD to INR paise for Razorpay
- * Razorpay requires amount in smallest currency unit (paise = INR × 100)
+ * Convert USD to cents (smallest unit for payment processing)
  */
-export function usdToInrPaise(usd: number): number {
-  return Math.round(usd * USD_TO_INR * 100);
-}
-
-/** Convert USD to INR (for display) */
-export function usdToInr(usd: number): number {
-  return Math.round(usd * USD_TO_INR);
+export function usdToCents(usd: number): number {
+  return Math.round(usd * 100);
 }
 
 // ─── Plan Definitions ───────────────────────────────────────────────────────
@@ -43,9 +33,8 @@ export interface Plan {
   yearlyPrice: number; // USD
   yearlyMonthlyEquivalent: number; // USD
   yearlySavings: number; // USD
-  priceInCents: number; // USD cents (for display)
-  priceInPaise: number; // INR paise (for Razorpay checkout)
-  priceINR: number; // INR rounded (for display at checkout)
+  priceInCents: number; // USD cents
+  priceUSD: number; // USD (the actual charge amount for this plan entry)
   messageLimit: number;
   features: string[];
   popular?: boolean;
@@ -59,9 +48,8 @@ export const PLANS: Plan[] = [
     monthlyPrice: PRICES.starter.monthly, yearlyPrice: PRICES.starter.yearly,
     yearlyMonthlyEquivalent: Math.round((PRICES.starter.yearly / 12) * 100) / 100,
     yearlySavings: PRICES.starter.yearlySavings,
-    priceInCents: PRICES.starter.monthly * 100,
-    priceInPaise: usdToInrPaise(PRICES.starter.monthly),
-    priceINR: usdToInr(PRICES.starter.monthly),
+    priceInCents: usdToCents(PRICES.starter.monthly),
+    priceUSD: PRICES.starter.monthly,
     messageLimit: 1000,
     features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness", "1,000 Messages/month"],
   },
@@ -71,9 +59,8 @@ export const PLANS: Plan[] = [
     monthlyPrice: PRICES.starter.monthly, yearlyPrice: PRICES.starter.yearly,
     yearlyMonthlyEquivalent: Math.round((PRICES.starter.yearly / 12) * 100) / 100,
     yearlySavings: PRICES.starter.yearlySavings,
-    priceInCents: PRICES.starter.yearly * 100,
-    priceInPaise: usdToInrPaise(PRICES.starter.yearly),
-    priceINR: usdToInr(PRICES.starter.yearly),
+    priceInCents: usdToCents(PRICES.starter.yearly),
+    priceUSD: PRICES.starter.yearly,
     messageLimit: 1000,
     features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness", "1,000 Messages/month"],
   },
@@ -83,9 +70,8 @@ export const PLANS: Plan[] = [
     monthlyPrice: PRICES.growth.monthly, yearlyPrice: PRICES.growth.yearly,
     yearlyMonthlyEquivalent: Math.round((PRICES.growth.yearly / 12) * 100) / 100,
     yearlySavings: PRICES.growth.yearlySavings,
-    priceInCents: PRICES.growth.monthly * 100,
-    priceInPaise: usdToInrPaise(PRICES.growth.monthly),
-    priceINR: usdToInr(PRICES.growth.monthly),
+    priceInCents: usdToCents(PRICES.growth.monthly),
+    priceUSD: PRICES.growth.monthly,
     messageLimit: 5000, popular: true, tagline: "Most Popular",
     features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export", "5,000 Messages/month"],
   },
@@ -95,9 +81,8 @@ export const PLANS: Plan[] = [
     monthlyPrice: PRICES.growth.monthly, yearlyPrice: PRICES.growth.yearly,
     yearlyMonthlyEquivalent: Math.round((PRICES.growth.yearly / 12) * 100) / 100,
     yearlySavings: PRICES.growth.yearlySavings,
-    priceInCents: PRICES.growth.yearly * 100,
-    priceInPaise: usdToInrPaise(PRICES.growth.yearly),
-    priceINR: usdToInr(PRICES.growth.yearly),
+    priceInCents: usdToCents(PRICES.growth.yearly),
+    priceUSD: PRICES.growth.yearly,
     messageLimit: 5000, popular: true, tagline: "Most Popular",
     features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export", "5,000 Messages/month"],
   },
@@ -107,9 +92,8 @@ export const PLANS: Plan[] = [
     monthlyPrice: PRICES.business.monthly, yearlyPrice: PRICES.business.yearly,
     yearlyMonthlyEquivalent: Math.round((PRICES.business.yearly / 12) * 100) / 100,
     yearlySavings: PRICES.business.yearlySavings,
-    priceInCents: PRICES.business.monthly * 100,
-    priceInPaise: usdToInrPaise(PRICES.business.monthly),
-    priceINR: usdToInr(PRICES.business.monthly),
+    priceInCents: usdToCents(PRICES.business.monthly),
+    priceUSD: PRICES.business.monthly,
     messageLimit: 20000, tagline: "Best for Growing Businesses",
     features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools", "20,000 Messages/month"],
   },
@@ -119,9 +103,8 @@ export const PLANS: Plan[] = [
     monthlyPrice: PRICES.business.monthly, yearlyPrice: PRICES.business.yearly,
     yearlyMonthlyEquivalent: Math.round((PRICES.business.yearly / 12) * 100) / 100,
     yearlySavings: PRICES.business.yearlySavings,
-    priceInCents: PRICES.business.yearly * 100,
-    priceInPaise: usdToInrPaise(PRICES.business.yearly),
-    priceINR: usdToInr(PRICES.business.yearly),
+    priceInCents: usdToCents(PRICES.business.yearly),
+    priceUSD: PRICES.business.yearly,
     messageLimit: 20000, tagline: "Best for Growing Businesses",
     features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools", "20,000 Messages/month"],
   },

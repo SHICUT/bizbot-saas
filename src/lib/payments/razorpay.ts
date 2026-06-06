@@ -2,6 +2,7 @@ import Razorpay from "razorpay";
 import { createHmac } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlanById } from "./plans";
+import { usdToInrPaiseLive } from "./exchange-rate";
 
 /**
  * Razorpay Payment Integration
@@ -72,15 +73,15 @@ export async function createRazorpaySubscription(
     },
   });
 
-  // 3. Store subscription in our database
+  // 3. Store subscription in our database (amount in USD cents)
   await supabase.from("subscriptions").upsert(
     {
       business_id: input.businessId,
       plan: plan.tier,
       status: "created", // will become "active" after payment
       billing_cycle: plan.billingCycle,
-      amount: plan.priceInPaise,
-      currency: "INR",
+      amount: plan.priceInCents,
+      currency: "USD",
       provider: "razorpay",
       razorpay_subscription_id: subscription.id,
       razorpay_plan_id: razorpayPlanId,
@@ -198,6 +199,9 @@ async function getOrCreateRazorpayPlan(
     return dbPlan.razorpay_plan_id;
   }
 
+  // Convert USD to INR paise using live exchange rate
+  const amountInPaise = await usdToInrPaiseLive(plan.priceUSD);
+
   // Create plan in Razorpay
   const period = plan.billingCycle === "monthly" ? "monthly" : "yearly";
   const razorpayPlan = await razorpay.plans.create({
@@ -205,7 +209,7 @@ async function getOrCreateRazorpayPlan(
     interval: 1,
     item: {
       name: `BizBot ${plan.name} (${plan.billingCycle})`,
-      amount: plan.priceInPaise,
+      amount: amountInPaise,
       currency: "INR",
       description: `${plan.messageLimit.toLocaleString()} messages/month`,
     },

@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Calendar, Clock, X, ChevronLeft, ChevronRight, Loader2,
-  CheckCircle, XCircle, AlertCircle, RotateCcw, DollarSign
+  CheckCircle, XCircle, AlertCircle, RotateCcw, DollarSign, Phone
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
-import { formatINRFull } from "@/lib/utils";
+import { formatUSDFull } from "@/lib/utils";
 
 type AppointmentStatus = "confirmed" | "pending" | "completed" | "cancelled" | "no_show" | "rescheduled";
 type CalendarView = "day" | "week" | "month" | "list";
@@ -219,7 +219,7 @@ export default function AppointmentsPage() {
         <Card>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center"><DollarSign className="w-5 h-5 text-indigo-600" /></div>
-            <div><p className="text-xl font-bold">{formatINRFull(stats.revenue)}</p><p className="text-xs text-text-muted">Revenue</p></div>
+            <div><p className="text-xl font-bold">{formatUSDFull(stats.revenue)}</p><p className="text-xs text-text-muted">Revenue</p></div>
           </div>
         </Card>
       </div>
@@ -385,9 +385,15 @@ export default function AppointmentsPage() {
             <Card>
               <div className="py-16 text-center">
                 <Calendar className="w-12 h-12 text-text-muted/20 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-1">No appointments yet</h3>
-                <p className="text-sm text-text-muted max-w-sm mx-auto mb-4">Appointments appear here when customers book through WhatsApp or when you create them manually.</p>
-                <Button onClick={() => setShowAddModal(true)}><Plus className="w-4 h-4" /> Create Appointment</Button>
+                <h3 className="text-lg font-semibold mb-2">No appointments yet</h3>
+                <p className="text-sm text-text-muted max-w-md mx-auto mb-4">
+                  Appointments booked through WhatsApp will appear here automatically.
+                  You can also create them manually to track all your customer bookings in one place.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Button onClick={() => setShowAddModal(true)}><Plus className="w-4 h-4" /> Create Appointment</Button>
+                  <Button variant="secondary" onClick={() => window.location.assign("/settings")}><Phone className="w-4 h-4" /> Connect WhatsApp</Button>
+                </div>
               </div>
             </Card>
           ) : (
@@ -401,7 +407,7 @@ export default function AppointmentsPage() {
                         <Avatar name={apt.customer_name} />
                         <div>
                           <p className="text-sm font-medium">{apt.customer_name}</p>
-                          <p className="text-xs text-text-muted">{apt.service}{apt.service_price ? ` • ${formatINRFull(apt.service_price)}` : ""}</p>
+                          <p className="text-xs text-text-muted">{apt.service}{apt.service_price ? ` • ${formatUSDFull(apt.service_price)}` : ""}</p>
                           {apt.staff_assigned && <p className="text-xs text-text-muted">Staff: {apt.staff_assigned}</p>}
                         </div>
                       </div>
@@ -456,7 +462,7 @@ export default function AppointmentsPage() {
                   <div><label className="text-sm font-medium block mb-1.5">Time *</label><input name="time" type="time" required className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-sm font-medium block mb-1.5">Price (₹)</label><input name="price" type="number" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="0" /></div>
+                  <div><label className="text-sm font-medium block mb-1.5">Price ($)</label><input name="price" type="number" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="0" /></div>
                   <div><label className="text-sm font-medium block mb-1.5">Staff</label><input name="staff" className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="Assigned to" /></div>
                 </div>
                 <div><label className="text-sm font-medium block mb-1.5">Notes</label><textarea name="notes" rows={2} className="w-full px-4 py-2.5 text-sm rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all resize-none" /></div>

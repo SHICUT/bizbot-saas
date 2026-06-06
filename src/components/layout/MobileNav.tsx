@@ -18,6 +18,7 @@ import {
   BookOpen,
   Megaphone,
   Image,
+  HelpCircle,
 } from "lucide-react";
 
 const navigation = [
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Simulator", href: "/simulator", icon: FlaskConical },
   { name: "Revenue", href: "/analytics", icon: BarChart2 },
   { name: "Billing", href: "/billing", icon: CreditCard },
+  { name: "Help", href: "/help", icon: HelpCircle },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
