@@ -15,6 +15,7 @@ export interface Coupon {
   discount_value: number;
   is_active: boolean;
   usage_limit: number | null;
+  per_user_limit: number | null;
   usage_count: number;
   expires_at: string | null;
   applicable_plans: string[] | null;
@@ -87,18 +88,21 @@ export async function validateCoupon(
     return { valid: false, error: `Minimum order amount is $${coupon.min_amount}.` };
   }
 
-  // Prevent duplicate redemption by the same business
+  // Prevent exceeding per-user redemption limit
   if (businessId) {
-    const { data: existingRedemption } = await supabase
+    const perUserLimit = coupon.per_user_limit ?? 1; // Default: 1 use per business
+    
+    const { count } = await supabase
       .from("coupon_redemptions")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("coupon_id", coupon.id)
-      .eq("business_id", businessId)
-      .limit(1)
-      .single();
+      .eq("business_id", businessId);
 
-    if (existingRedemption) {
-      return { valid: false, error: "You have already used this coupon." };
+    if (count !== null && count >= perUserLimit) {
+      return { valid: false, error: perUserLimit === 1 
+        ? "You have already used this coupon." 
+        : `This coupon can only be used ${perUserLimit} times per account.` 
+      };
     }
   }
 
@@ -170,6 +174,7 @@ export async function createCoupon(input: {
   discount_type: "percentage" | "fixed";
   discount_value: number;
   usage_limit?: number | null;
+  per_user_limit?: number | null;
   expires_at?: string | null;
   applicable_plans?: string[] | null;
   min_amount?: number;
@@ -197,6 +202,7 @@ export async function createCoupon(input: {
       discount_type: input.discount_type,
       discount_value: input.discount_value,
       usage_limit: input.usage_limit ?? null,
+      per_user_limit: input.per_user_limit ?? 1,
       expires_at: input.expires_at ?? null,
       applicable_plans: input.applicable_plans ?? null,
       min_amount: input.min_amount ?? 0,
@@ -223,6 +229,7 @@ export async function updateCoupon(
     discount_value: number;
     is_active: boolean;
     usage_limit: number | null;
+    per_user_limit: number | null;
     expires_at: string | null;
     applicable_plans: string[] | null;
     min_amount: number;
