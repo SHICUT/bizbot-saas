@@ -161,6 +161,9 @@ export async function processFollowUps(): Promise<FollowUpResult> {
           is_ai_generated: true,
           status: "sent",
         });
+
+        // Increment AI reply usage (follow-up messages count toward plan limit)
+        await supabase.rpc("increment_message_usage", { p_business_id: business.id });
       }
 
       result.sent++;

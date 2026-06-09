@@ -83,7 +83,7 @@ export default function Sidebar() {
         <div className="px-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">{usage.plan} Plan</span>
-            <span className="text-[10px] text-text-muted">{usage.used}/{usage.limit}</span>
+            <span className="text-[10px] text-text-muted">{usage.used}/{usage.limit} AI</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full">
             <div className={`h-1.5 rounded-full transition-all ${usagePercent > 90 ? "bg-red-500" : usagePercent > 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${usagePercent}%` }} />

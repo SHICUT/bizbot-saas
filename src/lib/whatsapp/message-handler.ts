@@ -183,8 +183,7 @@ async function processIncomingMessage(
     last_message_at: new Date().toISOString(),
   }).eq("id", lead.id);
 
-  // 7. Increment message usage
-  await supabase.rpc("increment_message_usage", { p_business_id: business.id });
+  // 7. (Inbound messages no longer count toward usage — only AI replies do)
 
   // 8. Check if AI should reply
   console.log(`[Webhook] Step 8: Checking shouldAIReply...`);
@@ -256,7 +255,7 @@ async function processIncomingMessage(
         status: "sent",
       });
 
-      // 12. Increment usage for outbound
+      // 12. Increment AI reply usage (only AI-generated outbound messages count toward plan limit)
       await supabase.rpc("increment_message_usage", { p_business_id: business.id });
 
       // 13. Update conversation with AI reply as last message
@@ -392,7 +391,8 @@ async function getConversationHistory(
 }
 
 /**
- * Check if business has remaining message quota.
+ * Check if business has remaining AI reply quota.
+ * Only AI-generated outbound messages count toward the limit.
  */
 async function checkMessageLimit(
   supabase: ReturnType<typeof createAdminClient>,

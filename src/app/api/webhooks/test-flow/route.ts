@@ -53,7 +53,7 @@ export async function GET() {
     return NextResponse.json({ results });
   }
 
-  results.push(`✓ Subscription: ${sub.status} | ${sub.messages_used}/${sub.message_limit} messages`);
+  results.push(`✓ Subscription: ${sub.status} | ${sub.messages_used}/${sub.message_limit} AI replies used`);
 
   const expired = sub.current_period_end && new Date(sub.current_period_end) < new Date();
   if (expired) {
@@ -62,7 +62,7 @@ export async function GET() {
   }
 
   if (sub.messages_used >= sub.message_limit) {
-    results.push("❌ Message limit reached");
+    results.push("❌ AI reply limit reached");
     return NextResponse.json({ results });
   }
 

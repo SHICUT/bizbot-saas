@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPlanById } from "@/lib/payments/plans";
+import { getPlanById, usdToCents } from "@/lib/payments/plans";
 import { usdToInrPaiseLive } from "@/lib/payments/exchange-rate";
+import { validateCoupon, redeemCoupon } from "@/lib/payments/coupons";
 import Razorpay from "razorpay";
 
 /**
  * POST /api/payments/razorpay/create-subscription
  *
  * Creates a Razorpay Order for the selected plan.
- * Uses Razorpay Orders API (simpler, more reliable than Subscriptions API for MVP).
+ * Supports optional coupon code — discount is validated server-side
+ * and the DISCOUNTED amount is sent to Razorpay.
  *
- * Body: { plan_id: string }
- * Returns: { order_id, key_id, amount, currency, plan }
+ * Body: { plan_id: string, coupon_code?: string }
+ * Returns: { order_id, key_id, amount, currency, plan, discount? }
  */
 export async function POST(request: NextRequest) {
   const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
@@ -21,10 +23,6 @@ export async function POST(request: NextRequest) {
   if (!razorpayKeyId || !razorpayKeySecret) {
     return NextResponse.json({
       error: "Payment system not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to environment variables.",
-      debug: {
-        RAZORPAY_KEY_ID_set: !!razorpayKeyId,
-        RAZORPAY_KEY_SECRET_set: !!razorpayKeySecret,
-      },
     }, { status: 503 });
   }
 
@@ -35,7 +33,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { plan_id } = body;
+  const { plan_id, coupon_code } = body;
 
   if (!plan_id) {
     return NextResponse.json({ error: "Please select a plan." }, { status: 400 });
@@ -56,13 +54,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Business not found." }, { status: 404 });
   }
 
+  // ─── Coupon Validation (server-side, never trust frontend) ──────────────
+  let finalAmountUSD = plan.priceUSD;
+  let couponId: string | null = null;
+  let discountAmountUSD = 0;
+
+  if (coupon_code) {
+    const couponResult = await validateCoupon(coupon_code, plan.tier, plan.priceUSD, business.id);
+    if (!couponResult.valid) {
+      return NextResponse.json({ error: couponResult.error }, { status: 400 });
+    }
+    finalAmountUSD = couponResult.finalAmount!;
+    discountAmountUSD = couponResult.discountAmount!;
+    couponId = couponResult.coupon!.id;
+  }
+
+  // Ensure amount is at least $1 (Razorpay minimum)
+  if (finalAmountUSD < 1) {
+    finalAmountUSD = 1;
+  }
+
   try {
     const razorpay = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpayKeySecret });
 
-    // Convert USD price to INR paise using live exchange rate
-    const amountInPaise = await usdToInrPaiseLive(plan.priceUSD);
+    // Convert FINAL discounted USD price to INR paise using live exchange rate
+    const amountInPaise = await usdToInrPaiseLive(finalAmountUSD);
 
-    // Create Razorpay Order
+    // Create Razorpay Order with discounted amount
     const order = await razorpay.orders.create({
       amount: amountInPaise,
       currency: "INR",
@@ -73,21 +91,37 @@ export async function POST(request: NextRequest) {
         plan_tier: plan.tier,
         billing_cycle: plan.billingCycle,
         user_email: user.email || "",
-        price_usd: String(plan.priceUSD),
+        price_usd: String(finalAmountUSD),
+        original_price_usd: String(plan.priceUSD),
+        coupon_code: coupon_code || "",
+        discount_usd: String(discountAmountUSD),
       },
     });
 
-    // Store pending payment in database (amount stored in USD cents)
+    // Store pending payment in database (final discounted amount in USD cents)
     const adminSupabase = createAdminClient();
     await adminSupabase.from("payments").insert({
       business_id: business.id,
-      amount: plan.priceInCents,
+      amount: usdToCents(finalAmountUSD),
       currency: "USD",
       status: "pending",
       provider: "razorpay",
       razorpay_order_id: order.id,
-      description: `${plan.name} Plan (${plan.billingCycle})`,
+      description: `${plan.name} Plan (${plan.billingCycle})${coupon_code ? ` — Coupon: ${coupon_code}` : ""}`,
     });
+
+    // Store coupon info for redemption after successful payment
+    if (couponId) {
+      await adminSupabase.from("payments").update({
+        metadata: {
+          coupon_id: couponId,
+          coupon_code: coupon_code,
+          original_amount_usd: plan.priceUSD,
+          discount_amount_usd: discountAmountUSD,
+          final_amount_usd: finalAmountUSD,
+        },
+      }).eq("razorpay_order_id", order.id);
+    }
 
     return NextResponse.json({
       success: true,
@@ -98,9 +132,16 @@ export async function POST(request: NextRequest) {
       plan: {
         name: plan.name,
         tier: plan.tier,
-        price: plan.priceUSD,
+        price: finalAmountUSD,
+        original_price: plan.priceUSD,
         billing_cycle: plan.billingCycle,
       },
+      discount: couponId ? {
+        coupon_code: coupon_code,
+        original_amount: plan.priceUSD,
+        discount_amount: discountAmountUSD,
+        final_amount: finalAmountUSD,
+      } : null,
       prefill: {
         name: business.name,
         email: business.email || user.email || "",
@@ -108,48 +149,28 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    // Extract the REAL error from Razorpay SDK
-    // Razorpay throws: { statusCode: 400, error: { code, description, source, step, reason } }
     let msg = "Unknown error";
     let debugInfo: Record<string, unknown> = {};
 
     try {
       if (error instanceof Error) {
         msg = error.message;
-        debugInfo = { type: "Error", message: error.message, stack: error.stack?.split("\n")[0] };
+        debugInfo = { type: "Error", message: error.message };
       } else if (error && typeof error === "object") {
-        // Force serialize to get all properties
         const serialized = JSON.parse(JSON.stringify(error));
         debugInfo = serialized;
-
-        // Extract message from Razorpay's nested format
-        if (serialized.error?.description) {
-          msg = serialized.error.description;
-        } else if (serialized.description) {
-          msg = serialized.description;
-        } else if (serialized.message) {
-          msg = serialized.message;
-        } else if (serialized.error && typeof serialized.error === "string") {
-          msg = serialized.error;
-        } else {
-          msg = JSON.stringify(serialized);
-        }
+        msg = serialized.error?.description || serialized.description || serialized.message || JSON.stringify(serialized);
       } else {
         msg = String(error);
-        debugInfo = { raw: String(error) };
       }
     } catch {
       msg = "Error parsing failed";
-      debugInfo = { parseError: true };
     }
 
-    console.error("[Razorpay] FULL ERROR:", JSON.stringify(debugInfo));
-    console.error("[Razorpay] Error message:", msg);
-    console.error("[Razorpay] Key ID prefix:", razorpayKeyId?.substring(0, 12));
+    console.error("[Razorpay] Error:", msg, debugInfo);
 
     return NextResponse.json({
       error: `Payment failed: ${msg}`,
-      razorpay_error: debugInfo,
     }, { status: 500 });
   }
 }

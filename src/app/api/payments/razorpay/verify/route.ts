@@ -115,6 +115,25 @@ export async function POST(request: NextRequest) {
     .update({ plan: tier })
     .eq("id", business.id);
 
+  // Redeem coupon if one was used
+  const { data: paymentRecord } = await adminSupabase
+    .from("payments")
+    .select("metadata")
+    .eq("razorpay_order_id", razorpay_order_id)
+    .single();
+
+  if (paymentRecord?.metadata?.coupon_id) {
+    const { redeemCoupon } = await import("@/lib/payments/coupons");
+    await redeemCoupon(
+      paymentRecord.metadata.coupon_id,
+      business.id,
+      plan_id || `${tier}_${billingCycle}`,
+      paymentRecord.metadata.original_amount_usd || plan?.priceUSD || 0,
+      paymentRecord.metadata.discount_amount_usd || 0,
+      paymentRecord.metadata.final_amount_usd || plan?.priceUSD || 0
+    );
+  }
+
   return NextResponse.json({
     success: true,
     plan: tier,

@@ -74,7 +74,7 @@ export default function DashboardPage() {
             <Zap className="w-5 h-5 text-indigo-600" />
             <div>
               <p className="text-sm font-semibold text-indigo-900">7-Day Free Trial • {daysLeft} days remaining</p>
-              <p className="text-xs text-indigo-600">{messagesUsed}/{messageLimit} messages used</p>
+              <p className="text-xs text-indigo-600">{messagesUsed}/{messageLimit} AI replies used</p>
             </div>
           </div>
           <a href="/billing"><Button size="sm">Upgrade</Button></a>
@@ -117,17 +117,20 @@ export default function DashboardPage() {
             </Card>
             <Card>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold">Message Usage</h3>
+                <h3 className="text-sm font-bold">AI Reply Usage</h3>
                 <span className="text-xs text-text-muted">{msgPercent}%</span>
               </div>
               <div className="h-2 bg-gray-100 rounded-full mb-2">
                 <div className={`h-2 rounded-full transition-all ${msgPercent > 90 ? "bg-red-500" : msgPercent > 70 ? "bg-amber-500" : "bg-indigo-500"}`} style={{ width: `${msgPercent}%` }} />
               </div>
               <div className="flex justify-between text-xs text-text-muted">
-                <span>{messagesUsed} used</span>
-                <span>{messageLimit} limit</span>
+                <span>{messagesUsed} / {messageLimit} AI replies</span>
+                <span>{messageLimit - messagesUsed} remaining</span>
               </div>
-              {msgPercent > 80 && <p className="text-xs text-amber-600 mt-2 font-medium">⚠ Running low on messages</p>}
+              {sub?.current_period_end && (
+                <p className="text-xs text-text-muted mt-2">Resets: {new Date(sub.current_period_end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+              )}
+              {msgPercent > 80 && <p className="text-xs text-amber-600 mt-1 font-medium">⚠ Running low — upgrade for more AI replies</p>}
             </Card>
           </div>
 

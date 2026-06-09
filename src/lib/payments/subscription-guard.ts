@@ -5,6 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * Validates subscription status and feature access server-side.
  * NEVER trust frontend checks — all enforcement happens here.
+ *
+ * Usage counting: Only AI-generated outbound messages count toward the plan limit.
+ * Inbound customer messages and manual replies by the business owner are unlimited.
  */
 
 // ─── Feature Definitions Per Plan ───────────────────────────────────────────
@@ -138,8 +141,8 @@ export async function getSubscriptionStatus(businessId: string): Promise<Subscri
 }
 
 /**
- * Quick check: can this business send a message?
- * Used in webhook hot path.
+ * Quick check: can this business receive an AI reply?
+ * Used in webhook hot path before generating AI response.
  */
 export async function canSendMessage(businessId: string): Promise<boolean> {
   const supabase = createAdminClient();
@@ -191,9 +194,9 @@ export async function checkFeatureAccess(
 
   if (!status.features[feature]) {
     // Determine which plan unlocks this feature
-    let upgradeTo = "pro";
-    if (PLAN_FEATURES.pro[feature]) upgradeTo = "pro";
-    else if (PLAN_FEATURES.business[feature]) upgradeTo = "business";
+    let upgradeTo = "growth";
+    if (PLAN_FEATURES.growth?.[feature]) upgradeTo = "growth";
+    else if (PLAN_FEATURES.business?.[feature]) upgradeTo = "business";
 
     return {
       allowed: false,

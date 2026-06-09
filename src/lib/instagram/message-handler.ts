@@ -54,7 +54,7 @@ async function processIncomingDM(event: IGMessagingEvent, igAccountId: string): 
     return;
   }
 
-  // 2. Check subscription limit
+  // 2. Check AI reply quota
   const { data: sub } = await supabase
     .from("subscriptions")
     .select("message_limit, messages_used")
@@ -65,7 +65,7 @@ async function processIncomingDM(event: IGMessagingEvent, igAccountId: string): 
     .single();
 
   if (!sub || sub.messages_used >= sub.message_limit) {
-    console.warn(`[Instagram] Message limit reached for business: ${business.id}`);
+    console.warn(`[Instagram] AI reply limit reached for business: ${business.id}`);
     return;
   }
 
@@ -150,8 +150,7 @@ async function processIncomingDM(event: IGMessagingEvent, igAccountId: string): 
     { onConflict: "business_id,wa_message_id" }
   );
 
-  // 7. Increment usage
-  await supabase.rpc("increment_message_usage", { p_business_id: business.id });
+  // 7. (Inbound messages no longer count — only AI replies do)
 
   // 8. Check if AI should reply
   if (!business.ai_enabled || !conversation.is_ai_active) return;
@@ -200,6 +199,7 @@ async function processIncomingDM(event: IGMessagingEvent, igAccountId: string): 
       status: "sent",
     });
 
+    // Increment AI reply usage (only AI-generated outbound counts toward plan limit)
     await supabase.rpc("increment_message_usage", { p_business_id: business.id });
   } catch (error) {
     console.error(`[Instagram] AI reply failed:`, error);

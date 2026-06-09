@@ -334,12 +334,38 @@ async function generateInvoice(
 
   if (!sub) return;
 
+  // Check if there's coupon metadata on the payment
+  const couponCode = subscription.notes?.coupon_code || null;
+  const discountUsd = subscription.notes?.discount_usd ? parseFloat(subscription.notes.discount_usd) : 0;
+
   // Generate invoice number
   const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
 
   const subtotal = payment.amount;
   const tax = Math.round(subtotal * 0.18); // 18% GST
   const total = subtotal + tax;
+
+  const lineItems: Array<{ description: string; amount: number; quantity: number }> = [
+    {
+      description: `BizBot ${sub.plan} Plan (${sub.billing_cycle})`,
+      amount: subtotal,
+      quantity: 1,
+    },
+  ];
+
+  if (couponCode && discountUsd > 0) {
+    lineItems.push({
+      description: `Coupon Discount (${couponCode})`,
+      amount: -Math.round(discountUsd * 100), // negative for discount
+      quantity: 1,
+    });
+  }
+
+  lineItems.push({
+    description: "GST (18%)",
+    amount: tax,
+    quantity: 1,
+  });
 
   await supabase.from("invoices").insert({
     business_id: businessId,
@@ -356,18 +382,7 @@ async function generateInvoice(
     period_end: new Date(
       Date.now() + (sub.billing_cycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000
     ).toISOString(),
-    line_items: [
-      {
-        description: `BizBot ${sub.plan} Plan (${sub.billing_cycle})`,
-        amount: subtotal,
-        quantity: 1,
-      },
-      {
-        description: "GST (18%)",
-        amount: tax,
-        quantity: 1,
-      },
-    ],
+    line_items: lineItems,
     paid_at: new Date().toISOString(),
   });
 }

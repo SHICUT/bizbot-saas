@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, CreditCard, Zap, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Check, CreditCard, Zap, Loader2, AlertCircle, CheckCircle, Tag, X } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -25,10 +25,20 @@ interface PlanData {
   name: string;
   tier: string;
   monthly: { price: number };
-  yearly: { totalPrice: number; monthlyEquivalent: number };
+  yearly: { totalPrice: number; monthlyEquivalent: number; savings: number };
   messageLimit: string;
   features: string[];
   popular?: boolean;
+}
+
+interface CouponData {
+  code: string;
+  description: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  originalAmount: number;
+  discountAmount: number;
+  finalAmount: number;
 }
 
 export default function BillingPage() {
@@ -39,10 +49,17 @@ export default function BillingPage() {
   const [sub, setSub] = useState<SubStatus | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [selectedPlanForCoupon, setSelectedPlanForCoupon] = useState<string | null>(null);
+
   const plans: PlanData[] = [
-    { id: "starter", name: "Starter", tier: "starter", monthly: { price: 9 }, yearly: { totalPrice: 79, monthlyEquivalent: 6.58 }, messageLimit: "1,000/month", features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness"] },
-    { id: "growth", name: "Growth", tier: "growth", popular: true, monthly: { price: 19 }, yearly: { totalPrice: 179, monthlyEquivalent: 14.92 }, messageLimit: "5,000/month", features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export"] },
-    { id: "business", name: "Business", tier: "business", monthly: { price: 39 }, yearly: { totalPrice: 349, monthlyEquivalent: 29.08 }, messageLimit: "20,000/month", features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools"] },
+    { id: "starter", name: "Starter", tier: "starter", monthly: { price: 19 }, yearly: { totalPrice: 182, monthlyEquivalent: 15.17, savings: 46 }, messageLimit: "1K AI Replies/month", features: ["AI Auto Reply", "Knowledge Base", "Conversations Inbox", "Leads CRM", "Media Library", "Basic Analytics", "AI Readiness"] },
+    { id: "growth", name: "Growth", tier: "growth", popular: true, monthly: { price: 49 }, yearly: { totalPrice: 470, monthlyEquivalent: 39.17, savings: 118 }, messageLimit: "5K AI Replies/month", features: ["Everything in Starter", "Broadcast Campaigns", "AI Follow-Up Automation", "Appointments", "Revenue Dashboard", "Lead Scoring", "Advanced CRM", "CSV Export"] },
+    { id: "business", name: "Business", tier: "business", monthly: { price: 99 }, yearly: { totalPrice: 950, monthlyEquivalent: 79.17, savings: 238 }, messageLimit: "20K AI Replies/month", features: ["Everything in Growth", "AI Sales Employee", "Multi-Agent Access", "Advanced Analytics", "Revenue Attribution", "Campaign Analytics", "WhatsApp Compliance Tools"] },
   ];
 
   useEffect(() => {
@@ -51,13 +68,57 @@ export default function BillingPage() {
       setPageLoading(false);
     }).catch(() => setPageLoading(false));
 
-    // Check for payment success
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
       setSuccess("Payment successful! Your subscription is now active. 🎉");
       window.history.replaceState({}, "", "/billing");
     }
   }, []);
+
+  async function handleApplyCoupon(planTier: string) {
+    if (!couponCode.trim()) return;
+    setCouponError(null);
+    setCouponLoading(true);
+    setSelectedPlanForCoupon(planTier);
+
+    const planId = `${planTier}_${billingCycle}`;
+
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim(), plan_id: planId }),
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        setAppliedCoupon({
+          code: data.coupon.code,
+          description: data.coupon.description,
+          discount_type: data.coupon.discount_type,
+          discount_value: data.coupon.discount_value,
+          originalAmount: data.originalAmount,
+          discountAmount: data.discountAmount,
+          finalAmount: data.finalAmount,
+        });
+        setCouponError(null);
+      } else {
+        setCouponError(data.error || "Invalid coupon.");
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError("Failed to validate coupon.");
+      setAppliedCoupon(null);
+    }
+    setCouponLoading(false);
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError(null);
+    setSelectedPlanForCoupon(null);
+  }
 
   async function handleSubscribe(planTier: string) {
     setError(null);
@@ -67,7 +128,10 @@ export default function BillingPage() {
     try {
       const res = await fetch("/api/payments/razorpay/create-subscription", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: planId }),
+        body: JSON.stringify({
+          plan_id: planId,
+          coupon_code: (appliedCoupon && selectedPlanForCoupon === planTier) ? appliedCoupon.code : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); setLoading(null); return; }
@@ -142,8 +206,8 @@ export default function BillingPage() {
               </div>
               <p className="text-sm text-text-secondary mt-0.5">
                 {sub?.isTrialing && sub.trialDaysRemaining !== null && `${sub.trialDaysRemaining} of 7 trial days remaining • `}
-                {sub?.expiresAt && !sub.isTrialing && `Renews ${new Date(sub.expiresAt).toLocaleDateString("en-IN")} • `}
-                Messages: {sub?.messagesUsed || 0} / {sub?.messageLimit || 0}
+                {sub?.expiresAt && !sub.isTrialing && `Renews ${new Date(sub.expiresAt).toLocaleDateString("en-US")} • `}
+                AI Replies: {sub?.messagesUsed || 0} / {sub?.messageLimit || 0}
               </p>
             </div>
           </div>
@@ -152,7 +216,7 @@ export default function BillingPage() {
         {/* Usage Bar */}
         <div className="mt-5 pt-5 border-t border-border">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-secondary">Message Usage</span>
+            <span className="text-sm text-text-secondary">AI Reply Usage</span>
             <span className="text-sm font-semibold">{sub?.messagesUsed || 0} / {sub?.messageLimit || 0}</span>
           </div>
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -172,22 +236,73 @@ export default function BillingPage() {
 
       {/* Yearly Savings Banner */}
       <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-2">
-        <span className="text-xs text-emerald-700 font-medium">💰 Save up to 25% with yearly billing</span>
+        <span className="text-xs text-emerald-700 font-medium">💰 Save 20% with yearly billing</span>
       </div>
 
       {/* Billing Toggle */}
       <div className="flex items-center justify-center gap-2 mb-6">
-        <button onClick={() => setBillingCycle("monthly")} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${billingCycle === "monthly" ? "bg-primary text-white shadow-sm" : "bg-gray-100 text-text-secondary hover:bg-gray-200"}`}>Monthly</button>
-        <button onClick={() => setBillingCycle("yearly")} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === "yearly" ? "bg-primary text-white shadow-sm" : "bg-gray-100 text-text-secondary hover:bg-gray-200"}`}>
+        <button onClick={() => { setBillingCycle("monthly"); removeCoupon(); }} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${billingCycle === "monthly" ? "bg-primary text-white shadow-sm" : "bg-gray-100 text-text-secondary hover:bg-gray-200"}`}>Monthly</button>
+        <button onClick={() => { setBillingCycle("yearly"); removeCoupon(); }} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === "yearly" ? "bg-primary text-white shadow-sm" : "bg-gray-100 text-text-secondary hover:bg-gray-200"}`}>
           Yearly <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${billingCycle === "yearly" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"}`}>Save 20%</span>
         </button>
       </div>
+
+      {/* Coupon Section */}
+      <Card className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Tag className="w-4 h-4 text-primary" />
+          <h4 className="text-sm font-semibold">Have a coupon code?</h4>
+        </div>
+        {appliedCoupon ? (
+          <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+            <div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-semibold text-emerald-800">Coupon Applied: {appliedCoupon.code}</span>
+              </div>
+              <p className="text-xs text-emerald-600 mt-0.5">
+                {appliedCoupon.discount_type === "percentage" ? `${appliedCoupon.discount_value}% Off` : `$${appliedCoupon.discount_value} Off`}
+                {" "}— You save ${appliedCoupon.discountAmount.toFixed(2)}
+              </p>
+            </div>
+            <button onClick={removeCoupon} className="p-1.5 rounded-lg hover:bg-emerald-100 text-emerald-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={couponCode}
+              onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+              placeholder="Enter coupon code"
+              className="flex-1 px-4 py-2.5 text-sm rounded-lg border border-border focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all uppercase"
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                // Apply to the first non-current plan (user will select at checkout)
+                const targetPlan = plans.find(p => !isCurrentPlan(p.tier)) || plans[0];
+                handleApplyCoupon(targetPlan.tier);
+              }}
+              disabled={!couponCode.trim() || couponLoading}
+            >
+              {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+            </Button>
+          </div>
+        )}
+        {couponError && <p className="text-xs text-red-600 mt-2">{couponError}</p>}
+      </Card>
 
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {plans.map((plan) => {
           const isCurrent = isCurrentPlan(plan.tier);
           const isMonthly = billingCycle === "monthly";
+          const basePrice = isMonthly ? plan.monthly.price : plan.yearly.totalPrice;
+          const hasCoupon = appliedCoupon && selectedPlanForCoupon === plan.tier;
+          const displayPrice = hasCoupon ? appliedCoupon.finalAmount : basePrice;
+
           return (
             <Card key={plan.id} className={`relative flex flex-col ${plan.popular ? "border-primary ring-2 ring-primary/20" : ""} ${isCurrent ? "ring-2 ring-emerald-300 border-emerald-300" : ""}`}>
               {/* Current Plan Badge */}
@@ -196,20 +311,38 @@ export default function BillingPage() {
               )}
               {/* Popular Badge */}
               {plan.popular && !isCurrent && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2"><span className="px-3 py-1 rounded-full bg-primary text-white text-xs font-semibold">Popular</span></div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2"><span className="px-3 py-1 rounded-full bg-primary text-white text-xs font-semibold">Most Popular</span></div>
               )}
 
               <div className="text-center mb-5 pt-2">
                 <h3 className="text-lg font-bold">{plan.name}</h3>
                 <p className="text-xs text-text-muted mt-1">{plan.messageLimit}</p>
                 <div className="mt-3">
-                  <span className="text-3xl font-bold">${isMonthly ? plan.monthly.price : plan.yearly.monthlyEquivalent}</span>
-                  <span className="text-text-muted text-sm">/mo</span>
+                  {hasCoupon ? (
+                    <>
+                      <span className="text-lg text-text-muted line-through">${isMonthly ? plan.monthly.price : plan.yearly.monthlyEquivalent.toFixed(2)}</span>
+                      <span className="text-3xl font-bold ml-2 text-emerald-600">${isMonthly ? displayPrice.toFixed(2) : (displayPrice / 12).toFixed(2)}</span>
+                      <span className="text-text-muted text-sm">/mo</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold">${isMonthly ? plan.monthly.price : plan.yearly.monthlyEquivalent.toFixed(2)}</span>
+                      <span className="text-text-muted text-sm">/mo</span>
+                    </>
+                  )}
                 </div>
-                {!isMonthly && (
+                {!isMonthly && !hasCoupon && (
                   <div className="mt-1">
                     <p className="text-xs text-text-muted">Billed ${plan.yearly.totalPrice}/year</p>
-                    <p className="text-xs text-emerald-600 font-medium">Save ${(plan.monthly.price * 12) - plan.yearly.totalPrice}/year</p>
+                    <p className="text-xs text-emerald-600 font-medium">Save ${plan.yearly.savings}/year</p>
+                  </div>
+                )}
+                {hasCoupon && (
+                  <div className="mt-1">
+                    <p className="text-xs text-emerald-600 font-medium">
+                      {isMonthly ? `Pay $${displayPrice.toFixed(2)}/month` : `Pay $${displayPrice.toFixed(2)}/year`}
+                      {" "}(was ${basePrice})
+                    </p>
                   </div>
                 )}
               </div>
@@ -225,10 +358,18 @@ export default function BillingPage() {
                   <CheckCircle className="w-4 h-4" /> Current Plan
                 </Button>
               ) : (
-                <Button variant={plan.popular ? "primary" : "secondary"} className="w-full" onClick={() => handleSubscribe(plan.tier)} disabled={loading === plan.tier}>
-                  {loading === plan.tier ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  {loading === plan.tier ? "Processing..." : "Upgrade"}
-                </Button>
+                <div className="space-y-2">
+                  {/* Per-plan coupon apply */}
+                  {appliedCoupon && selectedPlanForCoupon !== plan.tier && couponCode && (
+                    <Button variant="secondary" size="sm" className="w-full" onClick={() => handleApplyCoupon(plan.tier)} disabled={couponLoading}>
+                      <Tag className="w-3.5 h-3.5" /> Apply {appliedCoupon.code} to this plan
+                    </Button>
+                  )}
+                  <Button variant={plan.popular ? "primary" : "secondary"} className="w-full" onClick={() => handleSubscribe(plan.tier)} disabled={loading === plan.tier}>
+                    {loading === plan.tier ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    {loading === plan.tier ? "Processing..." : hasCoupon ? `Pay $${displayPrice.toFixed(2)}` : "Upgrade"}
+                  </Button>
+                </div>
               )}
             </Card>
           );
