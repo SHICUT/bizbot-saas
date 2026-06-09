@@ -40,6 +40,7 @@ export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [showAnalytics, setShowAnalytics] = useState<Coupon | null>(null);
@@ -51,6 +52,11 @@ export default function AdminCouponsPage() {
   async function fetchCoupons() {
     try {
       const res = await fetch("/api/admin/coupons");
+      if (res.status === 403) {
+        setAccessDenied(true);
+        setLoading(false);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setCoupons(data.coupons || []);
@@ -143,6 +149,16 @@ export default function AdminCouponsPage() {
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  if (accessDenied) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-center">
+        <Tag className="w-12 h-12 text-red-300 mx-auto mb-3" />
+        <p className="text-lg font-bold text-red-600">Access Denied</p>
+        <p className="text-sm text-text-muted mt-1">Super Admin access required.</p>
+      </div>
+    </div>
+  );
 
   const totalRedemptions = redemptions.length;
   const totalDiscountGiven = redemptions.reduce((sum, r) => sum + Number(r.discount_amount), 0);
