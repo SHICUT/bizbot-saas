@@ -1,36 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSuperAdmin } from "@/lib/auth/admin-check";
 import { getAllCoupons, createCoupon, updateCoupon, deleteCoupon } from "@/lib/payments/coupons";
 
 /**
  * Admin Coupon Management API
- * GET    - List all coupons
+ * GET    - List all coupons + redemption history
  * POST   - Create coupon
  * PATCH  - Update coupon
  * DELETE - Delete coupon
+ *
+ * Access: Super Admin only (same check as /api/admin)
  */
-
-async function isAdmin(userId: string): Promise<boolean> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-  return data?.role === "super_admin";
-}
 
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !(await isAdmin(user.id))) {
+  if (!user || !isSuperAdmin(user.email)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const coupons = await getAllCoupons();
 
-  // Get redemption counts
+  // Get redemption history
   const adminDb = createAdminClient();
   const { data: redemptions } = await adminDb
     .from("coupon_redemptions")
@@ -42,7 +35,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !(await isAdmin(user.id))) {
+  if (!user || !isSuperAdmin(user.email)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -84,7 +77,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !(await isAdmin(user.id))) {
+  if (!user || !isSuperAdmin(user.email)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -106,7 +99,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !(await isAdmin(user.id))) {
+  if (!user || !isSuperAdmin(user.email)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
