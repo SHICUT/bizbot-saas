@@ -72,8 +72,12 @@ export default function AdminCouponsPage() {
     const fd = new FormData(e.currentTarget);
     const plans = fd.getAll("plans") as string[];
 
-    const payload = {
-      code: fd.get("code"),
+    // Note: disabled inputs are NOT included in FormData
+    // For edit mode, we get code from editingCoupon state instead
+    const codeValue = editingCoupon ? editingCoupon.code : (fd.get("code") as string);
+
+    const payload: Record<string, unknown> = {
+      code: codeValue,
       description: fd.get("description") || null,
       discount_type: fd.get("discount_type"),
       discount_value: Number(fd.get("discount_value")),
@@ -87,10 +91,12 @@ export default function AdminCouponsPage() {
     try {
       let res: Response;
       if (editingCoupon) {
+        // Don't send code in PATCH (it can't be changed)
+        const { code, ...updatePayload } = payload;
         res = await fetch("/api/admin/coupons", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingCoupon.id, ...payload }),
+          body: JSON.stringify({ id: editingCoupon.id, ...updatePayload }),
         });
       } else {
         res = await fetch("/api/admin/coupons", {
@@ -260,7 +266,7 @@ export default function AdminCouponsPage() {
       <AnimatePresence>
         {showCreate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30" onClick={() => { setShowCreate(false); setEditingCoupon(null); }}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <motion.div key={editingCoupon?.id || "create"} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold">{editingCoupon ? "Edit Coupon" : "Create Coupon"}</h3>
                 <button onClick={() => { setShowCreate(false); setEditingCoupon(null); }}><X className="w-5 h-5 text-text-muted" /></button>
