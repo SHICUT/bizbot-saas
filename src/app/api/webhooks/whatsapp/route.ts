@@ -10,19 +10,19 @@ import type { WebhookPayload } from "@/lib/whatsapp/types";
  * POST → Incoming messages/status updates
  *
  * Environment variable required:
- *   WHATSAPP_VERIFY_TOKEN = simple string (e.g. "bizbot_verify_123")
+ *   WHATSAPP_VERIFY_TOKEN = simple string (e.g. "FlowNex_verify_123")
  *   This must EXACTLY match what you enter in Meta Developer Dashboard.
  *   It is NOT the access token (which starts with EAAN...).
  */
 
 // Hardcoded fallback — if env var is wrong (e.g. contains access token), use this
-const FALLBACK_VERIFY_TOKEN = "bizbot_verify_123";
+const FALLBACK_VERIFY_TOKEN = "FlowNex_verify_123";
 
 // Startup config validation (logs once when module loads)
 (() => {
   const vt = process.env.WHATSAPP_VERIFY_TOKEN || "";
   console.log(`[Webhook Config] Raw WHATSAPP_VERIFY_TOKEN: "${vt.substring(0, 10)}..." (length: ${vt.length})`);
-  if (!vt) console.warn("[Webhook Config] ⚠ WHATSAPP_VERIFY_TOKEN not set — using fallback 'bizbot_verify_123'");
+  if (!vt) console.warn("[Webhook Config] ⚠ WHATSAPP_VERIFY_TOKEN not set — using fallback 'FlowNex_verify_123'");
   else if (vt.startsWith("EAAN") || vt.length > 100) console.error(`[Webhook Config] 🔴 WRONG VALUE! WHATSAPP_VERIFY_TOKEN is "${vt.substring(0, 15)}..." (${vt.length} chars). This is an ACCESS TOKEN, not a verify token! Fix in Vercel env vars. Using fallback.`);
   else console.log(`[Webhook Config] ✓ WHATSAPP_VERIFY_TOKEN = "${vt}" (length: ${vt.length})`);
 

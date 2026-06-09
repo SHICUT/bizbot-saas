@@ -15,11 +15,11 @@
     },
     {
       "parameters": {
-        "fromEmail": "billing@bizbot.ai",
+        "fromEmail": "billing@FlowNex.ai",
         "toEmail": "={{ $json.business.owner_email }}",
         "subject": "=Your {{ $json.subscription.plan }} plan expires in {{ $json.subscription.days_until_expiry }} days",
         "emailType": "html",
-        "html": "=<h2>Hi {{ $json.business.name }}!</h2><p>Your <strong>{{ $json.subscription.plan }}</strong> plan is expiring in <strong>{{ $json.subscription.days_until_expiry }} days</strong>.</p><p>To avoid any interruption in your WhatsApp automation:</p><ul><li>AI auto-replies will stop</li><li>Lead capture will pause</li><li>Conversation history remains safe</li></ul><p><a href='https://app.bizbot.ai/billing' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Renew Now →</a></p><p style='color:#666;margin-top:24px;font-size:14px;'>Questions? Reply to this email or message us on WhatsApp.</p>",
+        "html": "=<h2>Hi {{ $json.business.name }}!</h2><p>Your <strong>{{ $json.subscription.plan }}</strong> plan is expiring in <strong>{{ $json.subscription.days_until_expiry }} days</strong>.</p><p>To avoid any interruption in your WhatsApp automation:</p><ul><li>AI auto-replies will stop</li><li>Lead capture will pause</li><li>Conversation history remains safe</li></ul><p><a href='https://app.FlowNex.ai/billing' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Renew Now →</a></p><p style='color:#666;margin-top:24px;font-size:14px;'>Questions? Reply to this email or message us on WhatsApp.</p>",
         "options": {}
       },
       "id": "send-email",
@@ -55,19 +55,19 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $env.BIZBOT_PHONE_NUMBER_ID }}/messages",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.FlowNex_PHONE_NUMBER_ID }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.BIZBOT_ACCESS_TOKEN }}"
+              "value": "=Bearer {{ $env.FlowNex_ACCESS_TOKEN }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Trigger').item.json.business.owner_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"⚠️ Hi! Your BizBot {{ $('Webhook Trigger').item.json.subscription.plan }} plan expires tomorrow. Your AI assistant will stop replying to customers.\\n\\nRenew now to keep your automation running: https://app.bizbot.ai/billing\"\n  }\n}",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Trigger').item.json.business.owner_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"⚠️ Hi! Your FlowNex {{ $('Webhook Trigger').item.json.subscription.plan }} plan expires tomorrow. Your AI assistant will stop replying to customers.\\n\\nRenew now to keep your automation running: https://app.FlowNex.ai/billing\"\n  }\n}",
         "options": {}
       },
       "id": "send-whatsapp-urgent",

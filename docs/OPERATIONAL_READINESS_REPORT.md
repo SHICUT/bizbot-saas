@@ -1,4 +1,4 @@
-# BizBot Operational Readiness Report
+# FlowNex Operational Readiness Report
 
 **Date:** June 9, 2026  
 **Purpose:** Pre-launch review of admin operations, billing recovery, and support workflows

@@ -3,7 +3,7 @@
 -- Multi-tenant with platform-level admin access
 -- ============================================================================
 
--- Admin users table (BizBot platform owners)
+-- Admin users table (FlowNex platform owners)
 CREATE TABLE IF NOT EXISTS public.admin_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

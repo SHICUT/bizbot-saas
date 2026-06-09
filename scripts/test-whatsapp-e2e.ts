@@ -25,7 +25,7 @@ interface TestResult {
 
 async function runTests() {
   console.log("\n╔══════════════════════════════════════════════════════════╗");
-  console.log("║     WhatsApp E2E Test Suite — BizBot AI                 ║");
+  console.log("║     WhatsApp E2E Test Suite — FlowNex AI                 ║");
   console.log("╚══════════════════════════════════════════════════════════╝\n");
 
   const results: TestResult[] = [];

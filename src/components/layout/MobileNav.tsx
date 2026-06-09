@@ -60,7 +60,7 @@ export default function MobileNav({ isOpen, onClose }: MobileNavProps) {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="w-4.5 h-4.5 text-white" />
             </div>
-            <span className="text-lg font-bold text-text-primary">BizBot</span>
+            <span className="text-lg font-bold text-text-primary">FlowNex</span>
           </div>
           <button
             onClick={onClose}

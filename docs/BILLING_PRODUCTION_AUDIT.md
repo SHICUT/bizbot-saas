@@ -1,4 +1,4 @@
-# BizBot Billing System — Production Readiness Audit
+# FlowNex Billing System — Production Readiness Audit
 
 **Audit Date:** June 9, 2026  
 **Status:** ⚠️ CONDITIONALLY READY (see blockers below)  

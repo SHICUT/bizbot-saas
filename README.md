@@ -1,4 +1,4 @@
-# BizBot AI — WhatsApp & Instagram Automation SaaS
+# FlowNex AI — WhatsApp & Instagram Automation SaaS
 
 AI-powered messaging automation for Indian small businesses. Auto-reply to WhatsApp & Instagram DMs, capture leads, book appointments, and follow up automatically.
 
@@ -36,8 +36,8 @@ AI-powered messaging automation for Indian small businesses. Auto-reply to Whats
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/bizbot-ai.git
-cd bizbot-ai
+git clone https://github.com/YOUR_USERNAME/FlowNex-ai.git
+cd FlowNex-ai
 
 # Install dependencies
 npm install

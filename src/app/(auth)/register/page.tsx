@@ -68,7 +68,7 @@ export default function RegisterPage() {
         <div className="relative z-10">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><Zap className="w-5 h-5 text-white" /></div>
-            <span className="text-xl font-bold text-white">BizBot AI</span>
+            <span className="text-xl font-bold text-white">FlowNex AI</span>
           </div>
         </div>
         <div className="relative z-10">
@@ -82,7 +82,7 @@ export default function RegisterPage() {
             ))}
           </div>
         </div>
-        <div className="relative z-10"><p className="text-white/50 text-sm">Join 500+ Indian businesses already using BizBot</p></div>
+        <div className="relative z-10"><p className="text-white/50 text-sm">Join 500+ Indian businesses already using FlowNex</p></div>
       </div>
 
       {/* Right Panel */}
@@ -90,7 +90,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
-            <span className="text-lg font-bold text-text-primary">BizBot AI</span>
+            <span className="text-lg font-bold text-text-primary">FlowNex AI</span>
           </div>
 
           <h2 className="text-2xl font-bold text-text-primary mb-1">Create your account</h2>

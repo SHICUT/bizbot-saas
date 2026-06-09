@@ -1,5 +1,5 @@
 -- ============================================================================
--- BIZBOT AI - COMPLETE DATABASE SCHEMA
+-- FLOWNEX AI - COMPLETE DATABASE SCHEMA
 -- Multi-tenant WhatsApp Automation SaaS
 -- ============================================================================
 -- Architecture: Multi-tenant with Row Level Security (RLS)

@@ -116,7 +116,7 @@ export default function OnboardingPage() {
       <div className="p-6 flex items-center justify-center">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
-          <span className="text-lg font-bold">BizBot AI</span>
+          <span className="text-lg font-bold">FlowNex AI</span>
         </div>
       </div>
 
@@ -152,7 +152,7 @@ export default function OnboardingPage() {
                   <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }} className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
                     <Sparkles className="w-10 h-10 text-primary" />
                   </motion.div>
-                  <h1 className="text-3xl font-bold mb-3">Welcome to BizBot AI</h1>
+                  <h1 className="text-3xl font-bold mb-3">Welcome to FlowNex AI</h1>
                   <p className="text-text-secondary mb-8 text-lg">Let&apos;s set up your AI assistant in under 2 minutes.</p>
                   <button onClick={goNext} className="w-full py-3.5 rounded-xl bg-primary text-white font-medium text-base hover:bg-primary-hover transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2">
                     Get Started <ArrowRight className="w-4 h-4" />
@@ -305,7 +305,7 @@ export default function OnboardingPage() {
                     >
                       Skip for Now
                     </button>
-                    <a href="https://wa.me/919572495969?text=Hi%2C%20I%20need%20help%20setting%20up%20BizBot%20and%20connecting%20my%20WhatsApp%20Business%20account." target="_blank" rel="noopener noreferrer" className="w-full py-3 rounded-xl border border-emerald-200 text-emerald-700 font-medium text-sm hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
+                    <a href="https://wa.me/919572495969?text=Hi%2C%20I%20need%20help%20setting%20up%20FlowNex%20and%20connecting%20my%20WhatsApp%20Business%20account." target="_blank" rel="noopener noreferrer" className="w-full py-3 rounded-xl border border-emerald-200 text-emerald-700 font-medium text-sm hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
                       📞 Setup For Me (Free)
                     </a>
                   </div>
@@ -320,7 +320,7 @@ export default function OnboardingPage() {
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }} className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="w-10 h-10 text-emerald-500" />
                   </motion.div>
-                  <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-3xl font-bold mb-3">🎉 BizBot is Ready!</motion.h1>
+                  <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-3xl font-bold mb-3">🎉 FlowNex is Ready!</motion.h1>
                   <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="text-text-secondary mb-8">Your AI assistant is configured.</motion.p>
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gray-50 rounded-xl p-5 mb-8 text-left space-y-3">
                     {["Business configured", "AI personality set", "Domain restrictions active", "Ready to receive messages"].map((item, i) => (

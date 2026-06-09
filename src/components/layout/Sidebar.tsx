@@ -54,7 +54,7 @@ export default function Sidebar() {
         <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
           <Zap className="w-3.5 h-3.5 text-white" />
         </div>
-        <span className="text-base font-bold text-text-primary tracking-tight">BizBot</span>
+        <span className="text-base font-bold text-text-primary tracking-tight">FlowNex</span>
         <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded ml-auto">AI</span>
       </div>
 

@@ -12,8 +12,8 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ Yes | `https://dwezqiruggjpdnmfhxbj.supabase.co` | All Supabase clients |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Yes | `sb_publishable_xxxxx` | Browser + server auth |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Yes | `sb_secret_xxxxx` | Webhooks, cron, admin ops |
-| `NEXT_PUBLIC_APP_URL` | ✅ Yes | `https://app.bizbot.ai` | OAuth redirects, webhook URLs |
-| `WHATSAPP_VERIFY_TOKEN` | ✅ Yes | `bizbot-prod-verify-token` | WhatsApp + Instagram webhook verification |
+| `NEXT_PUBLIC_APP_URL` | ✅ Yes | `https://app.FlowNex.ai` | OAuth redirects, webhook URLs |
+| `WHATSAPP_VERIFY_TOKEN` | ✅ Yes | `FlowNex-prod-verify-token` | WhatsApp + Instagram webhook verification |
 | `CRON_SECRET` | ✅ Yes | `random-64-char-string` | Protects cron endpoints |
 | `OPENAI_API_KEY` | ⚠️ For AI | `sk-proj-xxxxx` | AI reply generation |
 | `WHATSAPP_APP_SECRET` | ⚠️ For production | Meta App Secret | Webhook signature validation |
@@ -134,9 +134,9 @@ Proxy (1):          Auth middleware (session refresh + route protection)
 # 1. Push to GitHub (after Git is installed)
 git init
 git add .
-git commit -m "Production ready: BizBot AI v1.0"
+git commit -m "Production ready: FlowNex AI v1.0"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/bizbot-ai.git
+git remote add origin https://github.com/YOUR_USERNAME/FlowNex-ai.git
 git push -u origin main
 
 # 2. Deploy to Vercel

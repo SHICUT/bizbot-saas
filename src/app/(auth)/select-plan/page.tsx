@@ -105,7 +105,7 @@ export default function SelectPlanPage() {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-text-primary">BizBot AI</span>
+            <span className="text-lg font-bold text-text-primary">FlowNex AI</span>
           </div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">Choose your plan</h1>
           <p className="text-text-secondary">Start with a free trial. Upgrade anytime.</p>

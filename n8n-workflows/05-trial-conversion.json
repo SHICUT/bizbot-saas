@@ -33,11 +33,11 @@
     },
     {
       "parameters": {
-        "fromEmail": "hello@bizbot.ai",
+        "fromEmail": "hello@FlowNex.ai",
         "toEmail": "={{ $('Webhook Trigger').item.json.business.owner_email }}",
-        "subject": "Your BizBot trial ends in {{ $('Webhook Trigger').item.json.subscription.days_remaining }} days — you're crushing it! 🎉",
+        "subject": "Your FlowNex trial ends in {{ $('Webhook Trigger').item.json.subscription.days_remaining }} days — you're crushing it! 🎉",
         "emailType": "html",
-        "html": "=<h2>{{ $('Webhook Trigger').item.json.business.name }}, you're doing amazing!</h2><p>In just {{ 14 - $('Webhook Trigger').item.json.subscription.days_remaining }} days, your AI assistant has handled <strong>{{ $('Webhook Trigger').item.json.subscription.messages_used }} messages</strong> automatically.</p><p>That's {{ $('Webhook Trigger').item.json.subscription.messages_used }} times a customer got an instant reply instead of waiting hours. 🚀</p><h3>Your trial ends in {{ $('Webhook Trigger').item.json.subscription.days_remaining }} days</h3><p>Upgrade to keep your AI running 24/7:</p><ul><li><strong>Starter (₹999/mo)</strong> — 1,000 messages</li><li><strong>Pro (₹2,499/mo)</strong> — 5,000 messages + appointments</li></ul><p><a href='https://app.bizbot.ai/billing' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Upgrade Now →</a></p><p style='color:#666;margin-top:24px;font-size:14px;'>Questions? Just reply to this email.</p>",
+        "html": "=<h2>{{ $('Webhook Trigger').item.json.business.name }}, you're doing amazing!</h2><p>In just {{ 14 - $('Webhook Trigger').item.json.subscription.days_remaining }} days, your AI assistant has handled <strong>{{ $('Webhook Trigger').item.json.subscription.messages_used }} messages</strong> automatically.</p><p>That's {{ $('Webhook Trigger').item.json.subscription.messages_used }} times a customer got an instant reply instead of waiting hours. 🚀</p><h3>Your trial ends in {{ $('Webhook Trigger').item.json.subscription.days_remaining }} days</h3><p>Upgrade to keep your AI running 24/7:</p><ul><li><strong>Starter (₹999/mo)</strong> — 1,000 messages</li><li><strong>Pro (₹2,499/mo)</strong> — 5,000 messages + appointments</li></ul><p><a href='https://app.FlowNex.ai/billing' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Upgrade Now →</a></p><p style='color:#666;margin-top:24px;font-size:14px;'>Questions? Just reply to this email.</p>",
         "options": {}
       },
       "id": "email-high-usage",
@@ -48,11 +48,11 @@
     },
     {
       "parameters": {
-        "fromEmail": "hello@bizbot.ai",
+        "fromEmail": "hello@FlowNex.ai",
         "toEmail": "={{ $('Webhook Trigger').item.json.business.owner_email }}",
-        "subject": "Your BizBot trial ends in {{ $('Webhook Trigger').item.json.subscription.days_remaining }} days",
+        "subject": "Your FlowNex trial ends in {{ $('Webhook Trigger').item.json.subscription.days_remaining }} days",
         "emailType": "html",
-        "html": "=<h2>Hi {{ $('Webhook Trigger').item.json.business.name }}!</h2><p>Your free trial ends in <strong>{{ $('Webhook Trigger').item.json.subscription.days_remaining }} days</strong>.</p><p>We noticed you haven't used all your trial messages yet. Here are some tips to get the most out of BizBot:</p><ul><li>✅ Make sure your WhatsApp is connected</li><li>✅ Add your business details (services, prices, hours)</li><li>✅ Tell your customers to message your WhatsApp number</li></ul><p>Need help setting up? Reply to this email and we'll walk you through it!</p><p><a href='https://app.bizbot.ai/automations' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Complete Setup →</a></p>",
+        "html": "=<h2>Hi {{ $('Webhook Trigger').item.json.business.name }}!</h2><p>Your free trial ends in <strong>{{ $('Webhook Trigger').item.json.subscription.days_remaining }} days</strong>.</p><p>We noticed you haven't used all your trial messages yet. Here are some tips to get the most out of FlowNex:</p><ul><li>✅ Make sure your WhatsApp is connected</li><li>✅ Add your business details (services, prices, hours)</li><li>✅ Tell your customers to message your WhatsApp number</li></ul><p>Need help setting up? Reply to this email and we'll walk you through it!</p><p><a href='https://app.FlowNex.ai/automations' style='background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;'>Complete Setup →</a></p>",
         "options": {}
       },
       "id": "email-low-usage",

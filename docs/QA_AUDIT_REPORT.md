@@ -1,7 +1,7 @@
 # QA Audit Report
 
 **Date:** May 29, 2026
-**Project:** BizBot AI WhatsApp SaaS
+**Project:** FlowNex AI WhatsApp SaaS
 **Auditor:** Automated + Manual Review
 
 ---

@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
   // Platform-level webhook — all businesses share one webhook URL and verify token
   // The WHATSAPP_VERIFY_TOKEN env var is configured in Meta Developer Dashboard once
-  const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "bizbot-webhook-verify";
+  const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "FlowNex-webhook-verify";
 
   // 4. Update business with WhatsApp credentials
   const { error: updateError } = await supabase
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to save credentials" }, { status: 500 });
   }
 
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://bizbot-saasnew.vercel.app"}/api/webhooks/whatsapp`;
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://FlowNex-saasnew.vercel.app"}/api/webhooks/whatsapp`;
 
   return NextResponse.json({
     success: true,

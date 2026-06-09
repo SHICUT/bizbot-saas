@@ -230,7 +230,7 @@ OPENAI_API_KEY=sk-your-key
    - Generate token with whatsapp_business_messaging permission
 ```
 
-### 3. Connect in BizBot Dashboard
+### 3. Connect in FlowNex Dashboard
 
 ```
 1. Go to Settings → WhatsApp Connection

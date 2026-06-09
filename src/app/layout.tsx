@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BizBot AI — WhatsApp Automation for Business",
+  title: "FlowNex AI — WhatsApp Automation for Business",
   description: "AI-powered WhatsApp automation platform for Indian small businesses. Auto-reply, capture leads, book appointments automatically.",
 };
 

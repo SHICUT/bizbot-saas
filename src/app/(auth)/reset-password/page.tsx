@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
-          <span className="text-lg font-bold">BizBot AI</span>
+          <span className="text-lg font-bold">FlowNex AI</span>
         </div>
 
         {success ? (

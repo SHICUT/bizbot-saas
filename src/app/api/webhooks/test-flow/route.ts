@@ -99,7 +99,7 @@ export async function GET() {
         results.push("2. Click 'Add Assets'");
         results.push("3. Add your WhatsApp Business Account");
         results.push("4. Regenerate the token");
-        results.push("5. Update in BizBot Settings");
+        results.push("5. Update in FlowNex Settings");
       }
     }
   } catch (err) {

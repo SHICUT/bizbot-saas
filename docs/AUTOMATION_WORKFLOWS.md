@@ -177,7 +177,7 @@ Trigger: Daily scan for trials ending in 2-3 days
 Check: Has the user sent 50+ messages? (high engagement)
     ├── High usage → "You're crushing it! {X} messages handled..."
     │                 (emphasize value, show ROI)
-    └── Low usage  → "Tips to get the most out of BizBot..."
+    └── Low usage  → "Tips to get the most out of FlowNex..."
                      (help them succeed, offer setup assistance)
 ```
 
@@ -264,8 +264,8 @@ CRON_SECRET=your-cron-secret-here
 3. Import workflow JSON files (Settings → Import from File)
 4. Set environment variables in n8n:
    - N8N_WEBHOOK_SECRET (same as your app)
-   - BIZBOT_PHONE_NUMBER_ID (for payment reminders sent from BizBot's number)
-   - BIZBOT_ACCESS_TOKEN (BizBot's own WhatsApp token)
+   - FlowNex_PHONE_NUMBER_ID (for payment reminders sent from FlowNex's number)
+   - FlowNex_ACCESS_TOKEN (FlowNex's own WhatsApp token)
 5. Activate all workflows
 6. Set N8N_WEBHOOK_URL in your Vercel env vars
 ```

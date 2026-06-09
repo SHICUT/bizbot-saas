@@ -208,7 +208,7 @@ async function getOrCreateRazorpayPlan(
     period,
     interval: 1,
     item: {
-      name: `BizBot ${plan.name} (${plan.billingCycle})`,
+      name: `FlowNex ${plan.name} (${plan.billingCycle})`,
       amount: amountInPaise,
       currency: "INR",
       description: `${plan.messageLimit.toLocaleString()} messages/month`,
@@ -347,7 +347,7 @@ async function generateInvoice(
 
   const lineItems: Array<{ description: string; amount: number; quantity: number }> = [
     {
-      description: `BizBot ${sub.plan} Plan (${sub.billing_cycle})`,
+      description: `FlowNex ${sub.plan} Plan (${sub.billing_cycle})`,
       amount: subtotal,
       quantity: 1,
     },

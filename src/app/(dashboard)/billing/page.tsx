@@ -138,7 +138,7 @@ export default function BillingPage() {
 
       const options = {
         key: data.key_id, amount: data.amount, currency: data.currency, order_id: data.order_id,
-        name: "BizBot AI", description: `${data.plan.name} Plan (${data.plan.billing_cycle})`,
+        name: "FlowNex AI", description: `${data.plan.name} Plan (${data.plan.billing_cycle})`,
         prefill: data.prefill,
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           const verifyRes = await fetch("/api/payments/razorpay/verify", {

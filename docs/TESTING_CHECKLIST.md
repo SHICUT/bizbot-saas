@@ -285,8 +285,8 @@ curl -X POST http://localhost:3000/api/test/whatsapp-e2e \
 ### Production Smoke Test
 ```bash
 # After deployment, verify critical paths
-curl https://app.bizbot.ai/api/health
-curl "https://app.bizbot.ai/api/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=smoke_test"
+curl https://app.FlowNex.ai/api/health
+curl "https://app.FlowNex.ai/api/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=smoke_test"
 ```
 
 ---

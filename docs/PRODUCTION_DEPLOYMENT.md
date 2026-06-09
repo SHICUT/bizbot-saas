@@ -7,8 +7,8 @@
 │                         CLOUDFLARE                                    │
 │                    (DNS + CDN + DDoS Protection)                      │
 │                                                                      │
-│  app.bizbot.ai → Vercel                                              │
-│  api.bizbot.ai → Vercel (same project)                               │
+│  app.FlowNex.ai → Vercel                                              │
+│  api.FlowNex.ai → Vercel (same project)                               │
 └───────────────────────────┬─────────────────────────────────────────┘
                             │
                             ▼
@@ -45,7 +45,7 @@
 ```
 1. Go to https://supabase.com/dashboard
 2. Click "New Project"
-3. Name: bizbot-production
+3. Name: FlowNex-production
 4. Region: South Asia (Mumbai) — ap-south-1
 5. Generate a strong database password (save it securely)
 6. Wait for project to provision (~2 minutes)
@@ -71,8 +71,8 @@ npx supabase db push
    - Client ID: (from Google Cloud Console)
    - Client Secret: (from Google Cloud Console)
 4. URL Configuration:
-   - Site URL: https://app.bizbot.ai
-   - Redirect URLs: https://app.bizbot.ai/callback
+   - Site URL: https://app.FlowNex.ai
+   - Redirect URLs: https://app.FlowNex.ai/callback
 ```
 
 #### 1.4 Get API Keys
@@ -116,7 +116,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJ...
 SUPABASE_SERVICE_ROLE_KEY = eyJ...
 
 # App
-NEXT_PUBLIC_APP_URL = https://app.bizbot.ai
+NEXT_PUBLIC_APP_URL = https://app.FlowNex.ai
 
 # WhatsApp
 WHATSAPP_VERIFY_TOKEN = (generate: openssl rand -hex 32)
@@ -151,7 +151,7 @@ Vercel Dashboard → Settings → Functions
 vercel --prod
 
 # Verify
-curl https://app.bizbot.ai/api/health
+curl https://app.FlowNex.ai/api/health
 ```
 
 ---
@@ -160,9 +160,9 @@ curl https://app.bizbot.ai/api/health
 
 #### 3.1 Domain Setup (Cloudflare recommended)
 ```
-1. Buy domain (e.g., bizbot.ai) from Namecheap/GoDaddy
+1. Buy domain (e.g., FlowNex.ai) from Namecheap/GoDaddy
 2. Add to Cloudflare (free plan is fine)
-3. In Vercel: Settings → Domains → Add "app.bizbot.ai"
+3. In Vercel: Settings → Domains → Add "app.FlowNex.ai"
 4. In Cloudflare: Add CNAME record:
    - Name: app
    - Target: cname.vercel-dns.com
@@ -204,7 +204,7 @@ Speed → Optimization:
 1. Meta Developer Dashboard → Your App
 2. App Review → Submit for review (required for production)
 3. WhatsApp → Configuration:
-   - Webhook URL: https://app.bizbot.ai/api/webhooks/whatsapp
+   - Webhook URL: https://app.FlowNex.ai/api/webhooks/whatsapp
    - Verify Token: (your WHATSAPP_VERIFY_TOKEN)
    - Subscribe: messages
 4. WhatsApp → Getting Started:
@@ -216,7 +216,7 @@ Speed → Optimization:
 ```
 1. Switch to Live mode in Razorpay Dashboard
 2. Settings → Webhooks:
-   - URL: https://app.bizbot.ai/api/webhooks/razorpay
+   - URL: https://app.FlowNex.ai/api/webhooks/razorpay
    - Secret: (your RAZORPAY_WEBHOOK_SECRET)
    - Events: subscription.*, payment.failed
 3. Update RAZORPAY_KEY_ID to rzp_live_...
@@ -269,7 +269,7 @@ Speed → Optimization:
 ### Uptime Monitoring
 ```
 Service: Better Uptime (free tier) or UptimeRobot
-Endpoint: https://app.bizbot.ai/api/health
+Endpoint: https://app.FlowNex.ai/api/health
 Interval: 1 minute
 Alert: Email + SMS on failure
 ```
@@ -359,7 +359,7 @@ Pull Request:
 VERCEL_TOKEN        → Vercel → Settings → Tokens
 VERCEL_ORG_ID       → Vercel → Settings → General → Team ID
 VERCEL_PROJECT_ID   → Vercel → Project → Settings → General → Project ID
-PRODUCTION_URL      → https://app.bizbot.ai
+PRODUCTION_URL      → https://app.FlowNex.ai
 ```
 
 ### Branch Strategy:

@@ -87,7 +87,7 @@ Body: { plan_id: "pro_monthly" }
 const rzp = new Razorpay({
   key: data.key_id,
   subscription_id: data.subscription_id,
-  name: "BizBot AI",
+  name: "FlowNex AI",
   handler: async (response) => {
     // Verify payment
     await fetch("/api/payments/razorpay/verify", {

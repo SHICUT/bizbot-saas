@@ -19,7 +19,7 @@ interface HelpItem {
 const helpSections: HelpItem[] = [
   {
     title: "Getting Started",
-    description: "Complete your business setup and get BizBot running in minutes. Follow our step-by-step guide.",
+    description: "Complete your business setup and get FlowNex running in minutes. Follow our step-by-step guide.",
     icon: Zap,
     href: "/knowledge",
     color: "text-emerald-600",
@@ -43,7 +43,7 @@ const helpSections: HelpItem[] = [
   },
   {
     title: "Knowledge Base",
-    description: "Tell BizBot about your business — services, pricing, FAQs. The more you add, the smarter AI replies become.",
+    description: "Tell FlowNex about your business — services, pricing, FAQs. The more you add, the smarter AI replies become.",
     icon: BookOpen,
     href: "/knowledge",
     color: "text-purple-600",
@@ -88,7 +88,7 @@ export default function HelpPage() {
     <div>
       <PageHeader
         title="Help Center"
-        description="Everything you need to get the most out of BizBot"
+        description="Everything you need to get the most out of FlowNex"
       />
 
       {/* Quick Start Banner */}
@@ -98,7 +98,7 @@ export default function HelpPage() {
             <HelpCircle className="w-6 h-6 text-emerald-600" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-text-primary mb-1">New to BizBot?</h3>
+            <h3 className="text-base font-bold text-text-primary mb-1">New to FlowNex?</h3>
             <p className="text-sm text-text-secondary leading-relaxed">
               Follow these steps to get started: <span className="font-medium">1.</span> Fill your Knowledge Base →{" "}
               <span className="font-medium">2.</span> Connect WhatsApp →{" "}
@@ -138,7 +138,7 @@ export default function HelpPage() {
           <h3 className="text-sm font-bold mb-1">Still need help?</h3>
           <p className="text-xs text-text-muted mb-3">Our support team is available on WhatsApp for instant help.</p>
           <a
-            href="https://wa.me/919572495969?text=Hi%2C%20I%20need%20help%20with%20BizBot."
+            href="https://wa.me/919572495969?text=Hi%2C%20I%20need%20help%20with%20FlowNex."
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"

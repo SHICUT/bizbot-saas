@@ -52,7 +52,7 @@ function VerifyEmailContent() {
 
         <div className="flex items-center justify-center gap-2 mb-4">
           <Zap className="w-4 h-4 text-primary" />
-          <span className="text-sm font-bold text-primary">BizBot AI</span>
+          <span className="text-sm font-bold text-primary">FlowNex AI</span>
         </div>
 
         <h1 className="text-2xl font-bold text-text-primary mb-2">Verify your email</h1>
