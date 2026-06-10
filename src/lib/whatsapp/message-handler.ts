@@ -166,22 +166,19 @@ async function processIncomingMessage(
   }
   console.log(`[Webhook] ✓ Message stored (new, not duplicate)`);
 
-  // 6b. Update conversation metadata (last message, unread count)
-  await supabase.from("conversations").update({
-    last_message_text: content.substring(0, 200),
-    last_message_at: new Date().toISOString(),
-  }).eq("id", conversation.id);
-
-  // Increment unread separately using SQL
-  await supabase.rpc("increment_unread_count", { p_conversation_id: conversation.id }).then(() => {}, () => {
-    // RPC doesn't exist — just set to 1
-    supabase.from("conversations").update({ unread_count: 1 }).eq("id", conversation.id);
-  });
-
-  // 6c. Update lead last_message_at
-  await supabase.from("leads").update({
-    last_message_at: new Date().toISOString(),
-  }).eq("id", lead.id);
+  // 6b. Update conversation and lead metadata (parallelized)
+  await Promise.all([
+    supabase.from("conversations").update({
+      last_message_text: content.substring(0, 200),
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id),
+    supabase.rpc("increment_unread_count", { p_conversation_id: conversation.id }).then(() => {}, () => {
+      supabase.from("conversations").update({ unread_count: 1 }).eq("id", conversation.id);
+    }),
+    supabase.from("leads").update({
+      last_message_at: new Date().toISOString(),
+    }).eq("id", lead.id),
+  ]);
 
   // 7. (Inbound messages no longer count toward usage — only AI replies do)
 
@@ -255,18 +252,19 @@ async function processIncomingMessage(
         status: "sent",
       });
 
-      // 12. Increment AI reply usage (only AI-generated outbound messages count toward plan limit)
-      await supabase.rpc("increment_message_usage", { p_business_id: business.id });
-
-      // 13. Update conversation with AI reply as last message
-      await supabase.from("conversations").update({
-        last_message_text: replyText.substring(0, 200),
-        last_message_at: new Date().toISOString(),
-        unread_count: 0, // AI replied, so it's "handled"
-      }).eq("id", conversation.id);
-
-      // 14. Mark incoming message as read
-      await client.markAsRead(message.id);
+      // 12-14. Post-send operations (parallelized for speed)
+      await Promise.all([
+        // Increment AI reply usage
+        supabase.rpc("increment_message_usage", { p_business_id: business.id }),
+        // Update conversation with AI reply as last message
+        supabase.from("conversations").update({
+          last_message_text: replyText.substring(0, 200),
+          last_message_at: new Date().toISOString(),
+          unread_count: 0,
+        }).eq("id", conversation.id),
+        // Mark incoming message as read
+        client.markAsRead(message.id).catch(() => {}),
+      ]);
     } catch (sendErr) {
       console.error(`[Webhook] ❌ Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
       console.error(`[Webhook] This usually means the access token doesn't have permission for this phone_number_id`);

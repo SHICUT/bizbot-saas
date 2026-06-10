@@ -8,6 +8,7 @@
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const AI_TIMEOUT_MS = 8000; // 8 second timeout for AI calls
 
 export interface AIResponse {
   text: string;
@@ -92,6 +93,7 @@ async function callGemini(
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
@@ -135,6 +137,7 @@ async function callGroq(
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
       messages: chatMessages,
@@ -173,6 +176,7 @@ async function callOpenAI(
   const res = await fetch(OPENAI_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: chatMessages,
