@@ -58,13 +58,7 @@ function LoginForm() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <div className="flex items-center gap-2.5">
-            <img src="/brand/logo-mark.svg" alt="FlowNex" className="w-9 h-9" />
-            <div className="flex items-baseline">
-              <span className="text-lg font-bold text-white tracking-tight">Flow</span>
-              <span className="text-lg font-bold text-purple-300 tracking-tight">Nex</span>
-            </div>
-          </div>
+          <img src="/brand/logo-full.png" alt="FlowNex" className="h-8 object-contain brightness-0 invert opacity-90" />
         </div>
 
         {/* Hero Content */}
@@ -127,12 +121,8 @@ function LoginForm() {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-white">
         <div className="w-full max-w-[380px]">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-10">
-            <img src="/brand/logo-mark.svg" alt="FlowNex" className="w-9 h-9" />
-            <div className="flex items-baseline">
-              <span className="text-lg font-bold text-text-primary tracking-tight">Flow</span>
-              <span className="text-lg font-bold text-secondary tracking-tight">Nex</span>
-            </div>
+          <div className="lg:hidden mb-10">
+            <img src="/brand/logo-full.png" alt="FlowNex" className="h-8 object-contain" />
           </div>
 
           {/* Header */}

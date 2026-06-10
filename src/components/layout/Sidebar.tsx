@@ -56,13 +56,11 @@ export default function Sidebar() {
     )}>
       {/* Logo */}
       <div className="flex items-center justify-between px-4 h-16 border-b border-border">
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/brand/logo-mark.svg" alt="FlowNex" className="w-8 h-8" />
-          {!collapsed && (
-            <div className="flex items-baseline">
-              <span className="text-[15px] font-bold text-text-primary tracking-tight">Flow</span>
-              <span className="text-[15px] font-bold text-secondary tracking-tight">Nex</span>
-            </div>
+        <Link href="/" className="flex items-center gap-2">
+          {collapsed ? (
+            <img src="/brand/logo-icon.png" alt="FlowNex" className="w-8 h-8 object-contain" />
+          ) : (
+            <img src="/brand/logo-full.png" alt="FlowNex" className="h-7 object-contain" />
           )}
         </Link>
         <button

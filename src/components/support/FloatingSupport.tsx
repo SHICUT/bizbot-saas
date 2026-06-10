@@ -51,7 +51,7 @@ export default function FloatingSupport() {
       <button
         onClick={() => setOpen(!open)}
         title="Chat with FlowNex Support"
-        className={`group flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all ${open ? "bg-gray-800 hover:bg-gray-900" : "bg-emerald-600 hover:bg-emerald-700 hover:shadow-xl hover:scale-105"}`}
+        className={`group flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all ${open ? "bg-gray-800 hover:bg-gray-900" : "gradient-primary hover:opacity-90 hover:shadow-xl hover:scale-105"}`}
       >
         {open ? (
           <>

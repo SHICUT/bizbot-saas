@@ -10,7 +10,6 @@ import {
   Bot,
   Calendar,
   X,
-  Zap,
   CreditCard,
   BarChart2,
   Settings,
@@ -56,12 +55,7 @@ export default function MobileNav({ isOpen, onClose }: MobileNavProps) {
       <div className="fixed inset-y-0 left-0 w-72 bg-white shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 h-16 border-b border-border">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="w-4.5 h-4.5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-text-primary">FlowNex</span>
-          </div>
+          <img src="/brand/logo-full.png" alt="FlowNex" className="h-7 object-contain" />
           <button
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-gray-100 text-text-secondary"
