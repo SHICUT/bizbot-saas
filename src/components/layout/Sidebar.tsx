@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, MessageSquare, Bot, Calendar,
   CreditCard, BarChart2, Settings, FlaskConical,
   Shield, Image, BookOpen, Megaphone, HelpCircle,
-  Zap, ChevronLeft, ChevronRight, UserCircle,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 const navigation = [
@@ -57,13 +57,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between px-4 h-16 border-b border-border">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
+          <img src="/brand/logo-mark.svg" alt="FlowNex" className="w-8 h-8" />
           {!collapsed && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[15px] font-bold text-text-primary tracking-tight">FlowNex</span>
-              <span className="text-[9px] font-semibold text-white bg-gradient-to-r from-primary to-secondary px-1.5 py-0.5 rounded-full">AI</span>
+            <div className="flex items-baseline">
+              <span className="text-[15px] font-bold text-text-primary tracking-tight">Flow</span>
+              <span className="text-[15px] font-bold text-secondary tracking-tight">Nex</span>
             </div>
           )}
         </Link>

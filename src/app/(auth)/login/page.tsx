@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Zap, Eye, EyeOff, Loader2, AlertCircle, CheckCircle, MessageSquare, Users, Calendar, Bot, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, MessageSquare, Users, Calendar, Bot, ArrowRight } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { loginWithEmail } from "@/lib/auth/actions";
@@ -59,11 +59,11 @@ function LoginForm() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center">
-              <Zap className="w-4.5 h-4.5 text-white" />
+            <img src="/brand/logo-mark.svg" alt="FlowNex" className="w-9 h-9" />
+            <div className="flex items-baseline">
+              <span className="text-lg font-bold text-white tracking-tight">Flow</span>
+              <span className="text-lg font-bold text-purple-300 tracking-tight">Nex</span>
             </div>
-            <span className="text-lg font-bold text-white tracking-tight">FlowNex</span>
-            <span className="text-[9px] font-semibold text-white/80 bg-white/10 px-1.5 py-0.5 rounded-full border border-white/10">AI</span>
           </div>
         </div>
 
@@ -128,11 +128,11 @@ function LoginForm() {
         <div className="w-full max-w-[380px]">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-10">
-            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
-              <Zap className="w-4.5 h-4.5 text-white" />
+            <img src="/brand/logo-mark.svg" alt="FlowNex" className="w-9 h-9" />
+            <div className="flex items-baseline">
+              <span className="text-lg font-bold text-text-primary tracking-tight">Flow</span>
+              <span className="text-lg font-bold text-secondary tracking-tight">Nex</span>
             </div>
-            <span className="text-lg font-bold text-text-primary tracking-tight">FlowNex</span>
-            <span className="text-[9px] font-semibold text-white bg-gradient-to-r from-primary to-secondary px-1.5 py-0.5 rounded-full">AI</span>
           </div>
 
           {/* Header */}

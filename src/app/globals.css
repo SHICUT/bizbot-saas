@@ -1,40 +1,46 @@
 @import "tailwindcss";
 
 @theme {
-  /* ─── FlowNex Premium Color System ─── */
-  --color-primary: #2563EB;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
+  /* ─── FlowNex Brand Colors (extracted from logo) ─── */
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+  --color-primary-light: #EFF6FF;
+  --color-primary-50: #EFF6FF;
+  --color-primary-100: #DBEAFE;
+  --color-primary-500: #3B82F6;
+  --color-primary-600: #2563EB;
+  --color-primary-700: #1D4ED8;
 
-  --color-secondary: #6D28D9;
-  --color-secondary-light: #f5f3ff;
+  --color-secondary: #7C3AED;
+  --color-secondary-hover: #6D28D9;
+  --color-secondary-light: #F5F3FF;
+  --color-secondary-50: #F5F3FF;
+  --color-secondary-500: #7C3AED;
+  --color-secondary-600: #6D28D9;
 
-  --color-success: #10b981;
-  --color-success-light: #ecfdf5;
-  --color-warning: #f59e0b;
-  --color-warning-light: #fffbeb;
-  --color-danger: #ef4444;
-  --color-danger-light: #fef2f2;
+  --color-success: #10B981;
+  --color-success-light: #ECFDF5;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FFFBEB;
+  --color-danger: #EF4444;
+  --color-danger-light: #FEF2F2;
 
-  --color-surface: #ffffff;
-  --color-background: #f8fafc;
-  --color-border: #e5e7eb;
-  --color-border-light: #f3f4f6;
+  --color-surface: #FFFFFF;
+  --color-background: #F9FAFB;
+  --color-border: #E5E7EB;
+  --color-border-light: #F3F4F6;
 
   --color-text-primary: #111827;
-  --color-text-secondary: #4b5563;
-  --color-text-muted: #9ca3af;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #9CA3AF;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* ─── Shadows ─── */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  /* ─── Elevation ─── */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.04);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
 }
 
@@ -56,12 +62,12 @@
   }
 
   ::selection {
-    background-color: rgba(37, 99, 235, 0.12);
+    background-color: rgba(59, 130, 246, 0.12);
   }
 }
 
 @layer components {
-  /* ─── Sidebar Navigation ─── */
+  /* ─── Sidebar ─── */
   .sidebar-link {
     display: flex;
     align-items: center;
@@ -73,17 +79,15 @@
     color: var(--color-text-secondary);
     transition: all 150ms ease;
   }
-
   .sidebar-link:hover {
-    background-color: var(--color-primary-light);
-    color: var(--color-primary);
+    background-color: var(--color-primary-50);
+    color: var(--color-primary-600);
   }
-
   .sidebar-link.active {
-    background-color: var(--color-primary-light);
-    color: var(--color-primary);
+    background-color: var(--color-primary-50);
+    color: var(--color-primary-600);
     font-weight: 600;
-    box-shadow: inset 3px 0 0 0 var(--color-primary);
+    box-shadow: inset 3px 0 0 0 var(--color-primary-500);
   }
 
   /* ─── Cards ─── */
@@ -99,39 +103,48 @@
   .stat-card {
     position: relative;
     overflow: hidden;
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     border: 1px solid var(--color-border);
     background: white;
-    padding: 1.25rem;
+    padding: 1.25rem 1.5rem;
     transition: all 200ms ease;
   }
   .stat-card:hover {
     box-shadow: var(--shadow-md);
     border-color: var(--color-primary-100);
   }
-  .stat-card::before {
+  .stat-card::after {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    background: linear-gradient(90deg, var(--color-primary-500), var(--color-secondary-500));
     opacity: 0;
     transition: opacity 200ms ease;
   }
-  .stat-card:hover::before {
+  .stat-card:hover::after {
     opacity: 1;
   }
 
-  /* ─── Premium Gradient ─── */
+  /* ─── Brand Gradients (from logo) ─── */
   .gradient-primary {
+    background: linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%);
+  }
+  .gradient-primary-hover {
     background: linear-gradient(135deg, #2563EB 0%, #6D28D9 100%);
   }
   .gradient-text {
-    background: linear-gradient(135deg, #2563EB 0%, #6D28D9 100%);
+    background: linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  .gradient-subtle {
+    background: linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%);
+  }
+  .gradient-dark {
+    background: linear-gradient(135deg, #1E3A5F 0%, #1A1040 100%);
   }
 }
