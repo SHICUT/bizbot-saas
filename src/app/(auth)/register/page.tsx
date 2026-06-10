@@ -66,10 +66,7 @@ export default function RegisterPage() {
           <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><Zap className="w-5 h-5 text-white" /></div>
-            <span className="text-xl font-bold text-white">FlowNex AI</span>
-          </div>
+          <img src="/brand/logo-full.png" alt="FlowNex" className="h-10 object-contain drop-shadow-lg" />
         </div>
         <div className="relative z-10">
           <h1 className="text-4xl font-bold text-white leading-tight mb-6">Start converting leads<br />in under 5 minutes.</h1>
@@ -82,15 +79,14 @@ export default function RegisterPage() {
             ))}
           </div>
         </div>
-        <div className="relative z-10"><p className="text-white/50 text-sm">Join 500+ Indian businesses already using FlowNex</p></div>
+        <div className="relative z-10"><p className="text-white/40 text-sm">Growing businesses trust FlowNex to automate customer conversations</p></div>
       </div>
 
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
-            <span className="text-lg font-bold text-text-primary">FlowNex AI</span>
+          <div className="lg:hidden mb-8">
+            <img src="/brand/logo-full.png" alt="FlowNex" className="h-8 object-contain" />
           </div>
 
           <h2 className="text-2xl font-bold text-text-primary mb-1">Create your account</h2>

@@ -101,11 +101,8 @@ export default function SelectPlanPage() {
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-text-primary">FlowNex AI</span>
+          <div className="flex items-center justify-center mb-4">
+            <img src="/brand/logo-full.png" alt="FlowNex" className="h-9 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">Choose your plan</h1>
           <p className="text-text-secondary">Start with a free trial. Upgrade anytime.</p>

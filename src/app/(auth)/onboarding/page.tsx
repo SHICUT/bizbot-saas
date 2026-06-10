@@ -114,10 +114,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="p-6 flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
-          <span className="text-lg font-bold">FlowNex AI</span>
-        </div>
+        <img src="/brand/logo-full.png" alt="FlowNex" className="h-8 object-contain" />
       </div>
 
       {/* Progress Bar */}

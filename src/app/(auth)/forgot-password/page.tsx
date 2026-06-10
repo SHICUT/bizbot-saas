@@ -30,11 +30,8 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-text-primary">FlowNex AI</span>
+        <div className="flex items-center justify-center mb-8">
+          <img src="/brand/logo-full.png" alt="FlowNex" className="h-8 object-contain" />
         </div>
 
         {sent ? (

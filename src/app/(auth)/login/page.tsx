@@ -58,7 +58,7 @@ function LoginForm() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <img src="/brand/logo-icon.png" alt="FlowNex" className="h-10 w-10 object-contain drop-shadow-lg" />
+          <img src="/brand/logo-full.png" alt="FlowNex" className="h-10 object-contain drop-shadow-lg" />
         </div>
 
         {/* Hero Content */}
@@ -66,7 +66,7 @@ function LoginForm() {
           <h1 className="text-[2.75rem] font-bold text-white leading-[1.15] tracking-tight mb-5">
             Never Miss Another<br />Lead Again
           </h1>
-          <p className="text-white/60 text-lg leading-relaxed mb-10">
+          <p className="text-white/60 text-[17px] leading-relaxed mb-10">
             AI responds instantly, captures every inquiry, and books appointments automatically — 24/7 on WhatsApp.
           </p>
 
