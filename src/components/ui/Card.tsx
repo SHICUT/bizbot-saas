@@ -10,7 +10,7 @@ export default function Card({ className, padding = "md", hover = false, childre
   return (
     <div
       className={cn(
-        "bg-white rounded-xl border border-border/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
+        "bg-white rounded-xl border border-border shadow-sm",
         hover && "card-hover cursor-pointer",
         { "p-0": padding === "none", "p-4": padding === "sm", "p-5": padding === "md", "p-7": padding === "lg" },
         className

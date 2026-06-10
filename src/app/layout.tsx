@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FlowNex AI — WhatsApp Automation for Business",
-  description: "AI-powered WhatsApp automation platform for Indian small businesses. Auto-reply, capture leads, book appointments automatically.",
+  title: "FlowNex — AI-Powered Lead Capture & Customer Automation",
+  description: "Capture leads automatically, reply instantly on WhatsApp, book appointments, and grow your business with AI-powered automation.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

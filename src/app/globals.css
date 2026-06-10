@@ -1,20 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #10b981;
-  --color-primary-hover: #059669;
-  --color-primary-light: #ecfdf5;
-  --color-success: #22c55e;
+  /* ─── FlowNex Premium Color System ─── */
+  --color-primary: #2563EB;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+
+  --color-secondary: #6D28D9;
+  --color-secondary-light: #f5f3ff;
+
+  --color-success: #10b981;
+  --color-success-light: #ecfdf5;
   --color-warning: #f59e0b;
+  --color-warning-light: #fffbeb;
   --color-danger: #ef4444;
+  --color-danger-light: #fef2f2;
+
   --color-surface: #ffffff;
   --color-background: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* ─── Shadows ─── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
 }
 
 @layer base {
@@ -35,16 +56,17 @@
   }
 
   ::selection {
-    background-color: rgba(16, 185, 129, 0.12);
+    background-color: rgba(37, 99, 235, 0.12);
   }
 }
 
 @layer components {
+  /* ─── Sidebar Navigation ─── */
   .sidebar-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.55rem 0.875rem;
     border-radius: 0.5rem;
     font-size: 0.8125rem;
     font-weight: 500;
@@ -54,20 +76,62 @@
 
   .sidebar-link:hover {
     background-color: var(--color-primary-light);
-    color: var(--color-primary-hover);
+    color: var(--color-primary);
   }
 
   .sidebar-link.active {
     background-color: var(--color-primary-light);
     color: var(--color-primary);
     font-weight: 600;
+    box-shadow: inset 3px 0 0 0 var(--color-primary);
   }
 
+  /* ─── Cards ─── */
   .card-hover {
     transition: all 200ms ease;
   }
   .card-hover:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-md);
     transform: translateY(-1px);
+  }
+
+  /* ─── Stat Cards ─── */
+  .stat-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    background: white;
+    padding: 1.25rem;
+    transition: all 200ms ease;
+  }
+  .stat-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary-100);
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+
+  /* ─── Premium Gradient ─── */
+  .gradient-primary {
+    background: linear-gradient(135deg, #2563EB 0%, #6D28D9 100%);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #2563EB 0%, #6D28D9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
