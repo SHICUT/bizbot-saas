@@ -58,7 +58,7 @@ function LoginForm() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <img src="/brand/logo-full.png" alt="FlowNex" className="h-8 object-contain brightness-0 invert opacity-90" />
+          <img src="/brand/logo-icon.png" alt="FlowNex" className="h-10 w-10 object-contain drop-shadow-lg" />
         </div>
 
         {/* Hero Content */}
