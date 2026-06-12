@@ -303,7 +303,7 @@ export default function OnboardingPage() {
                       Skip for Now
                     </button>
                     <a href="https://wa.me/919572495969?text=Hi%2C%20I%20need%20help%20setting%20up%20FlowNex%20and%20connecting%20my%20WhatsApp%20Business%20account." target="_blank" rel="noopener noreferrer" className="w-full py-3 rounded-xl border border-emerald-200 text-emerald-700 font-medium text-sm hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
-                      📞 Setup For Me (Free)
+                      📞 Setup For Me
                     </a>
                   </div>
 
