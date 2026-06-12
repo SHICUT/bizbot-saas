@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { WhatsAppClient } from "./client";
 import { generateAIReply } from "@/lib/ai/reply-engine";
 import { detectAndCreateAppointment } from "@/lib/ai/appointment-detector";
+import { enrichLeadFromConversation } from "@/lib/ai/lead-enricher";
 import type {
   WebhookPayload,
   IncomingMessage,
@@ -277,6 +278,16 @@ async function processIncomingMessage(
         message.from,
         business.type
       ).catch((err) => console.error("[Webhook] Appointment detection failed:", err));
+
+      // 16. Enrich lead data from conversation (extract fields, score, stage)
+      enrichLeadFromConversation(
+        content,
+        replyText,
+        business.id,
+        lead.id,
+        business.type || "other",
+        await getConversationHistory(supabase, conversation.id)
+      ).catch((err) => console.error("[Webhook] Lead enrichment failed:", err));
 
     } catch (sendErr) {
       console.error(`[Webhook] ❌ Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
