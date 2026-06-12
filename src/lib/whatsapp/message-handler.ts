@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { WhatsAppClient } from "./client";
 import { generateAIReply } from "@/lib/ai/reply-engine";
+import { detectAndCreateAppointment } from "@/lib/ai/appointment-detector";
 import type {
   WebhookPayload,
   IncomingMessage,
@@ -265,6 +266,17 @@ async function processIncomingMessage(
         // Mark incoming message as read
         client.markAsRead(message.id).catch(() => {}),
       ]);
+
+      // 15. Detect appointment bookings in AI reply and create records
+      detectAndCreateAppointment(
+        replyText,
+        content,
+        business.id,
+        lead.id,
+        contact?.profile?.name || null,
+        message.from
+      ).catch((err) => console.error("[Webhook] Appointment detection failed:", err));
+
     } catch (sendErr) {
       console.error(`[Webhook] ❌ Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
       console.error(`[Webhook] This usually means the access token doesn't have permission for this phone_number_id`);
