@@ -13,6 +13,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getIndustryConfig } from "./industry-config";
 
 interface DetectedAppointment {
   date: string;       // YYYY-MM-DD
@@ -33,7 +34,8 @@ export async function detectAndCreateAppointment(
   businessId: string,
   leadId: string,
   leadName: string | null,
-  leadPhone: string
+  leadPhone: string,
+  businessType?: string
 ): Promise<boolean> {
   // Check if the AI reply indicates a confirmed booking
   if (!isBookingConfirmation(aiReply)) {
@@ -47,6 +49,13 @@ export async function detectAndCreateAppointment(
     return false;
   }
 
+  // Enhance with industry-specific info
+  const config = businessType ? getIndustryConfig(businessType) : null;
+  const service = details.service || (config?.appointmentTypes[0]?.label) || "Appointment";
+  const duration = config?.appointmentTypes.find((a) => 
+    service.toLowerCase().includes(a.label.toLowerCase()) || a.label.toLowerCase().includes(service.toLowerCase())
+  )?.defaultDuration || 60;
+
   // Create appointment in database
   const supabase = createAdminClient();
   const scheduledAt = `${details.date}T${details.time}:00`;
@@ -56,12 +65,12 @@ export async function detectAndCreateAppointment(
     lead_id: leadId,
     customer_name: leadName || "Customer",
     customer_phone: leadPhone || null,
-    title: details.title,
-    service: details.service,
+    title: details.title || service,
+    service: service,
     appointment_date: details.date,
     appointment_time: details.time,
     scheduled_at: scheduledAt,
-    duration_minutes: 60,
+    duration_minutes: duration,
     status: "confirmed",
     source: "whatsapp",
     booked_by: "ai",

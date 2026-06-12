@@ -1,6 +1,7 @@
 import type { ConversationContext } from "../types";
 import type { LanguageDetectionResult } from "./language-detector";
 import { getSalesModeInstructions, getLeadScoringInstructions, getFollowUpInstructions } from "./sales-mode";
+import { getIndustryPromptAdditions } from "../industry-config";
 
 /**
  * System Prompt Builder
@@ -112,6 +113,7 @@ Reply with ONLY the message text. No labels, no prefixes, no formatting markers.
 Write exactly as a human would type on WhatsApp.
 
 ${getSalesModeInstructions(ctx.businessType)}
+${getIndustryPromptAdditions(ctx.businessType)}
 ${getLeadScoringInstructions()}
 ${getFollowUpInstructions()}`;
 }

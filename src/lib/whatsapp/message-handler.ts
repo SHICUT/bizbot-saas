@@ -274,7 +274,8 @@ async function processIncomingMessage(
         business.id,
         lead.id,
         contact?.profile?.name || null,
-        message.from
+        message.from,
+        business.type
       ).catch((err) => console.error("[Webhook] Appointment detection failed:", err));
 
     } catch (sendErr) {
