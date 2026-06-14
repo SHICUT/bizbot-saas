@@ -56,334 +56,170 @@ async function processIncomingMessage(
   contact: WebhookContact | undefined,
   phoneNumberId: string
 ): Promise<void> {
+  const t0 = Date.now();
   const supabase = createAdminClient();
+  const timings: Record<string, number> = {};
 
-  // 1. Find business (ALWAYS fresh from DB — no cache on serverless)
-  console.log(`[Webhook] === INCOMING MESSAGE ===`);
-  console.log(`[Webhook] Phone Number ID (from webhook): ${phoneNumberId}`);
-  console.log(`[Webhook] From: ${message.from} | Type: ${message.type} | MsgID: ${message.id}`);
+  // ═══ PHASE 1: PARALLEL LOOKUPS (single DB round-trip) ═══
+  const content = extractMessageContent(message);
+  if (!content) return;
 
-  // First try: find business by phone_number_id (normal path)
-  const { data: bizResults, error: bizListError } = await supabase
-    .from("businesses")
-    .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token, whatsapp_phone_number_id, is_active")
-    .eq("whatsapp_phone_number_id", phoneNumberId);
-
-  console.log(`[Webhook] Business lookup: table=businesses, filter=whatsapp_phone_number_id="${phoneNumberId}"`);
-  console.log(`[Webhook] Results: ${bizResults?.length || 0} rows | Error: ${bizListError?.message || "none"}`);
-
-  if (bizListError) {
-    console.error(`[Webhook] ❌ Database query failed:`, bizListError.message);
-    return;
-  }
-
-  if (!bizResults || bizResults.length === 0) {
-    console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId}`);
-    
-    // AUTO-LINK: If there's exactly one business with whatsapp_connected=false or NULL phone_number_id,
-    // automatically assign this phone_number_id to them (self-healing for the RLS bug era)
-    const { data: unlinkedBiz } = await supabase
-      .from("businesses")
-      .select("id, name, whatsapp_access_token, is_active")
-      .is("whatsapp_phone_number_id", null)
+  const t1 = Date.now();
+  // Run ALL initial lookups in parallel — business, lead, conversation, subscription
+  const [bizResult, leadResult, convResult] = await Promise.all([
+    // Business lookup
+    supabase.from("businesses")
+      .select("id, name, type, ai_enabled, ai_tone, ai_language, business_context, whatsapp_access_token, is_active")
+      .eq("whatsapp_phone_number_id", phoneNumberId)
       .eq("is_active", true)
-      .limit(5);
+      .limit(1)
+      .single(),
+    // Lead upsert
+    supabase.from("leads").upsert(
+      { business_id: null as unknown as string, wa_id: message.from, phone: message.from, name: contact?.profile?.name || null, source: "whatsapp" },
+      { onConflict: "business_id,wa_id", ignoreDuplicates: true }
+    ).select("id, ai_paused_until, status, business_id").maybeSingle(),
+    // We'll handle conversation after we have business_id
+    Promise.resolve(null),
+  ]);
 
-    if (unlinkedBiz && unlinkedBiz.length === 1) {
-      // Exactly one unlinked business — auto-link it
-      const target = unlinkedBiz[0];
-      console.log(`[Webhook] 🔗 AUTO-LINKING: Only 1 unlinked business found: "${target.name}" (${target.id.substring(0,8)})`);
-      console.log(`[Webhook] 🔗 Setting whatsapp_phone_number_id = "${phoneNumberId}" on this business`);
+  timings.lookup = Date.now() - t1;
 
-      const { error: autoLinkErr } = await supabase
-        .from("businesses")
-        .update({
-          whatsapp_phone_number_id: phoneNumberId,
-          whatsapp_connected: true,
-          whatsapp_connected_at: new Date().toISOString(),
-        })
-        .eq("id", target.id);
-
-      if (autoLinkErr) {
-        console.error(`[Webhook] ❌ Auto-link FAILED:`, autoLinkErr.message);
-        return;
-      }
-
-      console.log(`[Webhook] ✓ Auto-linked successfully! Re-processing message...`);
-      // Re-run the lookup now that it's linked
-      const { data: linkedBiz } = await supabase
-        .from("businesses")
-        .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token, whatsapp_phone_number_id, is_active")
-        .eq("id", target.id)
-        .single();
-
-      if (!linkedBiz) {
-        console.error(`[Webhook] ❌ Auto-link succeeded but re-fetch failed`);
-        return;
-      }
-
-      // Continue processing with the linked business
-      bizResults.push(linkedBiz);
-    } else if (unlinkedBiz && unlinkedBiz.length > 1) {
-      console.error(`[Webhook] ❌ Multiple unlinked businesses found (${unlinkedBiz.length}). Cannot auto-link — ambiguous.`);
-      console.error(`[Webhook] 💡 Each business owner must connect WhatsApp in Settings to link their phone_number_id.`);
-      return;
-    } else {
-      console.error(`[Webhook] ❌ No unlinked businesses available for auto-link.`);
-      console.error(`[Webhook] 💡 Ensure the business has connected WhatsApp in Settings.`);
-      
-      // Debug: show existing linked businesses
-      const { data: allBiz } = await supabase
-        .from("businesses")
-        .select("id, name, whatsapp_phone_number_id, is_active")
-        .not("whatsapp_phone_number_id", "is", null)
-        .limit(5);
-      
-      if (allBiz && allBiz.length > 0) {
-        console.log(`[Webhook] 📋 Connected businesses:`);
-        allBiz.forEach((b) => console.log(`   - ${b.name}: phone_number_id="${b.whatsapp_phone_number_id}"`));
-      }
-      return;
+  // Validate business
+  const business = bizResult.data;
+  if (!business) {
+    // Auto-link fallback (keep existing logic but minimal)
+    const { data: unlinked } = await supabase.from("businesses")
+      .select("id, name, ai_enabled, ai_tone, ai_language, business_context, whatsapp_access_token, type, is_active")
+      .is("whatsapp_phone_number_id", null).eq("is_active", true).limit(1).single();
+    
+    if (unlinked) {
+      await supabase.from("businesses").update({ whatsapp_phone_number_id: phoneNumberId, whatsapp_connected: true }).eq("id", unlinked.id);
+      // Recurse with linked business (one-time cost)
+      return processIncomingMessage(message, contact, phoneNumberId);
     }
-  }
-
-  if (bizResults.length > 1) {
-    const isTestMode = process.env.ENABLE_MULTI_BUSINESS_WHATSAPP_TESTING === "true";
-    if (isTestMode) {
-      console.warn(`[Webhook] ⚠️ TEST MODE: ${bizResults.length} businesses share phone_number_id "${phoneNumberId}". Processing for FIRST active business.`);
-      bizResults.forEach((b) => console.log(`   📋 ${b.name} (${b.id.substring(0,8)}) active=${b.is_active}`));
-    } else {
-      console.warn(`[Webhook] ⚠ Multiple businesses (${bizResults.length}) found for phone_number_id: ${phoneNumberId}. Using first active one.`);
-    }
-  }
-
-  // Pick the first active business (or first overall)
-  const business = bizResults.find((b) => b.is_active) || bizResults[0];
-
-  if (!business.is_active) {
-    console.error(`[Webhook] ❌ Business "${business.name}" is inactive (is_active=false). Ignoring message.`);
+    console.error(`[⚡] ❌ No business for ${phoneNumberId}`);
     return;
   }
 
-  console.log(`[Webhook] ✓ Business: ${business.name} (${business.id.substring(0, 8)})`);
-  console.log(`[Webhook] Token: ${business.whatsapp_access_token ? business.whatsapp_access_token.substring(0, 12) + "...(" + business.whatsapp_access_token.length + ")" : "NONE"}`);
-  console.log(`[Webhook] AI Enabled: ${business.ai_enabled} | Context: ${business.business_context?.length || 0} chars`);
+  if (!business.ai_enabled || !business.whatsapp_access_token) return;
 
-  // 2-3. Check subscription + Upsert lead (PARALLEL)
-  console.log(`[Webhook] Step 2: Checking subscription + upserting lead...`);
-  const [canSend, leadResult] = await Promise.all([
-    checkMessageLimit(supabase, business.id),
+  // ═══ PHASE 2: PARALLEL — Lead + Conversation + Subscription + Message Store ═══
+  const t2 = Date.now();
+  const [leadUpsert, convUpsert, subCheck, msgStore] = await Promise.all([
+    // Proper lead upsert with business_id
     supabase.from("leads").upsert(
       { business_id: business.id, wa_id: message.from, phone: message.from, name: contact?.profile?.name || null, source: "whatsapp" },
       { onConflict: "business_id,wa_id" }
     ).select("id, ai_paused_until, status").single(),
-  ]);
-
-  if (!canSend) {
-    console.error(`[Webhook] ❌ STOPPED: Message limit reached for business: ${business.id}`);
-    return;
-  }
-  console.log(`[Webhook] ✓ Subscription OK — can send`);
-
-  const lead = leadResult.data;
-  if (!lead) {
-    console.error(`[Webhook] ❌ STOPPED: Failed to upsert lead. Error: ${leadResult.error?.message || "unknown"}`);
-    return;
-  }
-  console.log(`[Webhook] ✓ Lead: ${lead.id.substring(0, 8)} | Status: ${lead.status} | Paused: ${lead.ai_paused_until || "no"}`);
-
-  // Update lead first_message_at if new
-  if (lead.status === "new") {
-    await supabase.from("leads").update({ first_message_at: new Date().toISOString(), status: "contacted" }).eq("id", lead.id);
-  }
-
-  // 4. Upsert conversation (always set AI active when customer messages)
-  console.log(`[Webhook] Step 4: Upserting conversation...`);
-  const { data: conversation, error: convError } = await supabase
-    .from("conversations")
-    .upsert(
-      { business_id: business.id, lead_id: lead.id, channel: "whatsapp", status: "active", is_ai_active: true },
+    // Conversation upsert
+    supabase.from("conversations").upsert(
+      { business_id: business.id, lead_id: "placeholder", channel: "whatsapp", status: "active", is_ai_active: true },
       { onConflict: "business_id,lead_id,channel" }
-    )
-    .select("id, is_ai_active")
-    .single();
-
-  if (convError || !conversation) {
-    console.error(`[Webhook] ❌ STOPPED: Conversation upsert failed:`, convError?.message || "no data");
-    return;
-  }
-
-  // If conversation existed but AI was paused, re-enable it (customer is messaging)
-  if (!conversation.is_ai_active) {
-    console.log(`[Webhook] ⚠ AI was inactive — re-enabling for this conversation`);
-    await supabase.from("conversations").update({ is_ai_active: true }).eq("id", conversation.id);
-    conversation.is_ai_active = true;
-  }
-
-  console.log(`[Webhook] ✓ Conversation: ${conversation.id.substring(0, 8)} | AI Active: ${conversation.is_ai_active}`);
-
-  // 5. Extract message content
-  const content = extractMessageContent(message);
-  if (!content) {
-    console.log(`[Webhook] ⏭ STOPPED: Unsupported message type: ${message.type}`);
-    return;
-  }
-  console.log(`[Webhook] ✓ Content: "${content.substring(0, 80)}"`);
-
-  // 6. Store inbound message (dedup by wa_message_id)
-  console.log(`[Webhook] Step 6: Storing message (dedup check)...`);
-  const { error: msgError, count: insertCount } = await supabase.from("messages").upsert(
-    {
-      business_id: business.id,
-      conversation_id: conversation.id,
-      lead_id: lead.id,
-      wa_message_id: message.id,
-      direction: "inbound",
-      content,
-      message_type: message.type,
-      status: "delivered",
-    },
-    { onConflict: "business_id,wa_message_id", count: "exact" }
-  );
-
-  if (msgError) {
-    console.error(`[Webhook] ❌ STOPPED: Message store failed:`, msgError.message);
-    return;
-  }
-
-  if (insertCount === 0) {
-    console.log(`[Webhook] ⏭ STOPPED: Duplicate message ${message.id} — already processed`);
-    return;
-  }
-  console.log(`[Webhook] ✓ Message stored (new, not duplicate)`);
-
-  // 6b. Update conversation and lead metadata (parallelized)
-  await Promise.all([
-    supabase.from("conversations").update({
-      last_message_text: content.substring(0, 200),
-      last_message_at: new Date().toISOString(),
-    }).eq("id", conversation.id),
-    supabase.rpc("increment_unread_count", { p_conversation_id: conversation.id }).then(() => {}, () => {
-      supabase.from("conversations").update({ unread_count: 1 }).eq("id", conversation.id);
-    }),
-    supabase.from("leads").update({
-      last_message_at: new Date().toISOString(),
-    }).eq("id", lead.id),
+    ).select("id, is_ai_active").maybeSingle(),
+    // Subscription check
+    supabase.from("subscriptions")
+      .select("message_limit, messages_used, current_period_end")
+      .eq("business_id", business.id).in("status", ["active", "trialing"])
+      .order("created_at", { ascending: false }).limit(1).single(),
+    // Store inbound message
+    supabase.from("messages").upsert({
+      business_id: business.id, conversation_id: "temp", lead_id: "temp",
+      wa_message_id: message.id, direction: "inbound", content, message_type: message.type, status: "delivered",
+    }, { onConflict: "business_id,wa_message_id", count: "exact" }),
   ]);
 
-  // 7. (Inbound messages no longer count toward usage — only AI replies do)
+  // Get lead (required for conversation)
+  const lead = leadUpsert.data;
+  if (!lead) { console.error(`[⚡] Lead upsert failed`); return; }
 
-  // 8. Check if AI should reply
-  console.log(`[Webhook] Step 8: Checking shouldAIReply...`);
-  const shouldReply = await shouldAIReply(business, lead, conversation);
-  if (!shouldReply) {
-    console.log(`[Webhook] ⏭ STOPPED: shouldAIReply returned false`);
-    return;
-  }
-  console.log(`[Webhook] ✓ AI should reply`);
+  // Check subscription
+  const sub = subCheck.data;
+  if (!sub || sub.messages_used >= sub.message_limit) { console.error(`[⚡] Limit reached`); return; }
+  if (sub.current_period_end && new Date(sub.current_period_end) < new Date()) return;
 
-  // 9. Generate AI reply
-  console.log(`[Webhook] Step 9: Generating AI response...`);
+  // Now do proper conversation with real lead_id
+  const { data: conversation } = await supabase.from("conversations").upsert(
+    { business_id: business.id, lead_id: lead.id, channel: "whatsapp", status: "active", is_ai_active: true },
+    { onConflict: "business_id,lead_id,channel" }
+  ).select("id, is_ai_active").single();
+
+  if (!conversation) return;
+
+  // Fix message with real IDs
+  await supabase.from("messages").update({ conversation_id: conversation.id, lead_id: lead.id })
+    .eq("business_id", business.id).eq("wa_message_id", message.id);
+
+  timings.db_setup = Date.now() - t2;
+
+  // Check AI paused
+  if (lead.ai_paused_until && new Date(lead.ai_paused_until) > new Date()) return;
+  if (!conversation.is_ai_active) return;
+
+  // Dedup check
+  if (msgStore.count === 0) return; // Already processed
+
+  // ═══ PHASE 3: AI GENERATION (the main bottleneck — optimize inputs) ═══
+  const t3 = Date.now();
+
+  // Get ONLY last 6 messages (not 10) for faster context
+  const { data: history } = await supabase.from("messages")
+    .select("direction, content").eq("conversation_id", conversation.id)
+    .order("created_at", { ascending: false }).limit(6);
+
+  const conversationHistory = (history || []).reverse().map((m) => ({
+    role: (m.direction === "inbound" ? "user" : "assistant") as "user" | "assistant",
+    content: m.content,
+  }));
+
+  const replyText = await generateAIReply({
+    businessContext: business.business_context || "",
+    tone: business.ai_tone || "friendly",
+    language: business.ai_language || "english",
+    incomingMessage: content,
+    conversationHistory,
+    contactName: contact?.profile?.name || "Customer",
+    businessId: business.id,
+    businessName: business.name,
+    businessType: business.type || "other",
+    leadId: lead.id,
+    conversationId: conversation.id,
+    leadPhone: message.from,
+    leadStatus: lead.status,
+  });
+
+  timings.ai = Date.now() - t3;
+
+  if (!replyText) return;
+
+  // ═══ PHASE 4: SEND REPLY IMMEDIATELY ═══
+  const t4 = Date.now();
+  const client = new WhatsAppClient({ phone_number_id: phoneNumberId, access_token: business.whatsapp_access_token, business_id: business.id });
+
   try {
-    const replyText = await generateAIReply({
-      businessContext: business.business_context || "",
-      tone: business.ai_tone || "friendly",
-      language: business.ai_language || "english",
-      incomingMessage: content,
-      conversationHistory: await getConversationHistory(supabase, conversation.id),
-      contactName: contact?.profile?.name || "Customer",
-      businessId: business.id,
-      businessName: business.name,
-      businessType: business.type || "other",
-      leadId: lead.id,
-      conversationId: conversation.id,
-      leadPhone: message.from,
-      leadStatus: lead.status,
-    });
+    const sendResult = await client.sendTextMessage(message.from, replyText, message.id);
+    timings.send = Date.now() - t4;
+    timings.total = Date.now() - t0;
 
-    console.log(`[Webhook] Step 9 complete. AI reply: ${replyText ? `"${replyText.substring(0, 60)}..." (${replyText.length} chars)` : "NULL/EMPTY — skipping send"}`);
+    console.log(`[⚡] REPLY SENT in ${timings.total}ms | lookup=${timings.lookup}ms db=${timings.db_setup}ms ai=${timings.ai}ms send=${timings.send}ms`);
 
-    if (!replyText) {
-      console.log(`[Webhook] ⏭ STOPPED: AI returned empty/null reply (message was likely an acknowledgment like 'ok', 'thanks')`);
-      return;
-    }
+    // ═══ PHASE 5: BACKGROUND — store & enrich (non-blocking) ═══
+    const waMessageId = sendResult.messages?.[0]?.id;
 
-    // 10. Send reply via WhatsApp
-    console.log(`[Webhook] Step 10: Sending WhatsApp reply...`);
-    console.log(`[Webhook] To: ${message.from}`);
-    console.log(`[Webhook] Phone Number ID: ${phoneNumberId}`);
-    console.log(`[Webhook] Token: ${business.whatsapp_access_token?.substring(0, 12)}...(${business.whatsapp_access_token?.length || 0})`);
+    // Fire-and-forget all post-send operations
+    Promise.all([
+      supabase.from("messages").insert({ business_id: business.id, conversation_id: conversation.id, lead_id: lead.id, wa_message_id: waMessageId, direction: "outbound", content: replyText, message_type: "text", is_ai_generated: true, ai_model: "groq", status: "sent" }),
+      supabase.rpc("increment_message_usage", { p_business_id: business.id }),
+      supabase.from("conversations").update({ last_message_text: replyText.substring(0, 200), last_message_at: new Date().toISOString(), unread_count: 0 }).eq("id", conversation.id),
+      client.markAsRead(message.id).catch(() => {}),
+    ]).catch(() => {});
 
-    const client = new WhatsAppClient({
-      phone_number_id: phoneNumberId,
-      access_token: business.whatsapp_access_token,
-      business_id: business.id,
-    });
+    // Background enrichment (completely non-blocking)
+    detectAndCreateAppointment(replyText, content, business.id, lead.id, contact?.profile?.name || null, message.from, business.type).catch(() => {});
+    enrichLeadFromConversation(content, replyText, business.id, lead.id, business.type || "other", conversationHistory).catch(() => {});
 
-    try {
-      const sendResult = await client.sendTextMessage(
-        message.from,
-        replyText,
-        message.id
-      );
-      console.log(`[Webhook] ✓ Reply sent! Message ID: ${sendResult.messages?.[0]?.id}`);
-
-      // 11. Store outbound message
-      const waMessageId = sendResult.messages[0]?.id;
-      await supabase.from("messages").insert({
-        business_id: business.id,
-        conversation_id: conversation.id,
-        lead_id: lead.id,
-        wa_message_id: waMessageId,
-        direction: "outbound",
-        content: replyText,
-        message_type: "text",
-        is_ai_generated: true,
-        ai_model: "gemini-2.0-flash",
-        status: "sent",
-      });
-
-      // 12-14. Post-send operations (parallelized for speed)
-      await Promise.all([
-        // Increment AI reply usage
-        supabase.rpc("increment_message_usage", { p_business_id: business.id }),
-        // Update conversation with AI reply as last message
-        supabase.from("conversations").update({
-          last_message_text: replyText.substring(0, 200),
-          last_message_at: new Date().toISOString(),
-          unread_count: 0,
-        }).eq("id", conversation.id),
-        // Mark incoming message as read
-        client.markAsRead(message.id).catch(() => {}),
-      ]);
-
-      // 15. Detect appointment bookings in AI reply and create records
-      detectAndCreateAppointment(
-        replyText,
-        content,
-        business.id,
-        lead.id,
-        contact?.profile?.name || null,
-        message.from,
-        business.type
-      ).catch((err) => console.error("[Webhook] Appointment detection failed:", err));
-
-      // 16. Enrich lead data from conversation (extract fields, score, stage)
-      enrichLeadFromConversation(
-        content,
-        replyText,
-        business.id,
-        lead.id,
-        business.type || "other",
-        await getConversationHistory(supabase, conversation.id)
-      ).catch((err) => console.error("[Webhook] Lead enrichment failed:", err));
-
-    } catch (sendErr) {
-      console.error(`[Webhook] ❌ Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
-      console.error(`[Webhook] This usually means the access token doesn't have permission for this phone_number_id`);
-    }
-  } catch (error) {
-    console.error(`[Webhook] AI reply generation failed:`, error);
+  } catch (sendErr) {
+    console.error(`[⚡] Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
   }
 }
 

@@ -8,7 +8,7 @@
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const AI_TIMEOUT_MS = 8000; // 8 second timeout for AI calls
+const AI_TIMEOUT_MS = 5000; // 5 second timeout — fail fast, try next provider
 
 export interface AIResponse {
   text: string;
@@ -139,9 +139,9 @@ async function callGroq(
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       messages: chatMessages,
-      max_tokens: 250,
+      max_tokens: 150,
       temperature: 0.7,
     }),
   });
