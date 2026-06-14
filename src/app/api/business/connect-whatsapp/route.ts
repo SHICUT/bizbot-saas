@@ -110,38 +110,16 @@ export async function POST(request: NextRequest) {
   // Token is valid — proceed with connection
   console.log("[Connect] ✓ Validation passed. Saving credentials...");
 
-  // Platform-level webhook — all businesses share one webhook URL and verify token
   const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "flownex_verify_123";
-
-  // TEST MODE: Allow same phone_number_id on multiple businesses
   const isTestMode = process.env.ENABLE_MULTI_BUSINESS_WHATSAPP_TESTING === "true";
-  if (isTestMode) {
-    console.warn("[Connect] ⚠️ TEST MODE ACTIVE: Multi-business WhatsApp mapping enabled. NOT FOR PRODUCTION.");
-  }
 
   // 4. Use admin client to bypass RLS (prevents silent write failures)
   const admin = createAdminClient();
 
-  // Check if phone_number_id is already used by another business (production enforcement)
-  if (!isTestMode) {
-    const { data: existing } = await admin
-      .from("businesses")
-      .select("id, name")
-      .eq("whatsapp_phone_number_id", phone_number_id)
-      .neq("owner_id", user.id)
-      .limit(1)
-      .single();
-
-    if (existing) {
-      console.error(`[Connect] ❌ phone_number_id "${phone_number_id}" already connected to business "${existing.name}" (${existing.id})`);
-      return NextResponse.json({ error: "This WhatsApp number is already connected to another business." }, { status: 409 });
-    }
-  }
-
-  // First get the business ID for this user
+  // Get the current user's business
   const { data: bizLookup, error: bizLookupErr } = await admin
     .from("businesses")
-    .select("id, name")
+    .select("id, name, whatsapp_phone_number_id")
     .eq("owner_id", user.id)
     .single();
 
@@ -150,7 +128,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Business not found. Complete onboarding first." }, { status: 404 });
   }
 
-  console.log(`[Connect] Found business: ${bizLookup.name} (${bizLookup.id})`);
+  console.log(`[Connect] Found business: ${bizLookup.name} (${bizLookup.id}) | Current phone_number_id: ${bizLookup.whatsapp_phone_number_id || "NULL"}`);
+
+  // Check if phone_number_id is owned by a DIFFERENT business
+  if (!isTestMode) {
+    const { data: conflicting } = await admin
+      .from("businesses")
+      .select("id, name, owner_email")
+      .eq("whatsapp_phone_number_id", phone_number_id)
+      .neq("id", bizLookup.id) // Exclude current business (allows reconnect)
+      .limit(1);
+
+    if (conflicting && conflicting.length > 0) {
+      const owner = conflicting[0];
+      console.error(`[Connect] ❌ Conflict: phone_number_id "${phone_number_id}" is connected to "${owner.name}" (${owner.id})`);
+      return NextResponse.json({
+        error: `This WhatsApp number is already connected to another business: "${owner.name}". Disconnect it from that business first, or contact support.`,
+        conflicting_business: owner.name,
+      }, { status: 409 });
+    }
+  } else {
+    console.warn("[Connect] ⚠️ TEST MODE: Skipping duplicate check");
+  }
 
   // Fetch the display phone number from Meta API
   let displayPhoneNumber: string | null = null;
@@ -164,10 +163,27 @@ export async function POST(request: NextRequest) {
       displayPhoneNumber = phoneInfo.display_phone_number || null;
       verifiedName = phoneInfo.verified_name || null;
       console.log(`[Connect] ✓ Display phone: ${displayPhoneNumber} | Verified name: ${verifiedName}`);
+    } else {
+      const errData = await phoneInfoRes.json().catch(() => ({}));
+      console.warn(`[Connect] Could not fetch phone info: ${errData?.error?.message || phoneInfoRes.status}`);
     }
-  } catch { /* non-critical */ }
+  } catch (e) {
+    console.warn("[Connect] Phone info fetch failed:", e);
+  }
 
-  // Update with admin client (bypasses RLS, guaranteed write)
+  // 5. Clear any stale/duplicate mappings for this phone_number_id (from other businesses)
+  // This handles the case where test data left duplicates
+  if (!isTestMode) {
+    await admin
+      .from("businesses")
+      .update({ whatsapp_phone_number_id: null, whatsapp_connected: false })
+      .eq("whatsapp_phone_number_id", phone_number_id)
+      .neq("id", bizLookup.id);
+  }
+
+  // 6. Save WhatsApp credentials to this business
+  console.log(`[Connect] Saving: phone_number_id="${phone_number_id}" to business ${bizLookup.id}`);
+
   const { error: updateError } = await admin
     .from("businesses")
     .update({
@@ -184,11 +200,13 @@ export async function POST(request: NextRequest) {
     .eq("id", bizLookup.id);
 
   if (updateError) {
-    console.error("[Connect] Failed to update business:", updateError.message);
+    console.error("[Connect] ❌ Database update FAILED:", updateError.message, updateError.code);
     return NextResponse.json({ error: "Failed to save credentials: " + updateError.message }, { status: 500 });
   }
 
-  // 5. Verify the write actually persisted
+  console.log("[Connect] ✓ Database update succeeded");
+
+  // 7. Verify the write actually persisted
   const { data: verifyBiz } = await admin
     .from("businesses")
     .select("whatsapp_phone_number_id, whatsapp_connected")

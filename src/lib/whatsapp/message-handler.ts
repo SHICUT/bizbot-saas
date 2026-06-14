@@ -388,7 +388,8 @@ async function processIncomingMessage(
 }
 
 /**
- * Process message status updates (sent → delivered → read).
+ * Process message status updates (sent → delivered → read → failed).
+ * Meta sends these as callbacks after the message is accepted.
  */
 async function processStatusUpdate(
   status: MessageStatus,
@@ -396,29 +397,47 @@ async function processStatusUpdate(
 ): Promise<void> {
   const supabase = createAdminClient();
 
+  // Log ALL status updates for debugging delivery issues
+  console.log(`[Status] === MESSAGE STATUS UPDATE ===`);
+  console.log(`[Status] Message ID: ${status.id}`);
+  console.log(`[Status] Status: ${status.status}`);
+  console.log(`[Status] Recipient: ${status.recipient_id}`);
+  console.log(`[Status] Timestamp: ${status.timestamp}`);
+  if (status.errors && status.errors.length > 0) {
+    console.error(`[Status] ❌ ERROR: code=${status.errors[0].code} | title="${status.errors[0].title}" | message="${status.errors[0].message}"`);
+    if (status.errors[0].error_data) {
+      console.error(`[Status] Error details:`, JSON.stringify(status.errors[0].error_data));
+    }
+  }
+  console.log(`[Status] ===============================`);
+
   // Find the business
   const { data: business } = await supabase
     .from("businesses")
     .select("id")
     .eq("whatsapp_phone_number_id", phoneNumberId)
+    .limit(1)
     .single();
 
-  if (!business) return;
+  if (!business) {
+    console.warn(`[Status] No business for phone_number_id: ${phoneNumberId}`);
+    return;
+  }
 
-  // Update message status
+  // Update message status in DB
+  const updateData: Record<string, unknown> = { status: status.status };
+  if (status.errors && status.errors.length > 0) {
+    updateData.error_message = `${status.errors[0].code}: ${status.errors[0].title} — ${status.errors[0].message}`;
+  }
+
   const { error } = await supabase
     .from("messages")
-    .update({
-      status: status.status,
-      ...(status.errors && {
-        error_message: status.errors[0]?.message || "Unknown error",
-      }),
-    })
+    .update(updateData)
     .eq("business_id", business.id)
     .eq("wa_message_id", status.id);
 
   if (error) {
-    console.error(`[Webhook] Failed to update message status:`, error);
+    console.error(`[Status] DB update failed:`, error.message);
   }
 }
 
