@@ -79,23 +79,72 @@ async function processIncomingMessage(
 
   if (!bizResults || bizResults.length === 0) {
     console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId}`);
-    console.error(`[Webhook] 💡 Fix: Go to Settings → Connect WhatsApp in the FlowNex dashboard.`);
-    console.error(`[Webhook] 💡 This will store the phone_number_id in the businesses table.`);
     
-    // Debug: show what phone_number_ids DO exist
-    const { data: allBiz } = await supabase
+    // AUTO-LINK: If there's exactly one business with whatsapp_connected=false or NULL phone_number_id,
+    // automatically assign this phone_number_id to them (self-healing for the RLS bug era)
+    const { data: unlinkedBiz } = await supabase
       .from("businesses")
-      .select("id, name, whatsapp_phone_number_id, is_active")
-      .not("whatsapp_phone_number_id", "is", null)
+      .select("id, name, whatsapp_access_token, is_active")
+      .is("whatsapp_phone_number_id", null)
+      .eq("is_active", true)
       .limit(5);
-    
-    if (allBiz && allBiz.length > 0) {
-      console.log(`[Webhook] 📋 Existing connected businesses:`);
-      allBiz.forEach((b) => console.log(`   - ${b.name}: phone_number_id="${b.whatsapp_phone_number_id}" active=${b.is_active}`));
+
+    if (unlinkedBiz && unlinkedBiz.length === 1) {
+      // Exactly one unlinked business — auto-link it
+      const target = unlinkedBiz[0];
+      console.log(`[Webhook] 🔗 AUTO-LINKING: Only 1 unlinked business found: "${target.name}" (${target.id.substring(0,8)})`);
+      console.log(`[Webhook] 🔗 Setting whatsapp_phone_number_id = "${phoneNumberId}" on this business`);
+
+      const { error: autoLinkErr } = await supabase
+        .from("businesses")
+        .update({
+          whatsapp_phone_number_id: phoneNumberId,
+          whatsapp_connected: true,
+          whatsapp_connected_at: new Date().toISOString(),
+        })
+        .eq("id", target.id);
+
+      if (autoLinkErr) {
+        console.error(`[Webhook] ❌ Auto-link FAILED:`, autoLinkErr.message);
+        return;
+      }
+
+      console.log(`[Webhook] ✓ Auto-linked successfully! Re-processing message...`);
+      // Re-run the lookup now that it's linked
+      const { data: linkedBiz } = await supabase
+        .from("businesses")
+        .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token, whatsapp_phone_number_id, is_active")
+        .eq("id", target.id)
+        .single();
+
+      if (!linkedBiz) {
+        console.error(`[Webhook] ❌ Auto-link succeeded but re-fetch failed`);
+        return;
+      }
+
+      // Continue processing with the linked business
+      bizResults.push(linkedBiz);
+    } else if (unlinkedBiz && unlinkedBiz.length > 1) {
+      console.error(`[Webhook] ❌ Multiple unlinked businesses found (${unlinkedBiz.length}). Cannot auto-link — ambiguous.`);
+      console.error(`[Webhook] 💡 Each business owner must connect WhatsApp in Settings to link their phone_number_id.`);
+      return;
     } else {
-      console.log(`[Webhook] 📋 No businesses have whatsapp_phone_number_id set. None have connected WhatsApp yet.`);
+      console.error(`[Webhook] ❌ No unlinked businesses available for auto-link.`);
+      console.error(`[Webhook] 💡 Ensure the business has connected WhatsApp in Settings.`);
+      
+      // Debug: show existing linked businesses
+      const { data: allBiz } = await supabase
+        .from("businesses")
+        .select("id, name, whatsapp_phone_number_id, is_active")
+        .not("whatsapp_phone_number_id", "is", null)
+        .limit(5);
+      
+      if (allBiz && allBiz.length > 0) {
+        console.log(`[Webhook] 📋 Connected businesses:`);
+        allBiz.forEach((b) => console.log(`   - ${b.name}: phone_number_id="${b.whatsapp_phone_number_id}"`));
+      }
+      return;
     }
-    return;
   }
 
   if (bizResults.length > 1) {
