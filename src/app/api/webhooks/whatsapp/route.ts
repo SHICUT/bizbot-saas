@@ -15,8 +15,8 @@ import type { WebhookPayload } from "@/lib/whatsapp/types";
  *   It is NOT the access token (which starts with EAAN...).
  */
 
-// Hardcoded fallback — if env var is wrong (e.g. contains access token), use this
-const FALLBACK_VERIFY_TOKEN = "FlowNex_verify_123";
+// Hardcoded fallback — must match what is entered in Meta Developer Dashboard
+const FALLBACK_VERIFY_TOKEN = "flownex_verify_123";
 
 // Startup config validation (logs once when module loads)
 (() => {
@@ -44,6 +44,9 @@ function getVerifyToken(): string {
 /**
  * GET /api/webhooks/whatsapp
  * Meta webhook verification — must return challenge as plain text
+ *
+ * Meta sends: GET ?hub.mode=subscribe&hub.verify_token=xxx&hub.challenge=yyy
+ * We must return exactly hub.challenge as plain text with HTTP 200.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -53,29 +56,42 @@ export async function GET(request: NextRequest) {
 
   const expectedToken = getVerifyToken();
 
-  console.log("=== WEBHOOK VERIFICATION ===");
+  // Detailed logging for production debugging
+  console.log("=== WhatsApp Webhook Verification ===");
+  console.log("URL:", request.url);
   console.log("hub.mode:", mode);
-  console.log("hub.verify_token:", token);
-  console.log("expected token:", expectedToken);
-  console.log("challenge:", challenge);
-  console.log("match:", token === expectedToken);
-  console.log("============================");
+  console.log("hub.verify_token received:", token);
+  console.log("hub.verify_token expected:", expectedToken);
+  console.log("hub.challenge:", challenge);
+  console.log("token match:", token === expectedToken);
+  console.log("=====================================");
 
-  if (mode === "subscribe" && token === expectedToken) {
-    if (challenge) {
-      console.log("✓ VERIFICATION SUCCESS — returning challenge");
-      // CRITICAL: Return challenge as PLAIN TEXT, not JSON
-      return new Response(challenge, {
-        status: 200,
-        headers: { "Content-Type": "text/plain" },
-      });
-    }
+  // Meta requires: mode=subscribe, token matches, challenge present
+  if (mode === "subscribe" && challenge && token === expectedToken) {
+    console.log("✓ Verification SUCCESS — returning challenge");
+    // Must return plain text, not JSON
+    return new Response(challenge, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+        "X-Webhook-Verified": "true",
+      },
+    });
   }
 
-  console.error("✗ VERIFICATION FAILED");
-  if (mode !== "subscribe") console.error("  Reason: mode is not 'subscribe'");
-  if (token !== expectedToken) console.error("  Reason: token mismatch");
-  if (!challenge) console.error("  Reason: no challenge");
+  // Log failure reason clearly
+  console.error("✗ Verification FAILED");
+  if (mode !== "subscribe") {
+    console.error(`  Reason: hub.mode="${mode}" — expected "subscribe"`);
+  }
+  if (token !== expectedToken) {
+    console.error(`  Reason: token mismatch — got "${token}", expected "${expectedToken}"`);
+    console.error(`  Fix: In Vercel Dashboard → Environment Variables → set WHATSAPP_VERIFY_TOKEN = "${expectedToken}"`);
+    console.error(`  Fix: In Meta Dashboard → Webhooks → Verify Token = "${expectedToken}"`);
+  }
+  if (!challenge) {
+    console.error("  Reason: hub.challenge is missing");
+  }
 
   return new Response("Verification failed", { status: 403 });
 }
