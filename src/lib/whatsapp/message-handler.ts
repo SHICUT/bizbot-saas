@@ -148,7 +148,13 @@ async function processIncomingMessage(
   }
 
   if (bizResults.length > 1) {
-    console.warn(`[Webhook] ⚠ Multiple businesses (${bizResults.length}) found for phone_number_id: ${phoneNumberId}. Using first active one.`);
+    const isTestMode = process.env.ENABLE_MULTI_BUSINESS_WHATSAPP_TESTING === "true";
+    if (isTestMode) {
+      console.warn(`[Webhook] ⚠️ TEST MODE: ${bizResults.length} businesses share phone_number_id "${phoneNumberId}". Processing for FIRST active business.`);
+      bizResults.forEach((b) => console.log(`   📋 ${b.name} (${b.id.substring(0,8)}) active=${b.is_active}`));
+    } else {
+      console.warn(`[Webhook] ⚠ Multiple businesses (${bizResults.length}) found for phone_number_id: ${phoneNumberId}. Using first active one.`);
+    }
   }
 
   // Pick the first active business (or first overall)

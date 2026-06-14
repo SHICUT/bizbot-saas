@@ -113,8 +113,30 @@ export async function POST(request: NextRequest) {
   // Platform-level webhook — all businesses share one webhook URL and verify token
   const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "flownex_verify_123";
 
+  // TEST MODE: Allow same phone_number_id on multiple businesses
+  const isTestMode = process.env.ENABLE_MULTI_BUSINESS_WHATSAPP_TESTING === "true";
+  if (isTestMode) {
+    console.warn("[Connect] ⚠️ TEST MODE ACTIVE: Multi-business WhatsApp mapping enabled. NOT FOR PRODUCTION.");
+  }
+
   // 4. Use admin client to bypass RLS (prevents silent write failures)
   const admin = createAdminClient();
+
+  // Check if phone_number_id is already used by another business (production enforcement)
+  if (!isTestMode) {
+    const { data: existing } = await admin
+      .from("businesses")
+      .select("id, name")
+      .eq("whatsapp_phone_number_id", phone_number_id)
+      .neq("owner_id", user.id)
+      .limit(1)
+      .single();
+
+    if (existing) {
+      console.error(`[Connect] ❌ phone_number_id "${phone_number_id}" already connected to business "${existing.name}" (${existing.id})`);
+      return NextResponse.json({ error: "This WhatsApp number is already connected to another business." }, { status: 409 });
+    }
+  }
 
   // First get the business ID for this user
   const { data: bizLookup, error: bizLookupErr } = await admin
