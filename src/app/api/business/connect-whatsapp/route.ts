@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
 
   // Fetch the display phone number from Meta API
   let displayPhoneNumber: string | null = null;
+  let verifiedName: string | null = null;
   try {
     const phoneInfoRes = await fetch(`https://graph.facebook.com/v23.0/${phone_number_id}?fields=display_phone_number,verified_name`, {
       headers: { Authorization: `Bearer ${access_token}` },
@@ -161,7 +162,8 @@ export async function POST(request: NextRequest) {
     if (phoneInfoRes.ok) {
       const phoneInfo = await phoneInfoRes.json();
       displayPhoneNumber = phoneInfo.display_phone_number || null;
-      console.log(`[Connect] ✓ Display phone: ${displayPhoneNumber} | Verified name: ${phoneInfo.verified_name || "N/A"}`);
+      verifiedName = phoneInfo.verified_name || null;
+      console.log(`[Connect] ✓ Display phone: ${displayPhoneNumber} | Verified name: ${verifiedName}`);
     }
   } catch { /* non-critical */ }
 
@@ -171,6 +173,7 @@ export async function POST(request: NextRequest) {
     .update({
       whatsapp_phone_number_id: phone_number_id,
       whatsapp_phone_number: displayPhoneNumber,
+      whatsapp_verified_name: verifiedName,
       whatsapp_business_account_id: business_account_id || null,
       whatsapp_access_token: access_token,
       whatsapp_webhook_verify_token: platformVerifyToken,

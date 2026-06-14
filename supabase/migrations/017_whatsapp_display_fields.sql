@@ -7,6 +7,10 @@
 ALTER TABLE public.businesses
   ADD COLUMN IF NOT EXISTS whatsapp_phone_number TEXT;
 
+-- Add verified WhatsApp business name
+ALTER TABLE public.businesses
+  ADD COLUMN IF NOT EXISTS whatsapp_verified_name TEXT;
+
 -- Add owner_email for quick identification without joining auth.users
 ALTER TABLE public.businesses
   ADD COLUMN IF NOT EXISTS owner_email TEXT;
@@ -27,6 +31,7 @@ SELECT
   b.id,
   b.name AS business_name,
   b.owner_email,
+  b.whatsapp_verified_name,
   b.whatsapp_phone_number,
   b.whatsapp_phone_number_id,
   b.whatsapp_business_account_id,
