@@ -1,47 +1,65 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * GET /api/webhooks/debug — Temporary diagnostic endpoint
- * Shows webhook configuration status without exposing secrets
+ * GET /api/webhooks/debug
+ *
+ * Diagnostic endpoint to verify:
+ * 1. Which code version is deployed
+ * 2. Whether businesses have phone_number_id saved
+ * 3. Whether the webhook lookup would succeed
  */
-export async function GET(request: NextRequest) {
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+export async function GET() {
+  const BUILD_VERSION = "2026-06-14-v2"; // Update this to confirm deployment
+  const supabase = createAdminClient();
 
-  // Simulate webhook verification if params provided
-  const mode = request.nextUrl.searchParams.get("hub.mode");
-  const token = request.nextUrl.searchParams.get("hub.verify_token");
-  const challenge = request.nextUrl.searchParams.get("hub.challenge");
+  // Get all businesses and their WhatsApp connection status
+  const { data: businesses, error } = await supabase
+    .from("businesses")
+    .select("id, name, whatsapp_phone_number_id, whatsapp_connected, whatsapp_connected_at, is_active, owner_id")
+    .order("created_at", { ascending: false })
+    .limit(10);
 
-  let verificationTest = null;
-  if (mode || token) {
-    const receivedTrimmed = (token || "").trim();
-    const expectedTrimmed = (verifyToken || "").trim();
-    const match = receivedTrimmed === expectedTrimmed;
-
-    verificationTest = {
-      hub_mode: mode,
-      hub_verify_token_received: token ? `"${token}" (length: ${token.length})` : "null",
-      expected_token_preview: verifyToken ? `"${verifyToken.substring(0, 4)}...${verifyToken.substring(verifyToken.length - 4)}" (length: ${verifyToken.length})` : "NOT SET",
-      tokens_match: match,
-      would_return: match && mode === "subscribe" && challenge ? "200 + challenge" : "403 Verification failed",
-      challenge_provided: !!challenge,
-    };
+  if (error) {
+    return NextResponse.json({
+      version: BUILD_VERSION,
+      error: "DB query failed: " + error.message,
+      supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + "...",
+      service_key_set: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
   }
 
-  return NextResponse.json({
-    status: "ok",
+  const summary = {
+    version: BUILD_VERSION,
     timestamp: new Date().toISOString(),
-    config: {
-      WHATSAPP_VERIFY_TOKEN_exists: !!verifyToken,
-      WHATSAPP_VERIFY_TOKEN_length: verifyToken?.length || 0,
-      WHATSAPP_VERIFY_TOKEN_preview: verifyToken ? `${verifyToken.substring(0, 5)}...` : "NOT SET",
-      WHATSAPP_APP_SECRET_exists: !!appSecret,
-      NEXT_PUBLIC_APP_URL: appUrl || "NOT SET",
-      webhook_endpoint: "/api/webhooks/whatsapp",
+    env: {
+      app_url: process.env.NEXT_PUBLIC_APP_URL || "NOT SET",
+      supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 40) || "NOT SET",
+      service_key_set: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      verify_token: process.env.WHATSAPP_VERIFY_TOKEN || "NOT SET (using fallback)",
+      groq_key_set: !!process.env.GROQ_API_KEY,
+      gemini_key_set: !!process.env.GEMINI_API_KEY,
     },
-    verification_test: verificationTest,
-    instructions: "To test: add ?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=test123",
-  });
+    businesses: businesses?.map((b) => ({
+      id: b.id.substring(0, 8) + "...",
+      name: b.name,
+      phone_number_id: b.whatsapp_phone_number_id || "❌ NULL",
+      connected: b.whatsapp_connected,
+      connected_at: b.whatsapp_connected_at || "never",
+      active: b.is_active,
+    })) || [],
+    total_businesses: businesses?.length || 0,
+    connected_count: businesses?.filter((b) => b.whatsapp_connected && b.whatsapp_phone_number_id).length || 0,
+    unlinked_count: businesses?.filter((b) => !b.whatsapp_phone_number_id).length || 0,
+    diagnosis: "",
+  };
+
+  // Diagnosis
+  if (summary.connected_count === 0) {
+    summary.diagnosis = "NO businesses have whatsapp_phone_number_id set. Users need to reconnect via Settings → Connect WhatsApp. The connect API now uses admin client (fixed in this deployment).";
+  } else {
+    summary.diagnosis = `${summary.connected_count} business(es) connected. Webhook should find them by phone_number_id.`;
+  }
+
+  return NextResponse.json(summary);
 }
