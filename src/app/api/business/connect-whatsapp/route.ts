@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * POST /api/business/connect-whatsapp
@@ -110,11 +111,27 @@ export async function POST(request: NextRequest) {
   console.log("[Connect] ✓ Validation passed. Saving credentials...");
 
   // Platform-level webhook — all businesses share one webhook URL and verify token
-  // The WHATSAPP_VERIFY_TOKEN env var is configured in Meta Developer Dashboard once
-  const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "FlowNex-webhook-verify";
+  const platformVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "flownex_verify_123";
 
-  // 4. Update business with WhatsApp credentials
-  const { error: updateError } = await supabase
+  // 4. Use admin client to bypass RLS (prevents silent write failures)
+  const admin = createAdminClient();
+
+  // First get the business ID for this user
+  const { data: bizLookup, error: bizLookupErr } = await admin
+    .from("businesses")
+    .select("id, name")
+    .eq("owner_id", user.id)
+    .single();
+
+  if (bizLookupErr || !bizLookup) {
+    console.error("[Connect] Business not found for user:", user.id, bizLookupErr?.message);
+    return NextResponse.json({ error: "Business not found. Complete onboarding first." }, { status: 404 });
+  }
+
+  console.log(`[Connect] Found business: ${bizLookup.name} (${bizLookup.id})`);
+
+  // Update with admin client (bypasses RLS, guaranteed write)
+  const { error: updateError } = await admin
     .from("businesses")
     .update({
       whatsapp_phone_number_id: phone_number_id,
@@ -124,14 +141,28 @@ export async function POST(request: NextRequest) {
       whatsapp_connected: true,
       whatsapp_connected_at: new Date().toISOString(),
     })
-    .eq("owner_id", user.id);
+    .eq("id", bizLookup.id);
 
   if (updateError) {
-    console.error("[Connect] Failed to update business:", updateError);
-    return NextResponse.json({ error: "Failed to save credentials" }, { status: 500 });
+    console.error("[Connect] Failed to update business:", updateError.message);
+    return NextResponse.json({ error: "Failed to save credentials: " + updateError.message }, { status: 500 });
   }
 
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://FlowNex-saasnew.vercel.app"}/api/webhooks/whatsapp`;
+  // 5. Verify the write actually persisted
+  const { data: verifyBiz } = await admin
+    .from("businesses")
+    .select("whatsapp_phone_number_id, whatsapp_connected")
+    .eq("id", bizLookup.id)
+    .single();
+
+  if (!verifyBiz?.whatsapp_phone_number_id || verifyBiz.whatsapp_phone_number_id !== phone_number_id) {
+    console.error("[Connect] ❌ Write verification FAILED. phone_number_id not saved:", verifyBiz);
+    return NextResponse.json({ error: "Database write failed. Please try again." }, { status: 500 });
+  }
+
+  console.log(`[Connect] ✓ Verified: phone_number_id="${verifyBiz.whatsapp_phone_number_id}", connected=${verifyBiz.whatsapp_connected}`);
+
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://www.flownex.in"}/api/webhooks/whatsapp`;
 
   return NextResponse.json({
     success: true,
@@ -165,7 +196,8 @@ export async function DELETE(_request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("businesses")
     .update({
       whatsapp_phone_number_id: null,
