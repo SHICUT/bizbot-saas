@@ -152,16 +152,31 @@ export async function POST(request: NextRequest) {
 
   console.log(`[Connect] Found business: ${bizLookup.name} (${bizLookup.id})`);
 
+  // Fetch the display phone number from Meta API
+  let displayPhoneNumber: string | null = null;
+  try {
+    const phoneInfoRes = await fetch(`https://graph.facebook.com/v23.0/${phone_number_id}?fields=display_phone_number,verified_name`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    if (phoneInfoRes.ok) {
+      const phoneInfo = await phoneInfoRes.json();
+      displayPhoneNumber = phoneInfo.display_phone_number || null;
+      console.log(`[Connect] ✓ Display phone: ${displayPhoneNumber} | Verified name: ${phoneInfo.verified_name || "N/A"}`);
+    }
+  } catch { /* non-critical */ }
+
   // Update with admin client (bypasses RLS, guaranteed write)
   const { error: updateError } = await admin
     .from("businesses")
     .update({
       whatsapp_phone_number_id: phone_number_id,
+      whatsapp_phone_number: displayPhoneNumber,
       whatsapp_business_account_id: business_account_id || null,
       whatsapp_access_token: access_token,
       whatsapp_webhook_verify_token: platformVerifyToken,
       whatsapp_connected: true,
       whatsapp_connected_at: new Date().toISOString(),
+      owner_email: user.email || null,
     })
     .eq("id", bizLookup.id);
 
