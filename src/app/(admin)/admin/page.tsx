@@ -111,6 +111,7 @@ export default function AdminPage() {
       <div className="flex items-center justify-between mb-4">
         <div><h1 className="text-2xl font-bold">Super Admin</h1><p className="text-sm text-text-muted">Platform Control Center</p></div>
         <div className="flex items-center gap-2">
+          <a href="/admin/users"><Button size="sm" variant="secondary"><Users className="w-3.5 h-3.5" />Users</Button></a>
           <a href="/admin/coupons"><Button size="sm" variant="secondary"><Tag className="w-3.5 h-3.5" />Coupons</Button></a>
           <Badge variant="info">Admin</Badge>
           <Button size="sm" variant="secondary" onClick={loadData}><RefreshCw className="w-3.5 h-3.5" /></Button>
