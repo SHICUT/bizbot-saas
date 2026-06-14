@@ -63,19 +63,53 @@ async function processIncomingMessage(
   console.log(`[Webhook] Phone Number ID (from webhook): ${phoneNumberId}`);
   console.log(`[Webhook] From: ${message.from} | Type: ${message.type} | MsgID: ${message.id}`);
 
-  const { data: bizData, error: bizError } = await supabase
+  // First try: find business by phone_number_id (normal path)
+  const { data: bizResults, error: bizListError } = await supabase
     .from("businesses")
-    .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token")
-    .eq("whatsapp_phone_number_id", phoneNumberId)
-    .eq("is_active", true)
-    .single();
+    .select("id, name, type, ai_enabled, ai_tone, ai_language, ai_pause_duration, business_context, whatsapp_access_token, whatsapp_phone_number_id, is_active")
+    .eq("whatsapp_phone_number_id", phoneNumberId);
 
-  if (bizError || !bizData) {
-    console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId} | Error: ${bizError?.message || "no match"}`);
+  console.log(`[Webhook] Business lookup: table=businesses, filter=whatsapp_phone_number_id="${phoneNumberId}"`);
+  console.log(`[Webhook] Results: ${bizResults?.length || 0} rows | Error: ${bizListError?.message || "none"}`);
+
+  if (bizListError) {
+    console.error(`[Webhook] ❌ Database query failed:`, bizListError.message);
     return;
   }
 
-  const business = bizData;
+  if (!bizResults || bizResults.length === 0) {
+    console.error(`[Webhook] ❌ No business found for phone_number_id: ${phoneNumberId}`);
+    console.error(`[Webhook] 💡 Fix: Go to Settings → Connect WhatsApp in the FlowNex dashboard.`);
+    console.error(`[Webhook] 💡 This will store the phone_number_id in the businesses table.`);
+    
+    // Debug: show what phone_number_ids DO exist
+    const { data: allBiz } = await supabase
+      .from("businesses")
+      .select("id, name, whatsapp_phone_number_id, is_active")
+      .not("whatsapp_phone_number_id", "is", null)
+      .limit(5);
+    
+    if (allBiz && allBiz.length > 0) {
+      console.log(`[Webhook] 📋 Existing connected businesses:`);
+      allBiz.forEach((b) => console.log(`   - ${b.name}: phone_number_id="${b.whatsapp_phone_number_id}" active=${b.is_active}`));
+    } else {
+      console.log(`[Webhook] 📋 No businesses have whatsapp_phone_number_id set. None have connected WhatsApp yet.`);
+    }
+    return;
+  }
+
+  if (bizResults.length > 1) {
+    console.warn(`[Webhook] ⚠ Multiple businesses (${bizResults.length}) found for phone_number_id: ${phoneNumberId}. Using first active one.`);
+  }
+
+  // Pick the first active business (or first overall)
+  const business = bizResults.find((b) => b.is_active) || bizResults[0];
+
+  if (!business.is_active) {
+    console.error(`[Webhook] ❌ Business "${business.name}" is inactive (is_active=false). Ignoring message.`);
+    return;
+  }
+
   console.log(`[Webhook] ✓ Business: ${business.name} (${business.id.substring(0, 8)})`);
   console.log(`[Webhook] Token: ${business.whatsapp_access_token ? business.whatsapp_access_token.substring(0, 12) + "...(" + business.whatsapp_access_token.length + ")" : "NONE"}`);
   console.log(`[Webhook] AI Enabled: ${business.ai_enabled} | Context: ${business.business_context?.length || 0} chars`);
