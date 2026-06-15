@@ -302,6 +302,133 @@ Confirm: "Your free demo class for [Course] is booked on [Date] at [Time]. Bring
     qualificationCriteria: `Score based on buying intent and readiness to take action.`,
     bookingInstructions: `When booking, collect name, service interest, and preferred date/time.`,
   },
+
+  // ─── Finance / Insurance ────────────────────────────────────────────────
+  finance: {
+    type: "finance",
+    label: "Finance / Insurance",
+    leadFields: [
+      { key: "service_type", label: "Service Needed", question: "What type of financial service are you looking for?", required: true, type: "select", options: ["Loan", "Insurance", "Investment", "Tax Filing", "Credit Card", "Mutual Fund"] },
+      { key: "amount", label: "Amount/Coverage", question: "What amount or coverage are you considering?", required: false, type: "text" },
+      { key: "timeline", label: "Timeline", question: "When do you need this?", required: false, type: "text" },
+      { key: "preferred_date", label: "Consultation Date", question: "Would you like to schedule a consultation?", required: false, type: "date" },
+    ],
+    appointmentTypes: [
+      { id: "consultation", label: "Financial Consultation", defaultDuration: 30, description: "Discuss financial needs" },
+      { id: "application", label: "Application Review", defaultDuration: 45, description: "Review documents" },
+    ],
+    aiInstructions: `You are a financial advisor assistant. Help customers understand their options.
+Key behaviors:
+- Ask about their financial goal before recommending products
+- Never give specific investment returns guarantees
+- Explain options clearly in simple language
+- Guide toward booking a consultation with an advisor
+- Collect basic info: service type, amount, timeline`,
+    qualificationCriteria: `Score high (70+) if: clear need, ready for consultation. Score medium if: exploring options.`,
+    bookingInstructions: `Collect: service type, preferred date/time. Confirm: "Your financial consultation is scheduled for [Date] at [Time]."`,
+  },
+
+  // ─── Education / Tutoring ──────────────────────────────────────────────
+  education: {
+    type: "education",
+    label: "Education / Tutoring",
+    leadFields: [
+      { key: "subject", label: "Subject/Course", question: "Which subject or course are you interested in?", required: true, type: "text" },
+      { key: "level", label: "Student Level", question: "What grade or level is the student?", required: false, type: "text" },
+      { key: "goal", label: "Goal", question: "What's the learning goal? (exam prep, improvement, etc.)", required: false, type: "text" },
+      { key: "schedule", label: "Preferred Schedule", question: "What days and times work for classes?", required: false, type: "text" },
+      { key: "demo_date", label: "Demo Date", question: "Would you like to try a free demo class?", required: false, type: "date" },
+    ],
+    appointmentTypes: [
+      { id: "demo", label: "Free Demo Class", defaultDuration: 45, description: "Try a class free" },
+      { id: "assessment", label: "Student Assessment", defaultDuration: 30, description: "Evaluate current level" },
+      { id: "counseling", label: "Parent Counseling", defaultDuration: 20, description: "Discuss student progress" },
+    ],
+    aiInstructions: `You are an education counselor. Help students/parents find the right program.
+Key behaviors:
+- Understand the student's current level and goals
+- Recommend appropriate courses and batches
+- Offer free demo class as the primary conversion tool
+- Share faculty info and results when asked
+- Be encouraging about academic goals`,
+    qualificationCriteria: `Score high if: wants demo, clear subject interest. Score medium if: comparing options.`,
+    bookingInstructions: `Collect: subject, student name, preferred date. Confirm: "Your free demo class for [Subject] is booked on [Date] at [Time]!"`,
+  },
+
+  // ─── Automotive ─────────────────────────────────────────────────────────
+  automotive: {
+    type: "automotive",
+    label: "Automotive",
+    leadFields: [
+      { key: "vehicle_interest", label: "Vehicle Interest", question: "Which vehicle are you interested in?", required: true, type: "text" },
+      { key: "budget", label: "Budget", question: "What's your budget range?", required: false, type: "text" },
+      { key: "purpose", label: "Purpose", question: "Is this for personal use or business?", required: false, type: "select", options: ["Personal", "Business", "Family"] },
+      { key: "test_drive_date", label: "Test Drive Date", question: "Would you like to schedule a test drive?", required: false, type: "date" },
+    ],
+    appointmentTypes: [
+      { id: "test_drive", label: "Test Drive", defaultDuration: 45, description: "Drive the vehicle" },
+      { id: "consultation", label: "Sales Consultation", defaultDuration: 30, description: "Discuss options and financing" },
+      { id: "service", label: "Service Appointment", defaultDuration: 60, description: "Vehicle maintenance/repair" },
+    ],
+    aiInstructions: `You are a vehicle sales consultant. Help customers find the right car.
+Key behaviors:
+- Ask about their needs (family, commute, off-road, etc.)
+- Share specs and features of available vehicles
+- Discuss financing and EMI options when asked
+- Push toward test drive — that's the key conversion
+- Compare models when customer is undecided`,
+    qualificationCriteria: `Score high if: specific model interest + budget ready. Score medium if: comparing models.`,
+    bookingInstructions: `Collect: vehicle interest, preferred date. Confirm: "Your test drive for [Vehicle] is booked on [Date] at [Time]. Bring your license!"`,
+  },
+
+  // ─── Legal ──────────────────────────────────────────────────────────────
+  legal: {
+    type: "legal",
+    label: "Legal Services",
+    leadFields: [
+      { key: "case_type", label: "Legal Matter", question: "What type of legal matter do you need help with?", required: true, type: "text" },
+      { key: "urgency", label: "Urgency", question: "How urgent is this matter?", required: false, type: "select", options: ["Immediate", "This Week", "This Month", "No Rush"] },
+      { key: "preferred_date", label: "Consultation Date", question: "When would you like to schedule a consultation?", required: false, type: "date" },
+    ],
+    appointmentTypes: [
+      { id: "consultation", label: "Legal Consultation", defaultDuration: 30, description: "Initial case discussion" },
+      { id: "document_review", label: "Document Review", defaultDuration: 60, description: "Review legal documents" },
+    ],
+    aiInstructions: `You are a legal office assistant. Help clients schedule consultations.
+Key behaviors:
+- Be professional and empathetic
+- NEVER give legal advice — always recommend a consultation with the lawyer
+- Understand the type of legal matter to route to the right specialist
+- Mention confidentiality and professionalism
+- Book consultation as the primary action`,
+    qualificationCriteria: `Score high if: clear legal need + urgency. Score medium if: general inquiry.`,
+    bookingInstructions: `Collect: legal matter type, preferred date/time. Confirm: "Your legal consultation is scheduled for [Date] at [Time]. All discussions are confidential."`,
+  },
+
+  // ─── E-commerce ─────────────────────────────────────────────────────────
+  ecommerce: {
+    type: "ecommerce",
+    label: "E-commerce / Retail",
+    leadFields: [
+      { key: "product_interest", label: "Product Interest", question: "What product are you looking for?", required: true, type: "text" },
+      { key: "budget", label: "Budget", question: "What's your budget?", required: false, type: "text" },
+      { key: "delivery_location", label: "Delivery Location", question: "Where should we deliver?", required: false, type: "text" },
+    ],
+    appointmentTypes: [
+      { id: "consultation", label: "Product Consultation", defaultDuration: 15, description: "Help choosing products" },
+      { id: "pickup", label: "Store Pickup", defaultDuration: 10, description: "Pick up order" },
+    ],
+    aiInstructions: `You are a shopping assistant. Help customers find the right products.
+Key behaviors:
+- Understand what they're looking for
+- Recommend specific products from your catalog
+- Share prices, availability, and delivery options
+- Handle order status queries
+- Upsell related products naturally
+- Guide toward purchase or store visit`,
+    qualificationCriteria: `Score high if: ready to buy, asking about payment/delivery. Score medium if: browsing.`,
+    bookingInstructions: `Collect: product, delivery info. Confirm: "Your order has been noted! We'll confirm delivery details shortly."`,
+  },
 };
 
 /**
