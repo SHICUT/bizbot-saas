@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { WhatsAppClient } from "./client";
 import { generateAIReply } from "@/lib/ai/reply-engine";
-import { detectAndCreateAppointment } from "@/lib/ai/appointment-detector";
+import { detectAndCreateAppointment, detectReschedule } from "@/lib/ai/appointment-detector";
 import { enrichLeadFromConversation } from "@/lib/ai/lead-enricher";
 import type {
   WebhookPayload,
@@ -218,6 +218,9 @@ async function processIncomingMessage(
     detectAndCreateAppointment(replyText, content, business.id, lead.id, contact?.profile?.name || null, message.from, business.type)
       .then((created) => { if (created) console.log(`[⚡] 📅 Appointment created from AI reply`); })
       .catch((err) => console.error("[⚡] Appointment detection error:", err));
+    detectReschedule(replyText, content, business.id, lead.id)
+      .then((rescheduled) => { if (rescheduled) console.log(`[⚡] 📅 Appointment rescheduled`); })
+      .catch(() => {});
     enrichLeadFromConversation(content, replyText, business.id, lead.id, business.type || "other", conversationHistory)
       .catch((err) => console.error("[⚡] Lead enrichment error:", err));
 
