@@ -37,30 +37,37 @@ export async function detectAndCreateAppointment(
   leadPhone: string,
   businessType?: string
 ): Promise<boolean> {
-  // Check if the AI reply indicates a confirmed booking
-  if (!isBookingConfirmation(aiReply)) {
+  // Step 1: Check if the AI reply contains booking confirmation language
+  const isConfirmation = isBookingConfirmation(aiReply);
+  console.log(`[Appt] Check: isBookingConfirmation=${isConfirmation} | AI reply: "${aiReply.substring(0, 80)}..."`);
+  
+  if (!isConfirmation) {
     return false;
   }
 
-  // Extract appointment details from the reply + incoming message
+  // Step 2: Extract date and time
   const details = extractAppointmentDetails(aiReply, incomingMessage);
+  console.log(`[Appt] Extracted: date=${details?.date || "NULL"} time=${details?.time || "NULL"} service=${details?.service || "NULL"}`);
+  
   if (!details) {
-    console.warn("[AppointmentDetector] Detected booking language but couldn't extract date/time");
+    console.warn("[Appt] ⚠ Booking language detected but date/time extraction failed.");
+    console.warn(`[Appt] Customer said: "${incomingMessage.substring(0, 100)}"`);
+    console.warn(`[Appt] AI replied: "${aiReply.substring(0, 100)}"`);
     return false;
   }
 
-  // Enhance with industry-specific info
+  // Step 3: Get industry-specific config
   const config = businessType ? getIndustryConfig(businessType) : null;
   const service = details.service || (config?.appointmentTypes[0]?.label) || "Appointment";
   const duration = config?.appointmentTypes.find((a) => 
     service.toLowerCase().includes(a.label.toLowerCase()) || a.label.toLowerCase().includes(service.toLowerCase())
   )?.defaultDuration || 60;
 
-  // Create appointment in database
+  // Step 4: Create appointment in database
   const supabase = createAdminClient();
   const scheduledAt = `${details.date}T${details.time}:00`;
 
-  const { error } = await supabase.from("appointments").insert({
+  const insertPayload = {
     business_id: businessId,
     lead_id: leadId,
     customer_name: leadName || "Customer",
@@ -75,17 +82,22 @@ export async function detectAndCreateAppointment(
     source: "whatsapp",
     booked_by: "ai",
     booked_via: "whatsapp",
-  });
+  };
+
+  console.log(`[Appt] Inserting:`, JSON.stringify({ ...insertPayload, business_id: businessId.substring(0, 8), lead_id: leadId.substring(0, 8) }));
+
+  const { data: inserted, error } = await supabase.from("appointments").insert(insertPayload).select("id").single();
 
   if (error) {
-    console.error("[AppointmentDetector] Failed to create appointment:", error.message);
+    console.error(`[Appt] ❌ INSERT FAILED: ${error.message} | Code: ${error.code} | Details: ${error.details}`);
+    console.error(`[Appt] Hint: ${error.hint || "none"}`);
     return false;
   }
 
-  // Update lead status
+  // Step 5: Update lead status
   await supabase.from("leads").update({ status: "qualified" }).eq("id", leadId);
 
-  console.log(`[AppointmentDetector] ✓ Appointment created: ${details.title} on ${details.date} at ${details.time} for lead ${leadId.substring(0, 8)}`);
+  console.log(`[Appt] ✓ APPOINTMENT CREATED: id=${inserted.id} | ${service} on ${details.date} at ${details.time} | Lead: ${leadId.substring(0, 8)}`);
   return true;
 }
 

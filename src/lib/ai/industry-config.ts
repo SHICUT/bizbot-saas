@@ -363,6 +363,18 @@ ${appointmentTypes}
 # Booking Rules
 ${config.bookingInstructions}
 
+# CRITICAL BOOKING FORMAT RULE
+When confirming a booking, ALWAYS include the specific date AND time in your reply.
+Use exact words like "booked", "confirmed", or "scheduled" followed by the date and time.
+Examples of CORRECT confirmations:
+- "Done! Your appointment is booked for tomorrow at 5 PM."
+- "Great, I've confirmed your visit for Monday at 10 AM."
+- "Your session is scheduled for 15th June at 3 PM."
+
+NEVER confirm a booking without stating the date AND time.
+If the customer hasn't specified a time, ask: "What time works best for you?"
+If they haven't specified a date, ask: "Which day would you prefer?"
+
 # Lead Qualification
 ${config.qualificationCriteria}
 

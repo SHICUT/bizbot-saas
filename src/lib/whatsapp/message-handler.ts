@@ -214,9 +214,12 @@ async function processIncomingMessage(
       client.markAsRead(message.id).catch(() => {}),
     ]).catch(() => {});
 
-    // Background enrichment (completely non-blocking)
-    detectAndCreateAppointment(replyText, content, business.id, lead.id, contact?.profile?.name || null, message.from, business.type).catch(() => {});
-    enrichLeadFromConversation(content, replyText, business.id, lead.id, business.type || "other", conversationHistory).catch(() => {});
+    // Background enrichment (non-blocking but logs errors)
+    detectAndCreateAppointment(replyText, content, business.id, lead.id, contact?.profile?.name || null, message.from, business.type)
+      .then((created) => { if (created) console.log(`[⚡] 📅 Appointment created from AI reply`); })
+      .catch((err) => console.error("[⚡] Appointment detection error:", err));
+    enrichLeadFromConversation(content, replyText, business.id, lead.id, business.type || "other", conversationHistory)
+      .catch((err) => console.error("[⚡] Lead enrichment error:", err));
 
   } catch (sendErr) {
     console.error(`[⚡] Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
