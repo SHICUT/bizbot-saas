@@ -113,6 +113,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-2">
           <a href="/admin/users"><Button size="sm" variant="secondary"><Users className="w-3.5 h-3.5" />Users</Button></a>
           <a href="/admin/coupons"><Button size="sm" variant="secondary"><Tag className="w-3.5 h-3.5" />Coupons</Button></a>
+          <a href="/admin/demo"><Button size="sm" variant="secondary"><Zap className="w-3.5 h-3.5" />Demo</Button></a>
           <Badge variant="info">Admin</Badge>
           <Button size="sm" variant="secondary" onClick={loadData}><RefreshCw className="w-3.5 h-3.5" /></Button>
         </div>
