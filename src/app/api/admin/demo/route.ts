@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "reset") {
-    await resetDemo();
-    return NextResponse.json({ success: true, message: "Demo data cleared" });
+    const result = await resetDemo();
+    return NextResponse.json(result);
   }
 
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });

@@ -37,15 +37,33 @@ export default function AdminDemoPage() {
 
   async function generate() {
     setGenerating(true); setMsg(null);
-    const res = await fetch("/api/admin/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "generate" }) });
-    const data = await res.json();
-    if (data.success) {
-      setMsg(`✓ Demo generated in ${(data.duration / 1000).toFixed(1)}s`);
-      setLastResult({ duration: data.duration });
-      setStats(data.stats);
-      setExists(true);
-    } else {
-      setMsg(`✗ ${data.error || "Generation failed"}`);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 55000); // 55s client timeout
+      
+      const res = await fetch("/api/admin/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate" }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      const data = await res.json();
+      if (data.success) {
+        setMsg(`✓ Demo generated in ${((data.duration || 0) / 1000).toFixed(1)}s — ${data.stats?.leads} leads, ${data.stats?.messages} messages`);
+        setStats(data.stats);
+        setExists(true);
+      } else {
+        setMsg(`✗ ${data.error || "Generation failed"}\n${(data.log || []).join("\n")}`);
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      if (errMsg.includes("abort")) {
+        setMsg("✗ Generation timed out (>55s). Check Vercel function logs for details.");
+      } else {
+        setMsg(`✗ Network error: ${errMsg}`);
+      }
     }
     setGenerating(false);
   }
