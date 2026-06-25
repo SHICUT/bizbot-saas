@@ -57,12 +57,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Sidebar />
       <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="lg:pl-[260px] flex flex-col min-h-screen">
         <Topbar onMenuClick={() => setMobileNavOpen(true)} />
-        <main className="flex-1 p-4 lg:p-6 max-w-[1600px]">{children}</main>
+        <main className="flex-1 p-4 lg:p-6 max-w-[1600px] overflow-x-hidden">{children}</main>
       </div>
       <FloatingSupport />
     </div>
