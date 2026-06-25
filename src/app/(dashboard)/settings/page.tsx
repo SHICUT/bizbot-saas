@@ -231,7 +231,7 @@ export default function SettingsPage() {
             </>
           ) : (
             <>
-              {/* Not Connected State — Simple Setup */}
+              {/* Not Connected State */}
               <Card>
                 <div className="text-center py-6">
                   <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
@@ -239,24 +239,32 @@ export default function SettingsPage() {
                   </div>
                   <h3 className="text-lg font-bold text-text-primary mb-2">Connect WhatsApp</h3>
                   <p className="text-sm text-text-muted max-w-md mx-auto mb-6">
-                    Connect your WhatsApp Business number to start receiving messages and let AI reply to your customers automatically.
+                    Connect your WhatsApp Business number to start receiving messages and let AI reply automatically.
                   </p>
 
-                  {/* Primary: Manual Setup (always works) */}
-                  <Button onClick={() => setShowManualSetup(true)} className="mb-3">
-                    <MessageSquare className="w-4 h-4" /> Connect WhatsApp
-                  </Button>
+                  {/* Facebook Embedded Signup Button */}
+                  <FacebookConnectButton
+                    onSuccess={(data) => {
+                      setWaData({ phoneNumberId: data.phone_number_id, businessAccountId: data.waba_id || "", accessToken: "••••••••••••••••", connected: true, connectedAt: new Date().toISOString() });
+                      setSuccessMsg(`WhatsApp connected! Phone: ${data.phone_number || "Connected"}`);
+                    }}
+                    onError={(err) => setErrorMsg(err)}
+                  />
 
-                  <p className="text-xs text-text-muted max-w-sm mx-auto">
-                    You&apos;ll need your Phone Number ID and Access Token from the Meta Developer Dashboard.
-                  </p>
+                  {/* Manual Setup Link */}
+                  <div className="mt-5 pt-4 border-t border-border">
+                    <button onClick={() => setShowManualSetup(!showManualSetup)} className="text-xs text-text-muted hover:text-primary font-medium transition-colors">
+                      {showManualSetup ? "Hide manual setup" : "Use Manual Setup (Advanced) →"}
+                    </button>
+                  </div>
                 </div>
               </Card>
 
-              {/* Manual Setup Form */}
+              {/* Manual Setup Form (hidden by default) */}
               {showManualSetup && (
                 <Card>
                   <h3 className="text-sm font-semibold text-text-primary mb-4">Manual Setup (Advanced)</h3>
+                  <p className="text-xs text-text-muted mb-4">Enter credentials from your Meta Developer Dashboard.</p>
                   <form onSubmit={handleWhatsAppConnect} className="space-y-4">
                     <Input id="phoneNumberId" name="phoneNumberId" label="Phone Number ID" placeholder="From Meta Developer Dashboard" required />
                     <Input id="businessAccountId" name="businessAccountId" label="Business Account ID" placeholder="Optional" />
@@ -293,4 +301,162 @@ export default function SettingsPage() {
       )}
     </div>
   );
+}
+
+// ─── Facebook Connect Button ─────────────────────────────────────────────────
+
+function FacebookConnectButton({ onSuccess, onError }: {
+  onSuccess: (data: { phone_number_id: string; waba_id?: string; phone_number?: string }) => void;
+  onError: (error: string) => void;
+}) {
+  const [status, setStatus] = useState<"idle" | "loading_sdk" | "initializing" | "opening" | "exchanging">("idle");
+  const [fbError, setFbError] = useState<string | null>(null);
+
+  const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
+
+  async function handleClick() {
+    setFbError(null);
+    console.log("[Embedded Signup] Button clicked");
+
+    // Validate App ID
+    if (!META_APP_ID) {
+      const errMsg = "Meta App ID is not configured. Set NEXT_PUBLIC_META_APP_ID in Vercel environment variables.";
+      console.error("[Embedded Signup]", errMsg);
+      setFbError(errMsg);
+      onError(errMsg);
+      return;
+    }
+
+    // Load SDK if not loaded
+    setStatus("loading_sdk");
+    console.log("[Embedded Signup] Loading SDK...");
+
+    try {
+      await loadFacebookSDK(META_APP_ID);
+    } catch (err) {
+      const errMsg = `Facebook SDK failed to load: ${err instanceof Error ? err.message : "Network error"}`;
+      console.error("[Embedded Signup]", errMsg);
+      setFbError(errMsg);
+      setStatus("idle");
+      onError(errMsg);
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const FB = (window as any).FB;
+    if (!FB) {
+      const errMsg = "Facebook SDK loaded but FB object not available. Please refresh.";
+      console.error("[Embedded Signup]", errMsg);
+      setFbError(errMsg);
+      setStatus("idle");
+      onError(errMsg);
+      return;
+    }
+
+    // Launch OAuth
+    setStatus("opening");
+    console.log("[Embedded Signup] Launching OAuth popup...");
+
+    FB.login((response: { authResponse?: { code?: string }; status?: string }) => {
+      console.log("[Embedded Signup] OAuth response:", response.status, response.authResponse ? "has auth" : "no auth");
+
+      if (!response.authResponse?.code) {
+        const errMsg = response.status === "unknown" 
+          ? "Login cancelled. Please try again." 
+          : "Facebook login failed. Check popup blocker or try again.";
+        console.error("[Embedded Signup]", errMsg);
+        setFbError(errMsg);
+        setStatus("idle");
+        return;
+      }
+
+      // Exchange code
+      setStatus("exchanging");
+      console.log("[Embedded Signup] Exchanging code...");
+
+      fetch("/api/business/whatsapp-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: response.authResponse.code }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            console.log("[Embedded Signup] ✓ SUCCESS:", data);
+            setStatus("idle");
+            onSuccess({ phone_number_id: data.phone_number_id, waba_id: data.waba_id, phone_number: data.phone_number });
+          } else {
+            const errMsg = data.error || "Connection failed. Please try again.";
+            console.error("[Embedded Signup] Backend error:", errMsg);
+            setFbError(errMsg);
+            setStatus("idle");
+            onError(errMsg);
+          }
+        })
+        .catch((err) => {
+          const errMsg = "Network error during connection. Please try again.";
+          console.error("[Embedded Signup] Fetch error:", err);
+          setFbError(errMsg);
+          setStatus("idle");
+          onError(errMsg);
+        });
+    }, {
+      config_id: process.env.NEXT_PUBLIC_META_CONFIG_ID || undefined,
+      response_type: "code",
+      override_default_response_type: true,
+      extras: { setup: {}, featureType: "", sessionInfoVersion: 2 },
+    });
+  }
+
+  return (
+    <div>
+      <Button onClick={handleClick} disabled={status !== "idle"} className="w-full max-w-xs">
+        {status === "idle" && <><MessageSquare className="w-4 h-4" /> Connect with Facebook</>}
+        {status === "loading_sdk" && <><Loader2 className="w-4 h-4 animate-spin" /> Loading Facebook SDK...</>}
+        {status === "initializing" && <><Loader2 className="w-4 h-4 animate-spin" /> Initializing...</>}
+        {status === "opening" && <><Loader2 className="w-4 h-4 animate-spin" /> Opening Facebook...</>}
+        {status === "exchanging" && <><Loader2 className="w-4 h-4 animate-spin" /> Connecting account...</>}
+      </Button>
+
+      {fbError && (
+        <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-100 text-left max-w-xs mx-auto">
+          <p className="text-xs text-red-700">{fbError}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function loadFacebookSDK(appId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).FB) { resolve(); return; }
+
+    // Already loading
+    if (document.getElementById("facebook-jssdk")) {
+      // Wait for it to finish
+      const check = setInterval(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((window as any).FB) { clearInterval(check); resolve(); }
+      }, 100);
+      setTimeout(() => { clearInterval(check); reject(new Error("SDK load timeout")); }, 10000);
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).fbAsyncInit = function() {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).FB.init({ appId, cookie: true, xfbml: true, version: "v23.0" });
+      console.log("[Embedded Signup] SDK Initialized ✓");
+      resolve();
+    };
+
+    const script = document.createElement("script");
+    script.id = "facebook-jssdk";
+    script.src = "https://connect.facebook.net/en_US/sdk.js";
+    script.async = true;
+    script.onerror = () => reject(new Error("Failed to load Facebook SDK script"));
+    document.head.appendChild(script);
+  });
 }
