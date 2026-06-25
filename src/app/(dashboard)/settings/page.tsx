@@ -242,28 +242,18 @@ export default function SettingsPage() {
                     Connect your WhatsApp Business number to start receiving messages and let AI reply to your customers automatically.
                   </p>
 
-                  {/* Embedded Signup Button */}
-                  <Button onClick={() => {
-                    const appId = process.env.NEXT_PUBLIC_META_APP_ID;
-                    if (appId) {
-                      const redirectUri = `${window.location.origin}/api/business/whatsapp-signup/callback`;
-                      const scope = "whatsapp_business_management,whatsapp_business_messaging,business_management";
-                      window.open(`https://www.facebook.com/v23.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`, "meta_signup", "width=600,height=700");
-                    } else {
-                      setShowManualSetup(true);
-                    }
-                  }} className="mb-4">
-                    <MessageSquare className="w-4 h-4" /> Connect with Facebook
+                  {/* Primary: Manual Setup (always works) */}
+                  <Button onClick={() => setShowManualSetup(true)} className="mb-3">
+                    <MessageSquare className="w-4 h-4" /> Connect WhatsApp
                   </Button>
 
-                  <p className="text-xs text-text-muted">or</p>
-                  <button onClick={() => setShowManualSetup(!showManualSetup)} className="text-xs text-primary font-medium hover:underline mt-2">
-                    {showManualSetup ? "Hide manual setup" : "Connect manually (advanced)"}
-                  </button>
+                  <p className="text-xs text-text-muted max-w-sm mx-auto">
+                    You&apos;ll need your Phone Number ID and Access Token from the Meta Developer Dashboard.
+                  </p>
                 </div>
               </Card>
 
-              {/* Manual Setup (hidden by default) */}
+              {/* Manual Setup Form */}
               {showManualSetup && (
                 <Card>
                   <h3 className="text-sm font-semibold text-text-primary mb-4">Manual Setup (Advanced)</h3>
