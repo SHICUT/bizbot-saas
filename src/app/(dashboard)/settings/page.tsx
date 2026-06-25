@@ -355,44 +355,45 @@ function FacebookConnectButton({ onSuccess, onError }: {
       return;
     }
 
-    // Launch OAuth
+    // Launch Embedded Signup
     setStatus("opening");
-    console.log("[Embedded Signup] Launching OAuth popup...");
 
-    // Build login options
+    // Meta Embedded Signup REQUIRES a config_id from:
+    // Meta Dashboard → Your App → Use Cases → Customize → Facebook Login for Business
+    // → Create Configuration → WhatsApp Embedded Signup
     const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
-    const loginOptions: Record<string, unknown> = {
-      response_type: "code",
-      override_default_response_type: true,
-    };
 
-    if (configId) {
-      // Full Embedded Signup flow (requires WhatsApp Embedded Signup config in Meta Dashboard)
-      loginOptions.config_id = configId;
-      loginOptions.extras = { setup: {}, featureType: "", sessionInfoVersion: 2 };
-      console.log("[Embedded Signup] Using config_id:", configId);
-    } else {
-      // Standard OAuth flow (requests permissions directly)
-      loginOptions.scope = "whatsapp_business_management,whatsapp_business_messaging,business_management";
-      console.log("[Embedded Signup] No config_id — using standard OAuth with scope");
+    if (!configId) {
+      // No config_id = cannot do Embedded Signup. Show clear error.
+      const errMsg = "WhatsApp Embedded Signup configuration ID is missing. Set NEXT_PUBLIC_META_CONFIG_ID in Vercel. Create it in Meta Dashboard → Facebook Login for Business → Configurations.";
+      console.error("[Embedded Signup]", errMsg);
+      setFbError(errMsg);
+      setStatus("idle");
+      onError(errMsg);
+      return;
     }
 
+    console.log("[Embedded Signup] Launching with config_id:", configId);
+
+    // Official Meta Embedded Signup parameters
+    // Reference: https://developers.facebook.com/docs/whatsapp/embedded-signup
     FB.login((response: { authResponse?: { code?: string }; status?: string }) => {
-      console.log("[Embedded Signup] OAuth response:", response.status, response.authResponse ? "has auth" : "no auth");
+      console.log("[Embedded Signup] Response status:", response.status);
+      console.log("[Embedded Signup] Has authResponse:", !!response.authResponse);
 
       if (!response.authResponse?.code) {
-        const errMsg = response.status === "unknown" 
-          ? "Login cancelled. Please try again." 
-          : "Facebook login failed. Check popup blocker or try again.";
+        const errMsg = response.status === "unknown"
+          ? "Login was cancelled. Please try again."
+          : `Facebook login failed (status: ${response.status}). Please try again.`;
         console.error("[Embedded Signup]", errMsg);
         setFbError(errMsg);
         setStatus("idle");
         return;
       }
 
-      // Exchange code
+      // Exchange code for credentials
       setStatus("exchanging");
-      console.log("[Embedded Signup] Exchanging code for credentials...");
+      console.log("[Embedded Signup] Got code, exchanging for credentials...");
 
       fetch("/api/business/whatsapp-signup", {
         method: "POST",
@@ -402,25 +403,31 @@ function FacebookConnectButton({ onSuccess, onError }: {
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            console.log("[Embedded Signup] ✓ SUCCESS:", data);
+            console.log("[Embedded Signup] ✓ Connected:", data.phone_number);
             setStatus("idle");
             onSuccess({ phone_number_id: data.phone_number_id, waba_id: data.waba_id, phone_number: data.phone_number });
           } else {
-            const errMsg = data.error || "Connection failed. Please try again.";
-            console.error("[Embedded Signup] Backend error:", errMsg);
-            setFbError(errMsg);
+            console.error("[Embedded Signup] Backend error:", data.error);
+            setFbError(data.error || "Connection failed.");
             setStatus("idle");
-            onError(errMsg);
+            onError(data.error || "Connection failed.");
           }
         })
-        .catch((err) => {
-          const errMsg = "Network error during connection. Please try again.";
-          console.error("[Embedded Signup] Fetch error:", err);
-          setFbError(errMsg);
+        .catch(() => {
+          setFbError("Network error. Please try again.");
           setStatus("idle");
-          onError(errMsg);
+          onError("Network error.");
         });
-    }, loginOptions);
+    }, {
+      config_id: configId,
+      response_type: "code",
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+        featureType: "",
+        sessionInfoVersion: 2,
+      },
+    });
   }
 
   return (
