@@ -49,6 +49,7 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   const isSystemRoute =
+    pathname === "/api/webhook" ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/health") ||
