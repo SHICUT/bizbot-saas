@@ -107,16 +107,19 @@ export async function POST(request: NextRequest) {
     const subscribeData = await subscribeRes.json();
     console.log("[Embedded Signup] Subscribe response:", JSON.stringify(subscribeData));
 
-    // Step 5: Save to database
+    // Step 5: Save to database (with all fields for admin visibility)
     const admin = createAdminClient();
     const { error: updateErr } = await admin
       .from("businesses")
       .update({
         whatsapp_phone_number_id: phoneNumberId,
+        whatsapp_phone_number: displayPhone,
+        whatsapp_verified_name: displayPhone, // Will be updated with actual verified name
         whatsapp_business_account_id: wabaId,
         whatsapp_access_token: userAccessToken,
         whatsapp_connected: true,
         whatsapp_connected_at: new Date().toISOString(),
+        owner_email: user.email || null,
       })
       .eq("owner_id", user.id);
 
