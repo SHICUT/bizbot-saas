@@ -317,6 +317,8 @@ function FacebookConnectButton({ onSuccess, onError }: {
   async function handleClick() {
     setFbError(null);
     console.log("[Embedded Signup] Button clicked");
+    console.log("[Embedded Signup] NEXT_PUBLIC_META_APP_ID =", META_APP_ID || "NOT SET");
+    console.log("[Embedded Signup] NEXT_PUBLIC_META_CONFIG_ID =", process.env.NEXT_PUBLIC_META_CONFIG_ID || "NOT SET");
 
     // Validate App ID
     if (!META_APP_ID) {
@@ -357,6 +359,24 @@ function FacebookConnectButton({ onSuccess, onError }: {
     setStatus("opening");
     console.log("[Embedded Signup] Launching OAuth popup...");
 
+    // Build login options
+    const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
+    const loginOptions: Record<string, unknown> = {
+      response_type: "code",
+      override_default_response_type: true,
+    };
+
+    if (configId) {
+      // Full Embedded Signup flow (requires WhatsApp Embedded Signup config in Meta Dashboard)
+      loginOptions.config_id = configId;
+      loginOptions.extras = { setup: {}, featureType: "", sessionInfoVersion: 2 };
+      console.log("[Embedded Signup] Using config_id:", configId);
+    } else {
+      // Standard OAuth flow (requests permissions directly)
+      loginOptions.scope = "whatsapp_business_management,whatsapp_business_messaging,business_management";
+      console.log("[Embedded Signup] No config_id — using standard OAuth with scope");
+    }
+
     FB.login((response: { authResponse?: { code?: string }; status?: string }) => {
       console.log("[Embedded Signup] OAuth response:", response.status, response.authResponse ? "has auth" : "no auth");
 
@@ -372,7 +392,7 @@ function FacebookConnectButton({ onSuccess, onError }: {
 
       // Exchange code
       setStatus("exchanging");
-      console.log("[Embedded Signup] Exchanging code...");
+      console.log("[Embedded Signup] Exchanging code for credentials...");
 
       fetch("/api/business/whatsapp-signup", {
         method: "POST",
@@ -400,12 +420,7 @@ function FacebookConnectButton({ onSuccess, onError }: {
           setStatus("idle");
           onError(errMsg);
         });
-    }, {
-      config_id: process.env.NEXT_PUBLIC_META_CONFIG_ID || undefined,
-      response_type: "code",
-      override_default_response_type: true,
-      extras: { setup: {}, featureType: "", sessionInfoVersion: 2 },
-    });
+    }, loginOptions);
   }
 
   return (
