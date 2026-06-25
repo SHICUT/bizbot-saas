@@ -8,18 +8,16 @@ import type { WebhookPayload } from "@/lib/whatsapp/types";
  *
  * GET  → Health check OR Meta verification
  * POST → Incoming WhatsApp events
- *
- * Compatible with Meta WhatsApp Cloud API production requirements.
  */
 
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.META_VERIFY_TOKEN || "flownex_verify_123";
+function getVerifyToken(): string {
+  // Check multiple env var names (different projects use different names)
+  const token = process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || "flownex_verify_123";
+  return token.trim(); // Remove any trailing whitespace/newlines
+}
 
 /**
  * GET /api/webhook
- *
- * Two behaviors:
- * 1. No query params → returns "Webhook is running" (health check)
- * 2. Meta verification → validates token, returns challenge
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -27,19 +25,45 @@ export async function GET(request: NextRequest) {
   const token = params.get("hub.verify_token");
   const challenge = params.get("hub.challenge");
 
+  const expectedToken = getVerifyToken();
+
+  // Log every verification attempt for debugging
+  console.log("=== WEBHOOK VERIFICATION ===");
+  console.log("hub.mode:", JSON.stringify(mode));
+  console.log("hub.verify_token:", JSON.stringify(token));
+  console.log("expected token:", JSON.stringify(expectedToken));
+  console.log("hub.challenge:", JSON.stringify(challenge));
+  console.log("ENV META_VERIFY_TOKEN:", JSON.stringify(process.env.META_VERIFY_TOKEN || "NOT SET"));
+  console.log("ENV WHATSAPP_VERIFY_TOKEN:", JSON.stringify(process.env.WHATSAPP_VERIFY_TOKEN || "NOT SET"));
+  console.log("match:", token === expectedToken);
+  console.log("============================");
+
   // If no verification params → simple health check
   if (!mode && !token && !challenge) {
     return new Response("Webhook is running", { status: 200, headers: { "Content-Type": "text/plain" } });
   }
 
   // Meta verification request
-  if (mode === "subscribe" && token === VERIFY_TOKEN && challenge) {
-    console.log("[Webhook] ✓ Meta verification success");
-    return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
+  if (mode === "subscribe" && token === expectedToken && challenge) {
+    console.log("✓ VERIFICATION SUCCESS — returning challenge as-is");
+    // Return challenge EXACTLY as received — no encoding, no JSON, no modification
+    return new Response(challenge, {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
+    });
   }
 
-  // Verification failed
-  console.error(`[Webhook] ✗ Verification failed | mode=${mode} token=${token} expected=${VERIFY_TOKEN}`);
+  // Verification failed — log details
+  console.error("✗ VERIFICATION FAILED");
+  if (mode !== "subscribe") console.error("  Reason: hub.mode is not 'subscribe', got:", mode);
+  if (token !== expectedToken) {
+    console.error("  Reason: TOKEN MISMATCH");
+    console.error(`  Received: "${token}" (length: ${token?.length})`);
+    console.error(`  Expected: "${expectedToken}" (length: ${expectedToken.length})`);
+    console.error(`  Char comparison:`, [...(token || "")].map((c, i) => c === expectedToken[i] ? "✓" : `✗(${c.charCodeAt(0)} vs ${expectedToken.charCodeAt(i)})`).join(""));
+  }
+  if (!challenge) console.error("  Reason: hub.challenge is missing");
+
   return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
 }
 
