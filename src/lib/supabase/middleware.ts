@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const publicRoutes = ["/login", "/register", "/confirm", "/select-plan", "/verify-email", "/forgot-password", "/onboarding"];
+  const publicRoutes = ["/login", "/register", "/confirm", "/select-plan", "/verify-email", "/forgot-password", "/onboarding", "/privacy-policy", "/terms", "/support", "/welcome"];
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   const isSystemRoute =
@@ -64,7 +64,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isPublicRoute) {
-    const allowWhenAuth = ["/select-plan", "/verify-email", "/onboarding"];
+    const allowWhenAuth = ["/select-plan", "/verify-email", "/onboarding", "/privacy-policy", "/terms", "/support", "/welcome"];
     if (allowWhenAuth.some((r) => pathname.startsWith(r))) {
       return supabaseResponse;
     }
