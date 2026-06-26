@@ -181,6 +181,14 @@ function LoginForm() {
             Don&apos;t have an account?{" "}
             <Link href="/register" className="text-blue-600 font-semibold hover:text-blue-700">Get started free</Link>
           </p>
+
+          <div className="mt-6 flex items-center justify-center gap-3 text-[11px] text-gray-400">
+            <Link href="/privacy-policy" className="hover:text-gray-600">Privacy Policy</Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-gray-600">Terms</Link>
+            <span>•</span>
+            <Link href="/support" className="hover:text-gray-600">Support</Link>
+          </div>
         </div>
       </div>
     </div>
