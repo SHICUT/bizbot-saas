@@ -30,8 +30,14 @@ export async function POST(request: NextRequest) {
   const appSecret = process.env.META_APP_SECRET;
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/business/whatsapp-signup/callback`;
 
+  console.log("[Embedded Signup] ENV check: META_APP_ID =", appId ? `${appId.substring(0, 6)}...` : "NOT SET");
+  console.log("[Embedded Signup] ENV check: META_APP_SECRET =", appSecret ? `${appSecret.substring(0, 4)}...(${appSecret.length} chars)` : "NOT SET");
+  console.log("[Embedded Signup] ENV check: NEXT_PUBLIC_APP_URL =", process.env.NEXT_PUBLIC_APP_URL || "NOT SET");
+
   if (!appId || !appSecret) {
-    return NextResponse.json({ error: "Meta App not configured. Contact support." }, { status: 500 });
+    const missing = [!appId && "META_APP_ID", !appSecret && "META_APP_SECRET"].filter(Boolean).join(", ");
+    console.error(`[Embedded Signup] ❌ Missing env vars: ${missing}`);
+    return NextResponse.json({ error: `Meta App not configured. Missing: ${missing}. Add to Vercel Environment Variables.` }, { status: 500 });
   }
 
   try {
