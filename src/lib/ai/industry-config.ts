@@ -459,51 +459,25 @@ export function getAppointmentTypes(businessType: string): IndustryAppointmentTy
 export function getIndustryPromptAdditions(businessType: string): string {
   const config = getIndustryConfig(businessType);
 
-  const fieldsToCollect = config.leadFields
+  const keyInfo = config.leadFields
     .filter((f) => f.required)
-    .map((f) => `- ${f.label}: "${f.question}"`)
-    .join("\n");
+    .map((f) => f.label)
+    .join(", ");
 
-  const optionalFields = config.leadFields
-    .filter((f) => !f.required)
-    .map((f) => `- ${f.label}: "${f.question}"`)
-    .join("\n");
-
-  const appointmentTypes = config.appointmentTypes
-    .map((a) => `- ${a.label} (${a.defaultDuration} min): ${a.description}`)
-    .join("\n");
+  const bookingTypes = config.appointmentTypes
+    .map((a) => a.label)
+    .join(", ");
 
   return `
-# Industry-Specific Instructions (${config.label})
+# Industry Context (${config.label})
 ${config.aiInstructions}
 
-# Data Collection — Gather Naturally During Conversation
-MUST collect (before booking):
-${fieldsToCollect}
+# What to learn naturally (don't force): ${keyInfo}
+# Booking options: ${bookingTypes}
 
-Optional (collect if naturally mentioned):
-${optionalFields}
-
-# Available Appointment Types
-${appointmentTypes}
-
-# Booking Rules
-${config.bookingInstructions}
-
-# CRITICAL BOOKING FORMAT RULE
-When confirming a booking, ALWAYS include the specific date AND time in your reply.
-Use exact words like "booked", "confirmed", or "scheduled" followed by the date and time.
-Examples of CORRECT confirmations:
-- "Done! Your appointment is booked for tomorrow at 5 PM."
-- "Great, I've confirmed your visit for Monday at 10 AM."
-- "Your session is scheduled for 15th June at 3 PM."
-
-NEVER confirm a booking without stating the date AND time.
-If the customer hasn't specified a time, ask: "What time works best for you?"
-If they haven't specified a date, ask: "Which day would you prefer?"
-
-# Lead Qualification
-${config.qualificationCriteria}
-
-IMPORTANT: Collect information naturally through conversation — never send a form-like list of questions. Ask ONE thing at a time. Wait for their answer before asking the next question.`;
+# BOOKING CONFIRMATION RULE
+When confirming a booking, ALWAYS state the date + time clearly.
+Use words: "booked", "confirmed", or "scheduled" + date + time.
+If date or time is missing, ask naturally: "What time works for you?"
+Never confirm without both date AND time stated in your reply.`;
 }
