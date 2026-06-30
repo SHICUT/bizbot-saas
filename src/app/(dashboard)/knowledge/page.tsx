@@ -226,40 +226,40 @@ export default function KnowledgePage() {
         setLocation({ address: b.address || "", city: b.city || "", state: b.state || "", google_maps_link: b.google_maps_link || "" });
         if (b.business_hours) setHours(b.business_hours);
       }
-      if (knowledge.services?.length) {
-        setServices(knowledge.services.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.trainers?.length) {
-        setTrainers(knowledge.trainers.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.facilities?.length) {
-        setFacilities(knowledge.facilities.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.admissions?.length) {
-        setAdmissions(knowledge.admissions.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.documents?.length) {
-        setDocuments(knowledge.documents.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.transport?.length) {
-        setTransport(knowledge.transport.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.uniform?.length) {
-        setUniform(knowledge.uniform.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
-      if (knowledge.plans?.length) {
-        setPlans(knowledge.plans.map((p: Record<string, unknown>) => ({ name: (p.name as string) || "", price: (p.price as string) || "", duration: (p.duration as string) || "month", features: (p.features as string[]) || [], is_popular: (p.is_popular as boolean) || false })));
-      }
-      if (knowledge.faqs?.length) {
-        setFaqs(knowledge.faqs.map((f: Record<string, string>) => ({ question: f.question || "", answer: f.answer || "", category: f.category || "general" })));
-      }
-      if (knowledge.services?.length) {
-        const allSvc = knowledge.services as Array<Record<string, string>>;
-        const trainerItems = allSvc.filter((s) => s.category === "trainer");
-        const facilityItems = allSvc.filter((s) => s.category === "facility");
-        if (trainerItems.length) setTrainers(trainerItems.map((s) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-        if (facilityItems.length) setFacilities(facilityItems.map((s) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
-      }
+
+      // Load sections — supports both new format (knowledge.sections) and legacy (top-level keys)
+      const sec = knowledge.sections || {};
+      const getItems = (key: string): Array<Record<string, string>> => {
+        return sec[key] || knowledge[key] || [];
+      };
+
+      const svcItems = getItems("services");
+      if (svcItems.length) setServices(svcItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const trainerItems = getItems("trainers");
+      if (trainerItems.length) setTrainers(trainerItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const facilityItems = getItems("facilities");
+      if (facilityItems.length) setFacilities(facilityItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const admissionItems = getItems("admissions");
+      if (admissionItems.length) setAdmissions(admissionItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const documentItems = getItems("documents");
+      if (documentItems.length) setDocuments(documentItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const transportItems = getItems("transport");
+      if (transportItems.length) setTransport(transportItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const uniformItems = getItems("uniform");
+      if (uniformItems.length) setUniform(uniformItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const planItems = getItems("plans");
+      if (planItems.length) setPlans(planItems.map((p: Record<string, unknown>) => ({ name: (p.name as string) || "", price: (p.price as string) || "", duration: (p.duration as string) || "month", features: (p.features as string[]) || [], is_popular: (p.is_popular as boolean) || false })));
+
+      const faqItems = getItems("faqs");
+      if (faqItems.length) setFaqs(faqItems.map((f: Record<string, string>) => ({ question: f.question || "", answer: f.answer || "", category: f.category || "general" })));
+
       setScore(scoreData.score || 0);
       setScoreSections(scoreData.sections || []);
       setLoading(false);
