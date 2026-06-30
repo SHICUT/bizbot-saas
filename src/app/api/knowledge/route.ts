@@ -56,8 +56,39 @@ export async function GET() {
     servicesData = allSvc.filter((s) => !s.category || s.category === "service");
     trainersData = allSvc.filter((s) => s.category === "trainer");
     facilitiesData = allSvc.filter((s) => s.category === "facility");
+    const admissionsData_t = allSvc.filter((s) => s.category === "admission");
+    const documentsData_t = allSvc.filter((s) => s.category === "document");
+    const transportData_t = allSvc.filter((s) => s.category === "transport");
+    const uniformData_t = allSvc.filter((s) => s.category === "uniform");
     plansData = pln.data || [];
     faqsData = faq.data || [];
+
+    return NextResponse.json({
+      business: {
+        name: business.name || "",
+        owner_name: business.owner_name || "",
+        type: business.type || "other",
+        description: business.description || "",
+        phone: business.phone || "",
+        whatsapp_number: business.whatsapp_number || "",
+        email: business.contact_email || business.email || "",
+        website: business.website || "",
+        address: business.address || "",
+        city: business.city || "",
+        state: business.state || "",
+        google_maps_link: business.google_maps_link || "",
+        business_hours: business.business_hours || null,
+      },
+      services: servicesData,
+      trainers: trainersData,
+      facilities: facilitiesData,
+      admissions: admissionsData_t,
+      documents: documentsData_t,
+      transport: transportData_t,
+      uniform: uniformData_t,
+      plans: plansData,
+      faqs: faqsData,
+    });
   } catch {
     // Tables don't exist — try to load from knowledge_json or business_context JSON
     const kj = business.knowledge_json as Record<string, unknown> | null;
@@ -101,6 +132,10 @@ export async function GET() {
     services: servicesData,
     trainers: trainersData,
     facilities: facilitiesData,
+    admissions: [],
+    documents: [],
+    transport: [],
+    uniform: [],
     plans: plansData,
     faqs: faqsData,
   });
@@ -154,6 +189,30 @@ export async function POST(request: NextRequest) {
       const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
       const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "facility" }, business.id, i));
       await saveListSectionWithCategory(admin, business, "facility", rows);
+      break;
+    }
+    case "admissions": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "admission" }, business.id, i));
+      await saveListSectionWithCategory(admin, business, "admission", rows);
+      break;
+    }
+    case "documents": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "document" }, business.id, i));
+      await saveListSectionWithCategory(admin, business, "document", rows);
+      break;
+    }
+    case "transport": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "transport" }, business.id, i));
+      await saveListSectionWithCategory(admin, business, "transport", rows);
+      break;
+    }
+    case "uniform": {
+      const items = (data as unknown[]).filter((s: unknown) => (s as Record<string, string>).name?.trim());
+      const rows = items.map((item, i) => mapServiceRow({ ...(item as Record<string, unknown>), category: "uniform" }, business.id, i));
+      await saveListSectionWithCategory(admin, business, "uniform", rows);
       break;
     }
     case "plans": {
@@ -437,16 +496,89 @@ async function rebuildBusinessContext(admin: ReturnType<typeof createAdminClient
 
   // Services
   if (services.length > 0) {
-    lines.push("Services:");
-    services.forEach((s) => {
-      const item = s as Record<string, unknown>;
-      let line = `- ${item.name}`;
-      if (item.price) line += ` — ${item.price}`;
-      if (item.duration) line += ` (${item.duration})`;
-      if (item.description) line += ` — ${item.description}`;
-      lines.push(line);
-    });
-    lines.push("");
+    const regularSvc = (services as Array<Record<string, unknown>>).filter((s) => !s.category || s.category === "service");
+    const admissionItems = (services as Array<Record<string, unknown>>).filter((s) => s.category === "admission");
+    const documentItems = (services as Array<Record<string, unknown>>).filter((s) => s.category === "document");
+    const transportItems = (services as Array<Record<string, unknown>>).filter((s) => s.category === "transport");
+    const uniformItems = (services as Array<Record<string, unknown>>).filter((s) => s.category === "uniform");
+    const trainerItems = (services as Array<Record<string, unknown>>).filter((s) => s.category === "trainer");
+    const facilityItems = (services as Array<Record<string, unknown>>).filter((s) => s.category === "facility");
+
+    if (regularSvc.length > 0) {
+      lines.push("Services:");
+      regularSvc.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.price) line += ` — ${item.price}`;
+        if (item.duration) line += ` (${item.duration})`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (admissionItems.length > 0) {
+      lines.push("Admissions:");
+      admissionItems.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (documentItems.length > 0) {
+      lines.push("Documents Required:");
+      documentItems.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (transportItems.length > 0) {
+      lines.push("Transport:");
+      transportItems.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.price) line += ` — ${item.price}`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (uniformItems.length > 0) {
+      lines.push("Uniform:");
+      uniformItems.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.price) line += ` — ${item.price}`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (trainerItems.length > 0) {
+      const trainerLabel = biz.type === "school" ? "Faculty:" : "Team:";
+      lines.push(trainerLabel);
+      trainerItems.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.price) line += ` — ${item.price}`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
+
+    if (facilityItems.length > 0) {
+      lines.push("Facilities:");
+      facilityItems.forEach((item) => {
+        let line = `- ${item.name}`;
+        if (item.description) line += ` — ${item.description}`;
+        lines.push(line);
+      });
+      lines.push("");
+    }
   }
 
   // Plans

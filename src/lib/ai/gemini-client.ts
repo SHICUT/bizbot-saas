@@ -97,7 +97,7 @@ async function callGemini(
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 250 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 150 },
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -141,7 +141,7 @@ async function callGroq(
     body: JSON.stringify({
       model: "llama-3.1-8b-instant",
       messages: chatMessages,
-      max_tokens: 150,
+      max_tokens: 120,
       temperature: 0.7,
     }),
   });
@@ -180,7 +180,7 @@ async function callOpenAI(
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: chatMessages,
-      max_tokens: 250,
+      max_tokens: 150,
       temperature: 0.7,
     }),
   });

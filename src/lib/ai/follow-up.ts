@@ -217,6 +217,7 @@ function getStep1Message(greeting: string, type: string, bizName: string, inquir
     restaurant: `${greeting}! 👋 Hope you're doing well! Still thinking about visiting ${bizName}? We'd love to serve you. Any questions about our menu?`,
     real_estate: `${greeting}! 👋 Following up on your inquiry${topic}. Would you like to schedule a site visit? I can arrange a convenient time for you.`,
     coaching: `${greeting}! 👋 Just checking in${topic}. Would you like to attend a free demo class? We have new batches starting soon!`,
+    school: `${greeting}! 👋 Just checking in${topic}. Would you like to schedule a school visit? Our admissions team would be happy to show you around the campus! 🏫`,
   };
   return typeMessages[type] || `${greeting}! 👋 Just following up${topic}. Did you have any other questions about ${bizName}? Happy to help!`;
 }
@@ -229,6 +230,7 @@ function getStep2Message(greeting: string, type: string, bizName: string): strin
     restaurant: `${greeting}! 🍽️\n\nWe have some exciting new additions to our menu at ${bizName}! Plus, there's a special offer running for our regular guests.\n\nWould you like to reserve a table?`,
     real_estate: `${greeting}! 🏠\n\nWanted to share some updates — we have a few new units available with special pre-booking offers.\n\nWould you like me to send you the latest floor plans and pricing?`,
     coaching: `${greeting}! 📚\n\nQuick update — our new batch is starting soon with limited seats. We're also offering an early enrollment discount.\n\nWould you like me to reserve a spot for you?`,
+    school: `${greeting}! 🏫\n\nQuick update from ${bizName} — admissions are open and we have limited seats available for this session.\n\nWould you like to schedule a campus visit or speak with our admissions team? We'd love to help you with the process!`,
   };
   return typeMessages[type] || `${greeting}, hope you're doing well! 😊\n\nWanted to share that ${bizName} currently has some great offers available. Would you like to know more?\n\nNo pressure at all — just wanted to make sure you don't miss out!`;
 }
@@ -241,6 +243,7 @@ function getStep3Message(greeting: string, type: string, bizName: string): strin
     restaurant: `${greeting}! 🙏\n\nFinal check-in from ${bizName}. We'd love to host you whenever you're ready!\n\nOur doors are always open. Feel free to message us for reservations anytime!`,
     real_estate: `${greeting}! 🙏\n\nThis is a final check-in from ${bizName}. The property market is always moving, so don't hesitate to reach out when you're ready.\n\nI'm here to help whenever you need. All the best! 🏠`,
     coaching: `${greeting}! 🙏\n\nFinal reminder from ${bizName}. Education is always a good investment, and we're here whenever you're ready.\n\nFeel free to reach out for demo classes or batch information anytime!`,
+    school: `${greeting}! 🙏\n\nFinal check-in from ${bizName}. We understand choosing the right school is an important decision.\n\nWhenever you're ready to visit or have questions about admissions, fees, or anything else — we're here to help!\n\nWishing the best for your child's education. 🏫`,
   };
   return typeMessages[type] || `${greeting}! 🙏\n\nJust a final check-in from ${bizName}. If you ever need help in the future, don't hesitate to reach out.\n\nWe're always here for you. Take care!`;
 }
@@ -252,15 +255,18 @@ function generateHinglishFollowUp(step: number, greeting: string, type: string, 
     case 0:
       if (type === "gym") return `${greeting}! 👋 Bas check kar raha tha${topic}. Abhi bhi join karne ka soch rahe hain? Free trial session book karwa deta hoon! 💪`;
       if (type === "salon") return `${greeting}! 👋 Aapki inquiry${topic} ke baare mein follow up kar raha tha. Kya appointment book karni hai? Is week achhe slots available hain!`;
+      if (type === "school") return `${greeting}! 👋 Bas check kar raha tha${topic}. Kya aap school visit schedule karna chahenge? Humari admissions team aapko campus dikha sakti hai! 🏫`;
       return `${greeting}! 👋 Bas check kar raha tha${topic}. Kuch aur jaanna hai ${bizName} ke baare mein? Happy to help! 😊`;
 
     case 1:
       if (type === "gym") return `${greeting}, kaise hain aap? 💪\n\nAapko batana tha — is week new members ke liye free fitness assessment offer hai. Koi commitment nahi!\n\nSlot book karwa doon?`;
       if (type === "salon") return `${greeting}! ✨\n\n${bizName} mein abhi kuch special offers chal rahe hain. Sunna chahenge?\n\nAppointment ke liye bhi help kar sakta hoon!`;
+      if (type === "school") return `${greeting}! 🏫\n\n${bizName} mein admissions open hain aur limited seats available hain is session ke liye.\n\nKya aap campus visit schedule karna chahenge? Admissions team se baat karwa sakte hain!`;
       return `${greeting}! 😊\n\n${bizName} mein abhi kuch achhe offers available hain. Details chahiye?\n\nKoi pressure nahi — bas miss na ho jaaye isliye bata raha tha!`;
 
     case 2:
       if (type === "gym") return `${greeting}! 🙏\n\nYe last check-in hai ${bizName} ki taraf se. Jab bhi ready ho fitness journey start karne ke liye, hum yahan hain.\n\nFree trial session chahiye toh bas bata dena! 💪`;
+      if (type === "school") return `${greeting}! 🙏\n\n${bizName} ki taraf se last check-in. Sahi school chunna bohot zaroori decision hai — hum samajhte hain.\n\nJab bhi ready ho visit ke liye ya koi sawal ho admission ke baare mein, message kar dena! 🏫`;
       return `${greeting}! 🙏\n\n${bizName} ki taraf se last follow-up. Jab bhi help chahiye, message kar dena. Hamesha available hain!\n\nTake care! 😊`;
 
     default:

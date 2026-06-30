@@ -90,6 +90,16 @@ const BUSINESS_TYPE_SECTIONS: Record<string, SectionDef[]> = {
     { id: "trainers", label: "Faculty", icon: Users, description: "Teachers & mentors", type: "dynamic" },
     { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, etc.", type: "dynamic" },
   ],
+  school: [
+    { id: "admissions", label: "Admissions", icon: BookOpen, description: "Admission process & dates", type: "dynamic" },
+    { id: "services", label: "Classes Offered", icon: Star, description: "Nursery to XII, streams", type: "dynamic" },
+    { id: "plans", label: "Fee Structure", icon: FileText, description: "Admission, tuition, transport fees", type: "dynamic" },
+    { id: "documents", label: "Documents Required", icon: FileText, description: "Birth certificate, TC, etc.", type: "dynamic" },
+    { id: "trainers", label: "Faculty", icon: Users, description: "Principal, teachers", type: "dynamic" },
+    { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, sports, etc.", type: "dynamic" },
+    { id: "transport", label: "Transport", icon: MapPin, description: "Bus routes & pickup areas", type: "dynamic" },
+    { id: "uniform", label: "Uniform", icon: Star, description: "Summer & winter uniform", type: "dynamic" },
+  ],
   consultancy: [
     { id: "services", label: "Services", icon: Star, description: "Consulting services", type: "dynamic" },
     { id: "plans", label: "Packages & Pricing", icon: FileText, description: "Engagement models", type: "dynamic" },
@@ -138,6 +148,7 @@ const TYPE_LABELS: Record<string, Record<string, { title: string; addLabel: stri
   dental: { services: { title: "Treatments", addLabel: "Add Treatment", namePlaceholder: "e.g. Cleaning, Root Canal", pricePlaceholder: "₹1500", descPlaceholder: "Duration" }, plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Annual Care Plan", pricePlaceholder: "₹5000/year", descPlaceholder: "" }, trainers: { title: "Dentists", addLabel: "Add Dentist", namePlaceholder: "Dr. Name", pricePlaceholder: "₹500/visit", descPlaceholder: "Specialization" } },
   real_estate: { services: { title: "Projects", addLabel: "Add Project", namePlaceholder: "e.g. Green Valley Phase 2", pricePlaceholder: "₹45L onwards", descPlaceholder: "Location, type, possession" }, plans: { title: "Price Sheets", addLabel: "Add Configuration", namePlaceholder: "e.g. 2BHK, 3BHK", pricePlaceholder: "₹55,00,000", descPlaceholder: "" }, facilities: { title: "Amenities", addLabel: "Add Amenity", namePlaceholder: "e.g. Swimming Pool", pricePlaceholder: "", descPlaceholder: "Details" } },
   coaching: { services: { title: "Courses", addLabel: "Add Course", namePlaceholder: "e.g. JEE Prep, NEET", pricePlaceholder: "₹25000/year", descPlaceholder: "Duration, batch" }, plans: { title: "Fee Structure", addLabel: "Add Fee Plan", namePlaceholder: "e.g. Weekend Batch", pricePlaceholder: "₹15000", descPlaceholder: "" }, trainers: { title: "Faculty", addLabel: "Add Faculty", namePlaceholder: "Teacher name", pricePlaceholder: "", descPlaceholder: "Subject, experience" }, facilities: { title: "Facilities", addLabel: "Add Facility", namePlaceholder: "e.g. Computer Lab", pricePlaceholder: "", descPlaceholder: "Details" } },
+  school: { admissions: { title: "Admissions", addLabel: "Add Info", namePlaceholder: "e.g. Admission Open for 2025-26", pricePlaceholder: "", descPlaceholder: "Process, dates, eligibility, age criteria" }, services: { title: "Classes Offered", addLabel: "Add Class", namePlaceholder: "e.g. Nursery, KG, Class I–XII", pricePlaceholder: "", descPlaceholder: "Streams (Science/Commerce/Arts), sections" }, plans: { title: "Fee Structure", addLabel: "Add Fee", namePlaceholder: "e.g. Admission Fee, Tuition Fee", pricePlaceholder: "₹25000/year", descPlaceholder: "Annual/monthly, installments" }, documents: { title: "Documents Required", addLabel: "Add Document", namePlaceholder: "e.g. Birth Certificate, Transfer Certificate", pricePlaceholder: "", descPlaceholder: "Details, format" }, trainers: { title: "Faculty", addLabel: "Add Faculty", namePlaceholder: "e.g. Principal, Vice Principal, Teacher", pricePlaceholder: "", descPlaceholder: "Designation, qualifications" }, facilities: { title: "Facilities", addLabel: "Add Facility", namePlaceholder: "e.g. Smart Classes, Science Lab, Library", pricePlaceholder: "", descPlaceholder: "Details" }, transport: { title: "Transport", addLabel: "Add Route", namePlaceholder: "e.g. Route 1 — Sector 15 to School", pricePlaceholder: "₹2000/month", descPlaceholder: "Pickup areas, bus availability" }, uniform: { title: "Uniform", addLabel: "Add Uniform", namePlaceholder: "e.g. Summer Uniform, Winter Uniform", pricePlaceholder: "₹1500", descPlaceholder: "Details, where to buy" } },
   consultancy: { services: { title: "Services", addLabel: "Add Service", namePlaceholder: "e.g. Tax Filing, Audit", pricePlaceholder: "₹5000", descPlaceholder: "Details" }, plans: { title: "Packages", addLabel: "Add Package", namePlaceholder: "e.g. Annual Retainer", pricePlaceholder: "₹50000/year", descPlaceholder: "" }, trainers: { title: "Team", addLabel: "Add Member", namePlaceholder: "Name", pricePlaceholder: "", descPlaceholder: "Role, expertise" } },
   repair: { services: { title: "Repair Services", addLabel: "Add Service", namePlaceholder: "e.g. Screen Repair, AC Service", pricePlaceholder: "₹500", descPlaceholder: "Turnaround time" }, plans: { title: "Pricing", addLabel: "Add Price", namePlaceholder: "e.g. Basic Service, Premium", pricePlaceholder: "₹1000", descPlaceholder: "" }, facilities: { title: "Brands", addLabel: "Add Brand", namePlaceholder: "e.g. Samsung, LG", pricePlaceholder: "", descPlaceholder: "Warranty info" } },
   retail: { services: { title: "Products", addLabel: "Add Product", namePlaceholder: "e.g. iPhone 15, T-Shirt", pricePlaceholder: "₹999", descPlaceholder: "Category, brand" }, plans: { title: "Offers", addLabel: "Add Offer", namePlaceholder: "e.g. Buy 2 Get 1", pricePlaceholder: "", descPlaceholder: "Terms" }, facilities: { title: "Store Info", addLabel: "Add Info", namePlaceholder: "e.g. Free Delivery, Returns", pricePlaceholder: "", descPlaceholder: "Policy details" } },
@@ -170,6 +181,10 @@ export default function KnowledgePage() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [trainers, setTrainers] = useState<ServiceItem[]>([]); // Reuse ServiceItem shape
   const [facilities, setFacilities] = useState<ServiceItem[]>([]);
+  const [admissions, setAdmissions] = useState<ServiceItem[]>([]);
+  const [documents, setDocuments] = useState<ServiceItem[]>([]);
+  const [transport, setTransport] = useState<ServiceItem[]>([]);
+  const [uniform, setUniform] = useState<ServiceItem[]>([]);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [additionalNotes, setAdditionalNotes] = useState("");
 
@@ -220,13 +235,24 @@ export default function KnowledgePage() {
       if (knowledge.facilities?.length) {
         setFacilities(knowledge.facilities.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
       }
+      if (knowledge.admissions?.length) {
+        setAdmissions(knowledge.admissions.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+      }
+      if (knowledge.documents?.length) {
+        setDocuments(knowledge.documents.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+      }
+      if (knowledge.transport?.length) {
+        setTransport(knowledge.transport.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+      }
+      if (knowledge.uniform?.length) {
+        setUniform(knowledge.uniform.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+      }
       if (knowledge.plans?.length) {
         setPlans(knowledge.plans.map((p: Record<string, unknown>) => ({ name: (p.name as string) || "", price: (p.price as string) || "", duration: (p.duration as string) || "month", features: (p.features as string[]) || [], is_popular: (p.is_popular as boolean) || false })));
       }
       if (knowledge.faqs?.length) {
         setFaqs(knowledge.faqs.map((f: Record<string, string>) => ({ question: f.question || "", answer: f.answer || "", category: f.category || "general" })));
       }
-      // Trainers and facilities stored as services with category
       if (knowledge.services?.length) {
         const allSvc = knowledge.services as Array<Record<string, string>>;
         const trainerItems = allSvc.filter((s) => s.category === "trainer");
@@ -266,6 +292,18 @@ export default function KnowledgePage() {
         break;
       case "facilities":
         payload = { section: "facilities", data: facilities.filter((f) => f.name.trim()) };
+        break;
+      case "admissions":
+        payload = { section: "admissions", data: admissions.filter((a) => a.name.trim()) };
+        break;
+      case "documents":
+        payload = { section: "documents", data: documents.filter((d) => d.name.trim()) };
+        break;
+      case "transport":
+        payload = { section: "transport", data: transport.filter((t) => t.name.trim()) };
+        break;
+      case "uniform":
+        payload = { section: "uniform", data: uniform.filter((u) => u.name.trim()) };
         break;
       case "faqs":
         payload = { section: "faqs", data: faqs.filter((f) => f.question.trim()) };
@@ -347,6 +385,10 @@ export default function KnowledgePage() {
       case "services": return { items: services, setter: setServices };
       case "trainers": return { items: trainers, setter: setTrainers };
       case "facilities": return { items: facilities, setter: setFacilities };
+      case "admissions": return { items: admissions, setter: setAdmissions };
+      case "documents": return { items: documents, setter: setDocuments };
+      case "transport": return { items: transport, setter: setTransport };
+      case "uniform": return { items: uniform, setter: setUniform };
       default: return { items: services, setter: setServices };
     }
   }
@@ -496,7 +538,7 @@ export default function KnowledgePage() {
             </nav>
             <div className="border-t border-border pt-2 mb-1">
               <p className="text-[10px] uppercase tracking-wider text-text-muted font-semibold px-3 mb-1">
-                {({ gym: "🏋️ Gym", fitness: "💪 Fitness", salon: "💇 Salon", spa: "🧖 Spa", clinic: "🏥 Clinic", dental: "🦷 Dental", restaurant: "🍽️ Restaurant", cafe: "☕ Cafe", real_estate: "🏠 Real Estate", coaching: "📚 Coaching", consultancy: "💼 Consultancy", repair: "🔧 Repair", retail: "🛍️ Retail", agency: "📱 Agency", other: "📋 Business" } as Record<string, string>)[profile.type] || "📋 Business"}
+                {({ gym: "🏋️ Gym", fitness: "💪 Fitness", salon: "💇 Salon", spa: "🧖 Spa", clinic: "🏥 Clinic", dental: "🦷 Dental", restaurant: "🍽️ Restaurant", cafe: "☕ Cafe", real_estate: "🏠 Real Estate", coaching: "📚 Coaching", school: "🏫 School", consultancy: "💼 Consultancy", repair: "🔧 Repair", retail: "🛍️ Retail", agency: "📱 Agency", other: "📋 Business" } as Record<string, string>)[profile.type] || "📋 Business"}
               </p>
               <nav className="space-y-0.5">
                 {(BUSINESS_TYPE_SECTIONS[profile.type] || BUSINESS_TYPE_SECTIONS.other).map((sec) => (
@@ -547,6 +589,7 @@ export default function KnowledgePage() {
                     <option value="cafe">☕ Cafe</option>
                     <option value="real_estate">🏠 Real Estate</option>
                     <option value="coaching">📚 Coaching Institute</option>
+                    <option value="school">🏫 School</option>
                     <option value="consultancy">💼 Consultancy</option>
                     <option value="repair">🔧 Repair Services</option>
                     <option value="retail">🛍️ Retail Store</option>
@@ -639,8 +682,8 @@ export default function KnowledgePage() {
             </Card>
           )}
 
-          {/* Dynamic List Sections: services, trainers, facilities */}
-          {(activeSection === "services" || activeSection === "trainers" || activeSection === "facilities") && (
+          {/* Dynamic List Sections: services, trainers, facilities, admissions, documents, transport, uniform */}
+          {(activeSection === "services" || activeSection === "trainers" || activeSection === "facilities" || activeSection === "admissions" || activeSection === "documents" || activeSection === "transport" || activeSection === "uniform") && (
             <Card>
               {(() => {
                 const labels = typeLabels[activeSection] || { title: activeSection, addLabel: "Add", namePlaceholder: "Name", pricePlaceholder: "Price", descPlaceholder: "Description" };

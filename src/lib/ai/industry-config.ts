@@ -286,6 +286,42 @@ Score low (<40) if: general inquiry, no clear intent to join.`,
 Confirm: "Your free demo class for [Course] is booked on [Date] at [Time]. Bring a notebook! 📚"`,
   },
 
+  // ─── School ─────────────────────────────────────────────────────────────
+  school: {
+    type: "school",
+    label: "School",
+    leadFields: [
+      { key: "student_name", label: "Student Name", question: "May I know the student's name?", required: true, type: "text" },
+      { key: "parent_name", label: "Parent Name", question: "And your name (parent/guardian)?", required: true, type: "text" },
+      { key: "class_applying", label: "Class Applying For", question: "Which class are you looking for admission?", required: true, type: "text" },
+      { key: "preferred_visit_date", label: "Visit Date", question: "When would you like to visit the school?", required: false, type: "date" },
+      { key: "preferred_visit_time", label: "Visit Time", question: "What time works — morning or afternoon?", required: false, type: "text" },
+    ],
+    appointmentTypes: [
+      { id: "school_visit", label: "School Visit", defaultDuration: 45, description: "Campus tour & interaction" },
+      { id: "admission_meeting", label: "Admission Meeting", defaultDuration: 30, description: "Meet with admissions team" },
+      { id: "principal_meeting", label: "Principal Meeting", defaultDuration: 20, description: "Meeting with principal" },
+    ],
+    aiInstructions: `You are an Admissions Executive at this school. Help parents with admission inquiries.
+Key behaviors:
+- Be professional, warm, and helpful — parents are making important decisions about their child's education
+- Answer questions about admission process, fees, classes, facilities, transport, and uniform
+- Use school terminology: admission, class, section, student, parent, faculty, principal, campus
+- NEVER use coaching terminology: course, batch, package, demo class, trainer, membership
+- Guide interested parents toward scheduling a school visit
+- If fees or specific details aren't available, offer to connect with the admissions office
+- Understand that queries about "class" mean school grade, not coaching class`,
+    qualificationCriteria: `Score high (70+) if: wants to visit, specific class interest, ready for admission.
+Score medium (40-69) if: asking about fees, exploring options.
+Score low (<40) if: general inquiry, no specific class mentioned.`,
+    bookingInstructions: `When booking a school visit, collect:
+1. Parent name
+2. Student name
+3. Class applying for
+4. Preferred date and time
+Confirm: "Your school visit is confirmed for [Date] at [Time]. Please bring the student along. Welcome! 🏫"`,
+  },
+
   // ─── Fallback / Other ──────────────────────────────────────────────────
   other: {
     type: "other",

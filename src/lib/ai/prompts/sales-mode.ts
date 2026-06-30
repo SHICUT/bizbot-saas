@@ -87,6 +87,13 @@ function getUpsellStrategy(businessType: string): string {
 - Offer crash courses for exam preparation
 - Suggest doubt-clearing sessions
 - Mention scholarship/discount for early enrollment`;
+    case "school":
+      return `- If they ask about admission → mention school visit to see campus
+- Highlight facilities, smart classes, sports infrastructure
+- Mention transport availability for their area
+- Suggest meeting the principal for detailed discussion
+- Mention sibling discount if applicable
+- NEVER use: course, package, demo class, trainer, batch, membership`;
     case "restaurant":
       return `- Suggest combos over individual items
 - Mention party/event catering

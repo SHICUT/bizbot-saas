@@ -2,12 +2,11 @@ import { buildSystemPrompt } from "./prompts/system-prompt";
 import { classifyIntentLocal } from "./prompts/intent-classifier";
 import { detectLanguageAndTone } from "./prompts/language-detector";
 import { callAI } from "./gemini-client";
+import { formatResponse, validateResponse } from "./response-formatter";
 import type {
   ConversationContext,
   AIResponse,
-  AIAction,
   ConversationIntent,
-  ChatMessage,
 } from "./types";
 
 /**
@@ -65,6 +64,17 @@ export async function generateSalesReply(
       return createErrorResponse("Our AI assistant is temporarily unavailable. Please try again in a moment.");
     }
 
+    // ═══ POST-PROCESSING: Format & Validate ═══
+    const formattedReply = formatResponse(result.text, {
+      businessType: ctx.businessType || "other",
+    });
+
+    // Log quality metrics (non-blocking)
+    const validation = validateResponse(formattedReply, ctx.businessType || "other");
+    if (!validation.isValid) {
+      console.warn(`[AI Sales] Quality warning: words=${validation.wordCount}, questions=${validation.questionCount}, banned=${validation.bannedTermsFound.join(",")}`);
+    }
+
     // Calculate confidence based on context availability
     let confidence = 0.85;
     if (!ctx.businessContext || ctx.businessContext.length < 50) confidence = 0.4;
@@ -73,10 +83,10 @@ export async function generateSalesReply(
 
     // Check if response contains "I don't have" or similar — lower confidence
     const lowConfidencePatterns = /i don't have|information.*not available|contact.*directly|not sure about/i;
-    if (lowConfidencePatterns.test(result.text)) confidence = Math.min(confidence, 0.5);
+    if (lowConfidencePatterns.test(formattedReply)) confidence = Math.min(confidence, 0.5);
 
     return {
-      reply: result.text,
+      reply: formattedReply,
       actions: [],
       intent,
       confidence,

@@ -5,12 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Loader2, Check, ArrowRight, ArrowLeft, CheckCircle, Sparkles, MessageSquare } from "lucide-react";
 
 const BUSINESS_TYPES = [
+  { id: "school", label: "School", emoji: "🏫" },
   { id: "gym", label: "Gym / Fitness", emoji: "🏋️" },
   { id: "salon", label: "Salon / Beauty", emoji: "💇" },
   { id: "clinic", label: "Clinic / Hospital", emoji: "🏥" },
   { id: "coaching", label: "Coaching Center", emoji: "📚" },
   { id: "restaurant", label: "Restaurant / Cafe", emoji: "🍽️" },
   { id: "real_estate", label: "Real Estate", emoji: "🏠" },
+  { id: "dental", label: "Dental Clinic", emoji: "🦷" },
   { id: "other", label: "Other", emoji: "🏢" },
 ];
 
