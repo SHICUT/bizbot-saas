@@ -180,51 +180,43 @@ async function loadSections(
 // ─── Legacy Support ──────────────────────────────────────────────────────────
 
 /**
- * Load sections from legacy tables (business_services, business_plans, business_faqs)
+ * Load sections from legacy storage (businesses table JSONB fields)
+ * Used when knowledge_sections table has no data yet.
  */
 async function loadLegacySections(
   admin: ReturnType<typeof createAdminClient>,
   business: Record<string, unknown>
 ): Promise<Record<string, unknown[]>> {
   const sections: Record<string, unknown[]> = {};
-  const businessId = business.id as string;
 
-  try {
-    const [svcResult, plnResult, faqResult] = await Promise.all([
-      admin.from("business_services").select("*").eq("business_id", businessId).order("sort_order"),
-      admin.from("business_plans").select("*").eq("business_id", businessId).order("sort_order"),
-      admin.from("business_faqs").select("*").eq("business_id", businessId).order("sort_order"),
-    ]);
-
-    const allSvc = svcResult.data || [];
-
-    // Group services by category
-    const serviceItems = allSvc.filter((s) => !s.category || s.category === "service");
-    if (serviceItems.length > 0) sections.services = serviceItems;
-
-    const categories = ["trainer", "facility", "admission", "document", "transport", "uniform"];
-    for (const cat of categories) {
-      const items = allSvc.filter((s) => s.category === cat);
-      if (items.length > 0) sections[cat + "s"] = items; // trainers, facilities, etc.
+  // Try knowledge_json column first
+  const kj = business.knowledge_json as Record<string, unknown> | null;
+  if (kj) {
+    for (const [key, value] of Object.entries(kj)) {
+      if (Array.isArray(value) && value.length > 0) sections[key] = value;
     }
+    if (Object.keys(sections).length > 0) return sections;
+  }
 
-    if (plnResult.data?.length) sections.plans = plnResult.data;
-    if (faqResult.data?.length) sections.faqs = faqResult.data;
-  } catch {
-    // Legacy tables don't exist — try JSONB
-    const kj = business.knowledge_json as Record<string, unknown> | null;
-    if (kj) {
-      for (const [key, value] of Object.entries(kj)) {
-        if (Array.isArray(value) && value.length > 0) sections[key] = value;
+  // Try parsing business_context as JSON (some businesses store structured data here)
+  const ctx = business.business_context as string | null;
+  if (ctx) {
+    try {
+      if (ctx.startsWith("{")) {
+        const parsed = JSON.parse(ctx);
+        for (const [key, value] of Object.entries(parsed)) {
+          if (Array.isArray(value) && value.length > 0) sections[key] = value;
+        }
       }
-    }
+    } catch { /* not JSON — it's plain text AI context, ignore */ }
   }
 
   return sections;
 }
 
 /**
- * Save to legacy tables when knowledge_sections isn't available
+ * Save to legacy storage when knowledge_sections table isn't available.
+ * Uses the businesses.knowledge_json JSONB column.
  */
 async function saveSectionLegacy(
   admin: ReturnType<typeof createAdminClient>,
@@ -232,63 +224,24 @@ async function saveSectionLegacy(
   sectionKey: string,
   items: unknown[]
 ): Promise<void> {
-  const business = { id: businessId, knowledge_json: null };
+  // Store in knowledge_json column on the businesses table
+  const { data: biz } = await admin.from("businesses").select("knowledge_json").eq("id", businessId).single();
+  const existing = (biz?.knowledge_json as Record<string, unknown>) || {};
+  const updated = { ...existing, [sectionKey]: items };
 
-  switch (sectionKey) {
-    case "services": {
-      try {
-        await admin.from("business_services").delete().eq("business_id", businessId).eq("category", "service");
-        if (items.length > 0) {
-          const rows = items.map((item, i) => mapServiceRow(item as Record<string, unknown>, businessId, i));
-          await admin.from("business_services").insert(rows);
-        }
-      } catch {
-        await saveToJsonFallback(admin, business, sectionKey, items);
-      }
-      break;
-    }
-    case "plans": {
-      try {
-        await admin.from("business_plans").delete().eq("business_id", businessId);
-        if (items.length > 0) {
-          const rows = items.map((item, i) => mapPlanRow(item as Record<string, unknown>, businessId, i));
-          await admin.from("business_plans").insert(rows);
-        }
-      } catch {
-        await saveToJsonFallback(admin, business, sectionKey, items);
-      }
-      break;
-    }
-    case "faqs": {
-      try {
-        await admin.from("business_faqs").delete().eq("business_id", businessId);
-        if (items.length > 0) {
-          const rows = items.map((item, i) => mapFaqRow(item as Record<string, unknown>, businessId, i));
-          await admin.from("business_faqs").insert(rows);
-        }
-      } catch {
-        await saveToJsonFallback(admin, business, sectionKey, items);
-      }
-      break;
-    }
-    default: {
-      // For all other sections (admissions, transport, uniform, documents, trainers, facilities, etc.)
-      // Store in business_services with category
-      const category = sectionKey.replace(/s$/, ""); // "admissions" → "admission"
-      try {
-        await admin.from("business_services").delete().eq("business_id", businessId).eq("category", category);
-        if (items.length > 0) {
-          const rows = items.map((item, i) => mapServiceRow(
-            { ...(item as Record<string, unknown>), category },
-            businessId, i
-          ));
-          await admin.from("business_services").insert(rows);
-        }
-      } catch {
-        await saveToJsonFallback(admin, business, sectionKey, items);
-      }
-      break;
-    }
+  const { error } = await admin.from("businesses").update({ knowledge_json: updated }).eq("id", businessId);
+
+  if (error) {
+    // knowledge_json column doesn't exist — use business_context as JSON
+    console.warn(`[Knowledge] knowledge_json save failed: ${error.message} — using business_context`);
+    const { data: ctxBiz } = await admin.from("businesses").select("business_context").eq("id", businessId).single();
+    let contextJson: Record<string, unknown> = {};
+    try {
+      if (ctxBiz?.business_context?.startsWith("{")) contextJson = JSON.parse(ctxBiz.business_context);
+    } catch { /* not JSON */ }
+
+    contextJson[sectionKey] = items;
+    await admin.from("businesses").update({ business_context: JSON.stringify(contextJson) }).eq("id", businessId);
   }
 }
 
@@ -324,70 +277,6 @@ async function saveProfileFields(
     const { error: safeErr } = await admin.from("businesses").update(safe).eq("id", businessId);
     if (safeErr) throw new Error("Failed to save profile: " + safeErr.message);
   }
-}
-
-// ─── JSONB Fallback ──────────────────────────────────────────────────────────
-
-async function saveToJsonFallback(
-  admin: ReturnType<typeof createAdminClient>,
-  business: { id: string; knowledge_json: unknown },
-  key: string,
-  items: unknown[]
-) {
-  const existing = (business.knowledge_json as Record<string, unknown>) || {};
-  const updated = { ...existing, [key]: items };
-
-  const { error } = await admin.from("businesses").update({ knowledge_json: updated }).eq("id", business.id);
-  if (error) {
-    // knowledge_json doesn't exist — use business_context as JSON
-    const { data: biz } = await admin.from("businesses").select("business_context").eq("id", business.id).single();
-    let contextJson: Record<string, unknown> = {};
-    try {
-      if (biz?.business_context?.startsWith("{")) contextJson = JSON.parse(biz.business_context);
-    } catch { /* not JSON */ }
-
-    contextJson[key] = items;
-    await admin.from("businesses").update({ business_context: JSON.stringify(contextJson) }).eq("id", business.id);
-  }
-}
-
-// ─── Row Mappers (legacy tables) ─────────────────────────────────────────────
-
-function mapServiceRow(item: Record<string, unknown>, businessId: string, index: number) {
-  return {
-    business_id: businessId,
-    name: String(item.name || ""),
-    description: item.description ? String(item.description) : null,
-    price: item.price ? String(item.price) : null,
-    duration: item.duration ? String(item.duration) : null,
-    category: item.category ? String(item.category) : "service",
-    is_active: true,
-    sort_order: index,
-  };
-}
-
-function mapPlanRow(item: Record<string, unknown>, businessId: string, index: number) {
-  return {
-    business_id: businessId,
-    name: String(item.name || ""),
-    price: String(item.price || ""),
-    duration: String(item.duration || "month"),
-    features: Array.isArray(item.features) ? item.features : [],
-    is_popular: Boolean(item.is_popular),
-    is_active: true,
-    sort_order: index,
-  };
-}
-
-function mapFaqRow(item: Record<string, unknown>, businessId: string, index: number) {
-  return {
-    business_id: businessId,
-    question: String(item.question || ""),
-    answer: String(item.answer || ""),
-    category: String(item.category || "general"),
-    is_active: true,
-    sort_order: index,
-  };
 }
 
 // ─── Business Response Builder ───────────────────────────────────────────────
