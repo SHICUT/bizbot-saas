@@ -120,12 +120,21 @@ function getEscalationMessage(language: string, businessName: string): string {
 }
 
 function shouldSkipReply(message: string): boolean {
-  const skipPatterns = [
-    /^(ok|okay|k|kk|hmm|hm|alright|accha|acha|theek|thik)\.?$/i,
-    /^(thanks|thank you|ty|thx|dhanyavaad|shukriya|thanku)\.?$/i,
-    /^(bye|goodbye|good night|gn|alvida|chalo|chal)\.?$/i,
-    /^(👍|👌|🙏|✅|💯|😊|🙂|👋|🤝|🫡)$/,
-    /^\.+$/,
-  ];
-  return skipPatterns.some((p) => p.test(message.trim()));
+  // Only skip messages that are PURELY acknowledgments with no actionable intent.
+  // Do NOT skip confirmations like "ok book it", "theek hai", "haan" — those need AI response.
+  const trimmed = message.trim();
+  
+  // Only skip single emojis that are clearly just reactions
+  if (/^(👍|👌|💯|🙂|🤝|🫡)$/.test(trimmed)) return true;
+  
+  // Only skip explicit goodbyes
+  if (/^(bye|goodbye|good night|gn|alvida)\.?$/i.test(trimmed)) return true;
+  
+  // Only skip "thanks" when it's clearly a conversation ender
+  if (/^(thanks|thank you|ty|thx|dhanyavaad|shukriya|thanku)[\s!.]*$/i.test(trimmed) && trimmed.length < 20) return true;
+  
+  // Skip dots only
+  if (/^\.+$/.test(trimmed)) return true;
+  
+  return false;
 }

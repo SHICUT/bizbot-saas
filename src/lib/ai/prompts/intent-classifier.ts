@@ -36,18 +36,29 @@ Respond with ONLY the intent label (one word from the list above).`;
 export function classifyIntentLocal(message: string): ConversationIntent | null {
   const lower = message.toLowerCase().trim();
 
+  // Very short messages (1-3 words) are almost always follow-ups to previous context
+  if (lower.split(/\s+/).length <= 3 && lower.length < 30) {
+    // Date/time expressions → booking follow-up
+    if (/\b(kal|parso|aaj|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(lower)) return "booking_request";
+    if (/\b(\d{1,2}\s*(am|pm|baje)|\d{1,2}:\d{2})\b/i.test(lower)) return "booking_request";
+    // Affirmatives → follow-up
+    if (/^(ha|haan|yes|ok|okay|done|theek|sahi|sure|ji)\b/i.test(lower)) return "follow_up";
+    // If it's short and doesn't match anything specific, it's a follow-up
+    if (lower.length < 15) return "follow_up";
+  }
+
   // Greeting patterns
   if (/^(hi|hello|hey|hii+|good\s*(morning|afternoon|evening)|namaste|namaskar)\b/i.test(lower)) {
     return "greeting";
   }
 
   // Pricing patterns
-  if (/\b(price|cost|fee|rate|charge|kitna|kharcha|plan|package|membership)\b/i.test(lower)) {
+  if (/\b(price|cost|fee|rate|charge|kitna|kharcha|plan|package|membership|fees)\b/i.test(lower)) {
     return "pricing_inquiry";
   }
 
   // Booking patterns
-  if (/\b(book|appointment|schedule|reserve|slot|visit|come|aana|milna)\b/i.test(lower)) {
+  if (/\b(book|appointment|schedule|reserve|slot|visit|come|aana|milna|karna hai|karni hai|karani)\b/i.test(lower)) {
     return "booking_request";
   }
 
