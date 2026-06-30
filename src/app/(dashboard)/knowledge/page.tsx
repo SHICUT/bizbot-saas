@@ -416,7 +416,7 @@ export default function KnowledgePage() {
 
   return (
     <div>
-      <PageHeader title="Knowledge Base" description={`Tailored for your ${profile.type === "other" ? "" : profile.type + " "}business`} />
+      <PageHeader title="Knowledge Base" description={`Tailored for your ${({ gym: "Gym", fitness: "Fitness", salon: "Salon", spa: "Spa", clinic: "Clinic", dental: "Dental", restaurant: "Restaurant", cafe: "Cafe", real_estate: "Real Estate", coaching: "Coaching", school: "School", consultancy: "Consultancy", repair: "Repair", retail: "Retail", agency: "Agency" } as Record<string, string>)[profile.type] || ""} business`} />
 
       <AnimatePresence>
         {successMsg && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 flex items-center gap-2"><CheckCircle className="w-4 h-4" />{successMsg}</motion.div>}
