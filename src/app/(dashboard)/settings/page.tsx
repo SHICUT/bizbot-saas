@@ -171,7 +171,7 @@ export default function SettingsPage() {
           <Input id="bizName" label="Business Name" value={bizData.name} onChange={(e) => setBizData({ ...bizData, name: e.target.value })} />
           <div><label className="text-sm font-medium block mb-1.5">Business Type</label>
             <select value={bizData.type} onChange={(e) => setBizData({ ...bizData, type: e.target.value })} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20">
-              <option value="school">🏫 School</option><option value="gym">🏋️ Gym</option><option value="salon">💇 Salon</option><option value="clinic">🏥 Clinic</option><option value="dental">🦷 Dental Clinic</option><option value="coaching">📚 Coaching Center</option><option value="restaurant">🍽️ Restaurant</option><option value="real_estate">🏠 Real Estate</option><option value="consultancy">💼 Consultancy</option><option value="other">📋 Other</option>
+              <option value="school">🏫 School</option><option value="gym">🏋️ Gym</option><option value="fitness">💪 Fitness Studio</option><option value="salon">💇 Salon</option><option value="clinic">🏥 Clinic</option><option value="dental">🦷 Dental Clinic</option><option value="coaching">📚 Coaching Center</option><option value="restaurant">🍽️ Restaurant</option><option value="real_estate">🏠 Real Estate</option><option value="consultancy">💼 Consultancy</option><option value="other">📋 Other</option>
             </select>
           </div>
           <Input id="address" label="Address" value={bizData.address} onChange={(e) => setBizData({ ...bizData, address: e.target.value })} />

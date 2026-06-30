@@ -579,6 +579,7 @@ export default function KnowledgePage() {
                 <div><label className="text-sm font-medium block mb-1.5">Owner Name</label><input value={profile.owner_name} onChange={(e) => setProfile({ ...profile, owner_name: e.target.value })} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
                 <div><label className="text-sm font-medium block mb-1.5">Business Type</label>
                   <select value={profile.type} onChange={(e) => { setProfile({ ...profile, type: e.target.value }); setActiveSection("profile"); }} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    <option value="school">🏫 School</option>
                     <option value="gym">🏋️ Gym</option>
                     <option value="fitness">💪 Fitness Studio</option>
                     <option value="salon">💇 Salon</option>
@@ -589,7 +590,6 @@ export default function KnowledgePage() {
                     <option value="cafe">☕ Cafe</option>
                     <option value="real_estate">🏠 Real Estate</option>
                     <option value="coaching">📚 Coaching Institute</option>
-                    <option value="school">🏫 School</option>
                     <option value="consultancy">💼 Consultancy</option>
                     <option value="repair">🔧 Repair Services</option>
                     <option value="retail">🛍️ Retail Store</option>
@@ -598,7 +598,7 @@ export default function KnowledgePage() {
                   </select>
                   <p className="text-xs text-text-muted mt-1.5">This determines which sections appear in your knowledge base</p>
                 </div>
-                <div><label className="text-sm font-medium block mb-1.5">Description</label><textarea value={profile.description} onChange={(e) => setProfile({ ...profile, description: e.target.value })} rows={3} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder="Brief description..." /></div>
+                <div><label className="text-sm font-medium block mb-1.5">Description</label><textarea value={profile.description} onChange={(e) => setProfile({ ...profile, description: e.target.value })} rows={3} className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder={({ school: "e.g. CBSE-affiliated school offering Nursery to Class XII with modern facilities...", gym: "e.g. Full-service gym with personal training, group classes, and cardio zone...", salon: "e.g. Premium unisex salon offering haircuts, coloring, facials, and bridal packages...", clinic: "e.g. Multi-specialty clinic with experienced doctors and diagnostic services...", coaching: "e.g. Coaching center for JEE, NEET, and board exam preparation...", restaurant: "e.g. Family restaurant serving North Indian and Chinese cuisine...", real_estate: "e.g. Premium residential projects in prime locations with modern amenities..." } as Record<string, string>)[profile.type] || "Brief description of your business..."} /></div>
               </div>
             </Card>
           )}
