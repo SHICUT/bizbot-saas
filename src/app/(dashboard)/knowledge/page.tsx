@@ -46,93 +46,119 @@ const COMMON_BOTTOM: SectionDef[] = [
 ];
 
 const BUSINESS_TYPE_SECTIONS: Record<string, SectionDef[]> = {
-  gym: [
-    { id: "plans", label: "Membership Plans", icon: Star, description: "Monthly/yearly plans", type: "dynamic" },
-    { id: "services", label: "Classes & Programs", icon: Dumbbell, description: "Group classes, programs", type: "dynamic" },
-    { id: "trainers", label: "Trainers", icon: Users, description: "Personal trainers", type: "dynamic" },
-    { id: "facilities", label: "Facilities", icon: Building, description: "Equipment & amenities", type: "dynamic" },
-  ],
-  salon: [
-    { id: "services", label: "Services & Pricing", icon: Scissors, description: "Haircut, facial, etc.", type: "dynamic" },
-    { id: "plans", label: "Packages", icon: Star, description: "Combo packages", type: "dynamic" },
-    { id: "trainers", label: "Stylists", icon: Users, description: "Your team", type: "dynamic" },
-    { id: "facilities", label: "Gallery", icon: Image, description: "Before/after, portfolio", type: "dynamic" },
-  ],
-  restaurant: [
-    { id: "services", label: "Menu", icon: UtensilsCrossed, description: "Food & beverages", type: "dynamic" },
-    { id: "plans", label: "Combos & Offers", icon: Star, description: "Meal deals", type: "dynamic" },
-    { id: "facilities", label: "Delivery & Dine-in", icon: Building, description: "Delivery info, seating", type: "dynamic" },
-  ],
-  cafe: [
-    { id: "services", label: "Menu", icon: UtensilsCrossed, description: "Beverages & food", type: "dynamic" },
-    { id: "plans", label: "Offers", icon: Star, description: "Special deals", type: "dynamic" },
-    { id: "facilities", label: "Ambience & Seating", icon: Building, description: "Space details", type: "dynamic" },
-  ],
-  clinic: [
-    { id: "trainers", label: "Doctors", icon: Stethoscope, description: "Specialists & timings", type: "dynamic" },
-    { id: "services", label: "Treatments", icon: Stethoscope, description: "Consultations, procedures", type: "dynamic" },
-    { id: "plans", label: "Health Packages", icon: Star, description: "Checkup packages", type: "dynamic" },
-    { id: "facilities", label: "Specializations", icon: FileText, description: "Departments", type: "dynamic" },
-  ],
-  dental: [
-    { id: "trainers", label: "Dentists", icon: Stethoscope, description: "Specialists", type: "dynamic" },
-    { id: "services", label: "Treatments", icon: Stethoscope, description: "Procedures & pricing", type: "dynamic" },
-    { id: "plans", label: "Packages", icon: Star, description: "Dental care plans", type: "dynamic" },
-  ],
-  real_estate: [
-    { id: "services", label: "Projects", icon: Home, description: "Available properties", type: "dynamic" },
-    { id: "plans", label: "Price Sheets", icon: FileText, description: "Pricing & EMI", type: "dynamic" },
-    { id: "facilities", label: "Amenities", icon: Building, description: "Project amenities", type: "dynamic" },
-  ],
-  coaching: [
-    { id: "services", label: "Courses", icon: BookOpen, description: "Programs offered", type: "dynamic" },
-    { id: "plans", label: "Fee Structure", icon: Star, description: "Batch fees", type: "dynamic" },
-    { id: "trainers", label: "Faculty", icon: Users, description: "Teachers & mentors", type: "dynamic" },
-    { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, etc.", type: "dynamic" },
-  ],
   school: [
-    { id: "admissions", label: "Admissions", icon: BookOpen, description: "Admission process & dates", type: "dynamic" },
+    { id: "admissions", label: "Admissions", icon: BookOpen, description: "Process, dates & eligibility", type: "dynamic" },
     { id: "services", label: "Classes Offered", icon: Star, description: "Nursery to XII, streams", type: "dynamic" },
-    { id: "plans", label: "Fee Structure", icon: FileText, description: "Admission, tuition, transport fees", type: "dynamic" },
+    { id: "plans", label: "Fee Structure", icon: FileText, description: "Tuition, admission, transport fees", type: "dynamic" },
     { id: "documents", label: "Documents Required", icon: FileText, description: "Birth certificate, TC, etc.", type: "dynamic" },
-    { id: "trainers", label: "Faculty", icon: Users, description: "Principal, teachers", type: "dynamic" },
-    { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, sports, etc.", type: "dynamic" },
+    { id: "trainers", label: "Faculty", icon: Users, description: "Principal, teachers, staff", type: "dynamic" },
+    { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, sports, smart classes", type: "dynamic" },
     { id: "transport", label: "Transport", icon: MapPin, description: "Bus routes & pickup areas", type: "dynamic" },
     { id: "uniform", label: "Uniform", icon: Star, description: "Summer & winter uniform", type: "dynamic" },
+    { id: "timings", label: "School Timings", icon: Clock, description: "Class timings & office hours", type: "dynamic" },
+    { id: "activities", label: "Activities", icon: Star, description: "Sports, arts, extracurriculars", type: "dynamic" },
   ],
-  consultancy: [
-    { id: "services", label: "Services", icon: Star, description: "Consulting services", type: "dynamic" },
-    { id: "plans", label: "Packages & Pricing", icon: FileText, description: "Engagement models", type: "dynamic" },
-    { id: "trainers", label: "Team", icon: Users, description: "Consultants & experts", type: "dynamic" },
+  gym: [
+    { id: "plans", label: "Membership Plans", icon: Star, description: "Monthly, quarterly, annual plans", type: "dynamic" },
+    { id: "services", label: "Classes & Programs", icon: Dumbbell, description: "Group classes, HIIT, yoga", type: "dynamic" },
+    { id: "trainers", label: "Trainers", icon: Users, description: "Personal trainers & coaches", type: "dynamic" },
+    { id: "facilities", label: "Facilities", icon: Building, description: "Equipment, AC, steam, pool", type: "dynamic" },
+    { id: "timings", label: "Batch Timings", icon: Clock, description: "Morning, evening, weekend slots", type: "dynamic" },
+    { id: "offers", label: "Offers & Trials", icon: Star, description: "Free trials, seasonal offers", type: "dynamic" },
   ],
-  repair: [
-    { id: "services", label: "Repair Services", icon: Star, description: "What you fix", type: "dynamic" },
-    { id: "plans", label: "Pricing", icon: FileText, description: "Service charges", type: "dynamic" },
-    { id: "facilities", label: "Brands & Warranty", icon: Building, description: "Supported brands", type: "dynamic" },
-  ],
-  retail: [
-    { id: "services", label: "Products", icon: Star, description: "What you sell", type: "dynamic" },
-    { id: "plans", label: "Offers & Deals", icon: FileText, description: "Discounts, combos", type: "dynamic" },
-    { id: "facilities", label: "Store Info", icon: Building, description: "Delivery, returns", type: "dynamic" },
-  ],
-  agency: [
-    { id: "services", label: "Services", icon: Star, description: "What you offer", type: "dynamic" },
-    { id: "plans", label: "Pricing Plans", icon: FileText, description: "Packages & retainers", type: "dynamic" },
-    { id: "trainers", label: "Team", icon: Users, description: "Your team", type: "dynamic" },
-  ],
-  fitness: [
-    { id: "plans", label: "Membership Plans", icon: Star, description: "Subscriptions", type: "dynamic" },
-    { id: "services", label: "Programs", icon: Dumbbell, description: "Workout programs", type: "dynamic" },
-    { id: "trainers", label: "Coaches", icon: Users, description: "Fitness coaches", type: "dynamic" },
+  salon: [
+    { id: "services", label: "Services & Pricing", icon: Scissors, description: "Haircut, facial, bridal, etc.", type: "dynamic" },
+    { id: "plans", label: "Packages", icon: Star, description: "Bridal, party, combo packages", type: "dynamic" },
+    { id: "trainers", label: "Stylists", icon: Users, description: "Artists & specialists", type: "dynamic" },
+    { id: "offers", label: "Offers", icon: Star, description: "Seasonal offers & discounts", type: "dynamic" },
+    { id: "facilities", label: "Gallery & Policies", icon: Image, description: "Portfolio, cancellation policy", type: "dynamic" },
   ],
   spa: [
-    { id: "services", label: "Therapies", icon: Scissors, description: "Spa treatments", type: "dynamic" },
-    { id: "plans", label: "Packages", icon: Star, description: "Combo packages", type: "dynamic" },
-    { id: "trainers", label: "Therapists", icon: Users, description: "Your team", type: "dynamic" },
+    { id: "services", label: "Therapies", icon: Scissors, description: "Massages, facials, body wraps", type: "dynamic" },
+    { id: "plans", label: "Packages & Memberships", icon: Star, description: "Combo packages, memberships", type: "dynamic" },
+    { id: "trainers", label: "Therapists", icon: Users, description: "Specialists & experience", type: "dynamic" },
+    { id: "facilities", label: "Facilities", icon: Building, description: "Rooms, ambience, amenities", type: "dynamic" },
+    { id: "offers", label: "Offers", icon: Star, description: "Couple spa, seasonal offers", type: "dynamic" },
+  ],
+  clinic: [
+    { id: "trainers", label: "Doctors", icon: Stethoscope, description: "Specialists, qualifications, OPD", type: "dynamic" },
+    { id: "services", label: "Treatments & Services", icon: Stethoscope, description: "Consultations, procedures, diagnostics", type: "dynamic" },
+    { id: "plans", label: "Health Packages", icon: Star, description: "Checkup packages, insurance panels", type: "dynamic" },
+    { id: "facilities", label: "Departments & Equipment", icon: Building, description: "Departments, lab, pharmacy", type: "dynamic" },
+    { id: "timings", label: "OPD Timings", icon: Clock, description: "Doctor availability & slots", type: "dynamic" },
+  ],
+  dental: [
+    { id: "trainers", label: "Dentists", icon: Stethoscope, description: "Specialists & qualifications", type: "dynamic" },
+    { id: "services", label: "Procedures & Pricing", icon: Stethoscope, description: "Cleaning, RCT, implants, braces", type: "dynamic" },
+    { id: "plans", label: "Packages", icon: Star, description: "Annual care plans, insurance", type: "dynamic" },
+    { id: "facilities", label: "Equipment & Technology", icon: Building, description: "Digital X-ray, laser, etc.", type: "dynamic" },
+    { id: "timings", label: "Clinic Timings", icon: Clock, description: "Working hours & emergency", type: "dynamic" },
+  ],
+  restaurant: [
+    { id: "services", label: "Menu", icon: UtensilsCrossed, description: "Food items & beverages", type: "dynamic" },
+    { id: "plans", label: "Combos & Offers", icon: Star, description: "Meal deals, happy hours", type: "dynamic" },
+    { id: "facilities", label: "Dine-in & Delivery", icon: Building, description: "Seating, delivery areas, parking", type: "dynamic" },
+    { id: "timings", label: "Opening Hours", icon: Clock, description: "Timings, reservation info", type: "dynamic" },
+    { id: "offers", label: "Events & Catering", icon: Star, description: "Private dining, catering, events", type: "dynamic" },
+  ],
+  cafe: [
+    { id: "services", label: "Menu", icon: UtensilsCrossed, description: "Beverages, food, specials", type: "dynamic" },
+    { id: "plans", label: "Offers", icon: Star, description: "Happy hours, loyalty cards", type: "dynamic" },
+    { id: "facilities", label: "Ambience & Info", icon: Building, description: "WiFi, seating, pet-friendly", type: "dynamic" },
+    { id: "timings", label: "Opening Hours", icon: Clock, description: "Timings & reservation", type: "dynamic" },
+    { id: "offers", label: "Events", icon: Star, description: "Open mics, workshops, meetups", type: "dynamic" },
+  ],
+  real_estate: [
+    { id: "services", label: "Projects", icon: Home, description: "Available properties & locations", type: "dynamic" },
+    { id: "plans", label: "Pricing & Payment Plans", icon: FileText, description: "Price sheets, EMI, possession", type: "dynamic" },
+    { id: "facilities", label: "Amenities", icon: Building, description: "Pool, gym, park, security", type: "dynamic" },
+    { id: "offers", label: "Offers & RERA", icon: Star, description: "Early bird, RERA number, loans", type: "dynamic" },
+    { id: "trainers", label: "Sales Team", icon: Users, description: "Agents & contact persons", type: "dynamic" },
+  ],
+  coaching: [
+    { id: "services", label: "Courses", icon: BookOpen, description: "Programs, subjects, batches", type: "dynamic" },
+    { id: "plans", label: "Fee Structure", icon: Star, description: "Batch fees, scholarships", type: "dynamic" },
+    { id: "trainers", label: "Faculty", icon: Users, description: "Teachers, qualifications, experience", type: "dynamic" },
+    { id: "facilities", label: "Facilities", icon: Building, description: "Labs, library, study material", type: "dynamic" },
+    { id: "timings", label: "Batch Timings", icon: Clock, description: "Morning, evening, weekend batches", type: "dynamic" },
+    { id: "offers", label: "Demo & Results", icon: Star, description: "Free demo, results, placements", type: "dynamic" },
+  ],
+  consultancy: [
+    { id: "services", label: "Services", icon: Star, description: "Consulting services offered", type: "dynamic" },
+    { id: "plans", label: "Packages & Pricing", icon: FileText, description: "Engagement models, retainers", type: "dynamic" },
+    { id: "trainers", label: "Team", icon: Users, description: "Consultants, expertise, industries", type: "dynamic" },
+    { id: "facilities", label: "Process & Testimonials", icon: Building, description: "How you work, case studies", type: "dynamic" },
+  ],
+  repair: [
+    { id: "services", label: "Repair Services", icon: Star, description: "What you fix, pricing", type: "dynamic" },
+    { id: "plans", label: "Pricing & Warranty", icon: FileText, description: "Service charges, warranty terms", type: "dynamic" },
+    { id: "facilities", label: "Brands & Service Area", icon: Building, description: "Supported brands, pickup/drop", type: "dynamic" },
+    { id: "timings", label: "Turnaround & Timing", icon: Clock, description: "Repair time, working hours", type: "dynamic" },
+  ],
+  retail: [
+    { id: "services", label: "Products & Categories", icon: Star, description: "What you sell, brands", type: "dynamic" },
+    { id: "plans", label: "Offers & Deals", icon: FileText, description: "Discounts, seasonal sales", type: "dynamic" },
+    { id: "facilities", label: "Store Policies", icon: Building, description: "Returns, delivery, payment", type: "dynamic" },
+    { id: "timings", label: "Store Hours", icon: Clock, description: "Opening hours, holidays", type: "dynamic" },
+  ],
+  agency: [
+    { id: "services", label: "Services", icon: Star, description: "SEO, ads, design, dev, etc.", type: "dynamic" },
+    { id: "plans", label: "Pricing Plans", icon: FileText, description: "Packages, retainers, custom", type: "dynamic" },
+    { id: "trainers", label: "Team", icon: Users, description: "Experts, portfolio, roles", type: "dynamic" },
+    { id: "facilities", label: "Portfolio & Process", icon: Building, description: "Case studies, industries, tech", type: "dynamic" },
+  ],
+  fitness: [
+    { id: "plans", label: "Membership Plans", icon: Star, description: "Subscriptions & pricing", type: "dynamic" },
+    { id: "services", label: "Programs", icon: Dumbbell, description: "Workout programs & classes", type: "dynamic" },
+    { id: "trainers", label: "Coaches", icon: Users, description: "Fitness coaches & diet experts", type: "dynamic" },
+    { id: "timings", label: "Batch Timings", icon: Clock, description: "Slots & availability", type: "dynamic" },
+    { id: "offers", label: "Offers & Trials", icon: Star, description: "Free sessions, discounts", type: "dynamic" },
   ],
   other: [
     { id: "services", label: "Services", icon: Star, description: "What you offer", type: "dynamic" },
     { id: "plans", label: "Pricing", icon: FileText, description: "Your pricing", type: "dynamic" },
+    { id: "trainers", label: "Team", icon: Users, description: "Your team members", type: "dynamic" },
+    { id: "facilities", label: "Facilities & Info", icon: Building, description: "Additional details", type: "dynamic" },
   ],
 };
 
@@ -185,6 +211,9 @@ export default function KnowledgePage() {
   const [documents, setDocuments] = useState<ServiceItem[]>([]);
   const [transport, setTransport] = useState<ServiceItem[]>([]);
   const [uniform, setUniform] = useState<ServiceItem[]>([]);
+  const [timings, setTimings] = useState<ServiceItem[]>([]);
+  const [offers, setOffers] = useState<ServiceItem[]>([]);
+  const [activities, setActivities] = useState<ServiceItem[]>([]);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [additionalNotes, setAdditionalNotes] = useState("");
 
@@ -254,6 +283,15 @@ export default function KnowledgePage() {
       const uniformItems = getItems("uniform");
       if (uniformItems.length) setUniform(uniformItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
 
+      const timingsItems = getItems("timings");
+      if (timingsItems.length) setTimings(timingsItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const offersItems = getItems("offers");
+      if (offersItems.length) setOffers(offersItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
+      const activitiesItems = getItems("activities");
+      if (activitiesItems.length) setActivities(activitiesItems.map((s: Record<string, string>) => ({ name: s.name || "", description: s.description || "", price: s.price || "", duration: s.duration || "" })));
+
       const planItems = getItems("plans");
       if (planItems.length) setPlans(planItems.map((p: Record<string, unknown>) => ({ name: (p.name as string) || "", price: (p.price as string) || "", duration: (p.duration as string) || "month", features: (p.features as string[]) || [], is_popular: (p.is_popular as boolean) || false })));
 
@@ -304,6 +342,15 @@ export default function KnowledgePage() {
         break;
       case "uniform":
         payload = { section: "uniform", data: uniform.filter((u) => u.name.trim()) };
+        break;
+      case "timings":
+        payload = { section: "timings", data: timings.filter((t) => t.name.trim()) };
+        break;
+      case "offers":
+        payload = { section: "offers", data: offers.filter((o) => o.name.trim()) };
+        break;
+      case "activities":
+        payload = { section: "activities", data: activities.filter((a) => a.name.trim()) };
         break;
       case "faqs":
         payload = { section: "faqs", data: faqs.filter((f) => f.question.trim()) };
@@ -389,6 +436,9 @@ export default function KnowledgePage() {
       case "documents": return { items: documents, setter: setDocuments };
       case "transport": return { items: transport, setter: setTransport };
       case "uniform": return { items: uniform, setter: setUniform };
+      case "timings": return { items: timings, setter: setTimings };
+      case "offers": return { items: offers, setter: setOffers };
+      case "activities": return { items: activities, setter: setActivities };
       default: return { items: services, setter: setServices };
     }
   }
@@ -682,8 +732,8 @@ export default function KnowledgePage() {
             </Card>
           )}
 
-          {/* Dynamic List Sections: services, trainers, facilities, admissions, documents, transport, uniform */}
-          {(activeSection === "services" || activeSection === "trainers" || activeSection === "facilities" || activeSection === "admissions" || activeSection === "documents" || activeSection === "transport" || activeSection === "uniform") && (
+          {/* Dynamic List Sections: services, trainers, facilities, admissions, documents, transport, uniform, timings, offers, activities */}
+          {(activeSection === "services" || activeSection === "trainers" || activeSection === "facilities" || activeSection === "admissions" || activeSection === "documents" || activeSection === "transport" || activeSection === "uniform" || activeSection === "timings" || activeSection === "offers" || activeSection === "activities") && (
             <Card>
               {(() => {
                 const labels = typeLabels[activeSection] || { title: activeSection, addLabel: "Add", namePlaceholder: "Name", pricePlaceholder: "Price", descPlaceholder: "Description" };
