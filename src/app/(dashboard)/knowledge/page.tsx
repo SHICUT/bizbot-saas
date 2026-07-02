@@ -613,7 +613,14 @@ export default function KnowledgePage() {
         </div>
 
         {/* Section Content */}
-        <div>
+        <div onKeyDown={(e) => {
+          // Prevent parent elements (sidebar buttons, navigation) from capturing keyboard events
+          // when the user is typing in input/textarea fields
+          const target = e.target as HTMLElement;
+          if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") {
+            e.stopPropagation();
+          }
+        }}>
 
           {/* Business Details */}
           {activeSection === "profile" && (
@@ -762,13 +769,13 @@ export default function KnowledgePage() {
                             <div className="flex items-start gap-2">
                               <div className="flex-1 space-y-2">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  <input value={item.name} onChange={(e) => updateItem(setter, i, "name", e.target.value)} placeholder={labels.namePlaceholder} className="px-3 py-2 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                                  <input value={item.name} onChange={(e) => updateItem(setter, i, "name", e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder={labels.namePlaceholder} className="px-3 py-2 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                                   {labels.pricePlaceholder && (
-                                    <input value={item.price} onChange={(e) => updateItem(setter, i, "price", e.target.value)} placeholder={labels.pricePlaceholder} className="px-3 py-2 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                                    <input value={item.price} onChange={(e) => updateItem(setter, i, "price", e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder={labels.pricePlaceholder} className="px-3 py-2 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                                   )}
                                 </div>
                                 {labels.descPlaceholder && (
-                                  <input value={item.description} onChange={(e) => updateItem(setter, i, "description", e.target.value)} placeholder={labels.descPlaceholder} className="w-full px-3 py-2 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                                  <input value={item.description} onChange={(e) => updateItem(setter, i, "description", e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder={labels.descPlaceholder} className="w-full px-3 py-2 text-sm rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                                 )}
                               </div>
                               <button onClick={() => removeItem(setter, i)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
