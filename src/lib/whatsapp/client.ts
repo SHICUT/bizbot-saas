@@ -112,6 +112,81 @@ export class WhatsAppClient {
   }
 
   /**
+   * Send an image message via URL.
+   */
+  async sendImage(
+    to: string,
+    imageUrl: string,
+    caption?: string
+  ): Promise<SendMessageResponse> {
+    const payload: SendMessagePayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "image",
+      image: { link: imageUrl, ...(caption && { caption }) },
+    };
+    return this.sendMessage(payload);
+  }
+
+  /**
+   * Send a document (PDF, brochure, floor plan) via URL.
+   */
+  async sendDocument(
+    to: string,
+    documentUrl: string,
+    filename: string,
+    caption?: string
+  ): Promise<SendMessageResponse> {
+    const payload: SendMessagePayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "document",
+      document: { link: documentUrl, filename, ...(caption && { caption }) },
+    };
+    return this.sendMessage(payload);
+  }
+
+  /**
+   * Send a video message via URL.
+   */
+  async sendVideo(
+    to: string,
+    videoUrl: string,
+    caption?: string
+  ): Promise<SendMessageResponse> {
+    const payload: SendMessagePayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "video",
+      video: { link: videoUrl, ...(caption && { caption }) },
+    };
+    return this.sendMessage(payload);
+  }
+
+  /**
+   * Send a location pin (Google Maps style).
+   */
+  async sendLocation(
+    to: string,
+    latitude: number,
+    longitude: number,
+    name?: string,
+    address?: string
+  ): Promise<SendMessageResponse> {
+    const payload: SendMessagePayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "location",
+      location: { latitude, longitude, ...(name && { name }), ...(address && { address }) },
+    };
+    return this.sendMessage(payload);
+  }
+
+  /**
    * Mark a message as read (shows blue ticks to sender).
    */
   async markAsRead(messageId: string): Promise<void> {

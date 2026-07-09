@@ -120,10 +120,12 @@ export interface SendMessagePayload {
   messaging_product: "whatsapp";
   recipient_type: "individual";
   to: string;
-  type: "text" | "image" | "document" | "template" | "interactive";
+  type: "text" | "image" | "document" | "video" | "location" | "template" | "interactive";
   text?: { preview_url?: boolean; body: string };
   image?: { link: string; caption?: string };
   document?: { link: string; caption?: string; filename?: string };
+  video?: { link: string; caption?: string };
+  location?: { latitude: number; longitude: number; name?: string; address?: string };
   template?: TemplateMessage;
   interactive?: OutgoingInteractiveMessage;
   context?: { message_id: string }; // reply to specific message

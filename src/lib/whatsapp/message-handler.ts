@@ -3,6 +3,7 @@ import { WhatsAppClient } from "./client";
 import { generateAIReply } from "@/lib/ai/reply-engine";
 import { detectAndCreateAppointment, detectReschedule } from "@/lib/ai/appointment-detector";
 import { enrichLeadFromConversation } from "@/lib/ai/lead-enricher";
+import { handlePropertyMedia } from "@/lib/ai/property-media-handler";
 import type {
   WebhookPayload,
   IncomingMessage,
@@ -223,6 +224,19 @@ async function processIncomingMessage(
       .catch(() => {});
     enrichLeadFromConversation(content, replyText, business.id, lead.id, business.type || "other", conversationHistory)
       .catch((err) => console.error("[⚡] Lead enrichment error:", err));
+
+    // Property media (images, brochures, location) — real estate only
+    handlePropertyMedia({
+      businessId: business.id,
+      businessType: business.type || "other",
+      phoneNumberId: phoneNumberId,
+      accessToken: business.whatsapp_access_token,
+      leadPhone: message.from,
+      leadMetadata: (lead as Record<string, unknown>).metadata as Record<string, unknown> || {},
+      incomingMessage: content,
+      aiReply: replyText,
+    }).then((count) => { if (count > 0) console.log(`[⚡] 📸 ${count} media sent`); })
+      .catch((err) => console.error("[⚡] Property media error:", err));
 
   } catch (sendErr) {
     console.error(`[⚡] Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
