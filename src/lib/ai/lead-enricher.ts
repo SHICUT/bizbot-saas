@@ -84,6 +84,19 @@ export async function enrichLeadFromConversation(
     const temperature = newScore >= 70 ? "hot" : newScore >= 40 ? "warm" : "cold";
     await supabase.from("leads").update({ score: newScore, lead_temperature: temperature }).eq("id", leadId);
     result.scoreUpdated = true;
+
+    // Trigger hot lead notification
+    if (temperature === "hot" && (lead.lead_temperature !== "hot")) {
+      import("@/lib/crm/notification-engine").then(({ sendNotification }) => {
+        sendNotification({
+          businessId,
+          type: "hot_lead",
+          title: "🔥 Hot Lead Detected",
+          body: `Lead score: ${newScore}/100. Ready to convert!`,
+          metadata: { lead_id: leadId, score: newScore },
+        }).catch(() => {});
+      }).catch(() => {});
+    }
   }
 
   // ─── 5. Auto-Update Pipeline Stage ────────────────────────────────────

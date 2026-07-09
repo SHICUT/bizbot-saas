@@ -4,6 +4,8 @@ import { generateAIReply } from "@/lib/ai/reply-engine";
 import { detectAndCreateAppointment, detectReschedule } from "@/lib/ai/appointment-detector";
 import { enrichLeadFromConversation } from "@/lib/ai/lead-enricher";
 import { handlePropertyMedia } from "@/lib/ai/property-media-handler";
+import { assignLead } from "@/lib/crm/lead-assignment";
+import { sendNotification } from "@/lib/crm/notification-engine";
 import type {
   WebhookPayload,
   IncomingMessage,
@@ -238,6 +240,21 @@ async function processIncomingMessage(
       aiReply: replyText,
     }).then((count) => { if (count > 0) console.log(`[⚡] 📸 ${count} media sent`); })
       .catch((err) => console.error("[⚡] Property media error:", err));
+
+    // Auto-assign new leads + notify (first message only)
+    if (lead.status === "new") {
+      const leadMeta = ((lead as Record<string, unknown>).metadata || {}) as Record<string, unknown>;
+      assignLead(business.id, lead.id, leadMeta)
+        .then((r) => { if (r.assigned) console.log(`[⚡] 👤 Lead assigned to ${r.memberName} (${r.strategy})`); })
+        .catch(() => {});
+      sendNotification({
+        businessId: business.id,
+        type: "new_lead",
+        title: "New WhatsApp Lead",
+        body: `${contact?.profile?.name || message.from} messaged: "${content.substring(0, 80)}"`,
+        metadata: { lead_id: lead.id, phone: message.from, source: "whatsapp" },
+      }).catch(() => {});
+    }
 
   } catch (sendErr) {
     console.error(`[⚡] Send FAILED:`, sendErr instanceof Error ? sendErr.message : sendErr);
