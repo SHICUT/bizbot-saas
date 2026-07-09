@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processWebhookPayload } from "@/lib/whatsapp/message-handler";
 import { validateWebhookSignature, validatePayloadStructure } from "@/lib/whatsapp/webhook-validator";
+import { checkRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/security/rate-limiter";
 import type { WebhookPayload } from "@/lib/whatsapp/types";
 
 /**
@@ -15,16 +16,15 @@ import type { WebhookPayload } from "@/lib/whatsapp/types";
  *   It is NOT the access token (which starts with EAAN...).
  */
 
-// Hardcoded fallback — must match what is entered in Meta Developer Dashboard
-const FALLBACK_VERIFY_TOKEN = "flownex_verify_123";
+// Hardcoded fallback REMOVED for production security.
+// WHATSAPP_VERIFY_TOKEN must be set in environment variables.
 
 // Startup config validation (logs once when module loads)
 (() => {
   const vt = process.env.WHATSAPP_VERIFY_TOKEN || "";
-  console.log(`[Webhook Config] Raw WHATSAPP_VERIFY_TOKEN: "${vt.substring(0, 10)}..." (length: ${vt.length})`);
-  if (!vt) console.warn("[Webhook Config] ⚠ WHATSAPP_VERIFY_TOKEN not set — using fallback 'FlowNex_verify_123'");
-  else if (vt.startsWith("EAAN") || vt.length > 100) console.error(`[Webhook Config] 🔴 WRONG VALUE! WHATSAPP_VERIFY_TOKEN is "${vt.substring(0, 15)}..." (${vt.length} chars). This is an ACCESS TOKEN, not a verify token! Fix in Vercel env vars. Using fallback.`);
-  else console.log(`[Webhook Config] ✓ WHATSAPP_VERIFY_TOKEN = "${vt}" (length: ${vt.length})`);
+  if (!vt) console.error("[Webhook Config] 🔴 WHATSAPP_VERIFY_TOKEN not set — webhook verification will FAIL. Set it in Vercel env vars.");
+  else if (vt.startsWith("EAAN") || vt.length > 100) console.error(`[Webhook Config] 🔴 WRONG VALUE! WHATSAPP_VERIFY_TOKEN is "${vt.substring(0, 15)}..." (${vt.length} chars). This is an ACCESS TOKEN, not a verify token!`);
+  else console.log(`[Webhook Config] ✓ WHATSAPP_VERIFY_TOKEN configured (length: ${vt.length})`);
 
   const as = process.env.WHATSAPP_APP_SECRET;
   if (!as) console.warn("[Webhook Config] ⚠ WHATSAPP_APP_SECRET not set — signature validation disabled");
@@ -32,13 +32,16 @@ const FALLBACK_VERIFY_TOKEN = "flownex_verify_123";
 })();
 
 function getVerifyToken(): string {
-  const envToken = process.env.WHATSAPP_VERIFY_TOKEN || "";
-  // If env token looks like an access token (too long), use fallback
-  if (envToken.length > 100 || envToken.startsWith("EAAN")) {
-    console.warn("[Webhook] WHATSAPP_VERIFY_TOKEN appears to be an access token (too long). Using fallback token.");
-    return FALLBACK_VERIFY_TOKEN;
+  const envToken = (process.env.WHATSAPP_VERIFY_TOKEN || "").trim();
+  if (!envToken) {
+    console.error("[Webhook] WHATSAPP_VERIFY_TOKEN not set. Verification will fail.");
+    return "__NOT_CONFIGURED__";
   }
-  return envToken.trim() || FALLBACK_VERIFY_TOKEN;
+  if (envToken.length > 100 || envToken.startsWith("EAAN")) {
+    console.error("[Webhook] WHATSAPP_VERIFY_TOKEN appears to be an access token. Verification will fail.");
+    return "__MISCONFIGURED__";
+  }
+  return envToken;
 }
 
 /**
@@ -101,6 +104,13 @@ export async function GET(request: NextRequest) {
  * Incoming messages from WhatsApp — must return 200 within 5 seconds
  */
 export async function POST(request: NextRequest) {
+  // Rate limit webhook to prevent flood attacks (200/min per IP)
+  const clientIp = getClientIdentifier(request);
+  const rateCheck = checkRateLimit(`webhook:${clientIp}`, RATE_LIMITS.webhook);
+  if (!rateCheck.allowed) {
+    return new Response("Rate limited", { status: 429 });
+  }
+
   const rawBody = await request.text();
 
   // Signature validation (if app secret configured)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assignLead } from "@/lib/crm/lead-assignment";
 import { sendNotification } from "@/lib/crm/notification-engine";
+import { checkRateLimit, RATE_LIMITS, getClientIdentifier, getRateLimitHeaders } from "@/lib/security/rate-limiter";
 import crypto from "crypto";
 
 /**
@@ -19,6 +20,16 @@ import crypto from "crypto";
  */
 
 export async function POST(request: NextRequest) {
+  // Rate limit by IP (prevents brute-force key guessing)
+  const clientId = getClientIdentifier(request);
+  const rateCheck = checkRateLimit(`inbound:${clientId}`, RATE_LIMITS.api);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429, headers: getRateLimitHeaders(rateCheck) }
+    );
+  }
+
   const apiKey = request.headers.get("x-api-key");
   if (!apiKey) {
     return NextResponse.json({ error: "Missing x-api-key header" }, { status: 401 });
@@ -137,6 +148,19 @@ export async function POST(request: NextRequest) {
   }).catch((e) => console.error("[WebLead] Notification failed:", e));
 
   return NextResponse.json({ success: true, lead_id: lead.id, status: "created" }, { status: 201 });
+}
+
+/** CORS preflight for cross-origin website forms */
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, x-api-key",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
 }
 
 function sanitize(value: string | undefined | null): string {

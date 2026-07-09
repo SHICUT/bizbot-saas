@@ -78,6 +78,16 @@ ALTER TABLE lead_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies before creating (idempotent)
+DROP POLICY IF EXISTS "Service role team" ON team_members;
+DROP POLICY IF EXISTS "Service role assignments" ON lead_assignments;
+DROP POLICY IF EXISTS "Service role notifications" ON notifications;
+DROP POLICY IF EXISTS "Service role api_keys" ON api_keys;
+DROP POLICY IF EXISTS "Owner team" ON team_members;
+DROP POLICY IF EXISTS "Owner assignments" ON lead_assignments;
+DROP POLICY IF EXISTS "Owner notifications" ON notifications;
+DROP POLICY IF EXISTS "Owner api_keys" ON api_keys;
+
 -- Policies (service role full access for all)
 CREATE POLICY "Service role team" ON team_members FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role assignments" ON lead_assignments FOR ALL USING (auth.role() = 'service_role');

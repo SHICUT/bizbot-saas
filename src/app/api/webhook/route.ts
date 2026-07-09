@@ -11,9 +11,9 @@ import type { WebhookPayload } from "@/lib/whatsapp/types";
  */
 
 function getVerifyToken(): string {
-  // Check multiple env var names (different projects use different names)
-  const token = process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || "flownex_verify_123";
-  return token.trim(); // Remove any trailing whitespace/newlines
+  const token = process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || "";
+  if (!token) return "__NOT_CONFIGURED__";
+  return token.trim();
 }
 
 /**
