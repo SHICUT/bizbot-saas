@@ -74,7 +74,21 @@ export async function enrichLeadFromConversation(
 
   // ─── 3. Update metadata if fields found ───────────────────────────────
   if (result.fieldsUpdated.length > 0) {
-    const newMetadata = { ...currentMetadata, ...extractedFields, last_enriched_at: new Date().toISOString() };
+    const newMetadata: Record<string, unknown> = { ...currentMetadata, ...extractedFields, last_enriched_at: new Date().toISOString() };
+
+    // Track recommended properties (for AI memory)
+    if (businessType === "real_estate") {
+      const recommended = (newMetadata.recommended_properties as string[]) || [];
+      const propertyMentions = aiReply.match(/🏠\s*\*?([^*\n]+)\*?/g);
+      if (propertyMentions) {
+        for (const mention of propertyMentions) {
+          const name = mention.replace(/🏠\s*\*?/, "").replace(/\*$/, "").trim();
+          if (name && !recommended.includes(name)) recommended.push(name);
+        }
+        newMetadata.recommended_properties = recommended.slice(-10);
+      }
+    }
+
     await supabase.from("leads").update({ metadata: newMetadata }).eq("id", leadId);
   }
 

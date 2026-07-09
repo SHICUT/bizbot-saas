@@ -111,14 +111,23 @@ export async function processFollowUps(): Promise<FollowUpResult> {
     }
 
     // Generate message based on step + business type
-    const message = generateFollowUpMessage(
-      followUpCount,
-      lead.name,
-      business.type,
-      business.name,
-      metadata.last_inquiry as string | undefined,
-      business.ai_language
-    );
+    // For real estate, use personalized AI-driven follow-ups
+    let message: string;
+    if (business.type === "real_estate") {
+      const { generatePersonalizedFollowUp, buildBuyerProfile } = await import("./real-estate-intelligence");
+      const profile = buildBuyerProfile(metadata, []);
+      message = generatePersonalizedFollowUp(profile, followUpCount, business.name);
+      if (lead.name) message = `Hi ${lead.name}! ${message}`;
+    } else {
+      message = generateFollowUpMessage(
+        followUpCount,
+        lead.name,
+        business.type,
+        business.name,
+        metadata.last_inquiry as string | undefined,
+        business.ai_language
+      );
+    }
 
     // Send via WhatsApp
     try {

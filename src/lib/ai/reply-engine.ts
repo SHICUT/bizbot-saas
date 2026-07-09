@@ -8,6 +8,7 @@
 import { generateSalesReply } from "./sales-assistant";
 import { executeActions } from "./action-executor";
 import { getRecommendationContext } from "./property-media-handler";
+import { buildIntelligenceContext } from "./real-estate-intelligence";
 import type { ConversationContext, ChatMessage } from "./types";
 
 interface SimpleReplyInput {
@@ -34,16 +35,26 @@ interface SimpleReplyInput {
  * Returns error message string if Gemini fails.
  */
 export async function generateAIReply(input: SimpleReplyInput): Promise<string | null> {
-  // For real_estate businesses, inject live property recommendations into context
+  // For real_estate businesses, inject live property recommendations + intelligence into context
   let enrichedContext = input.businessContext;
   if (input.businessType === "real_estate" && input.businessId && input.leadMetadata) {
     try {
-      const recoContext = await getRecommendationContext(input.businessId, input.leadMetadata);
+      const [recoContext, intelligenceContext] = await Promise.all([
+        getRecommendationContext(input.businessId, input.leadMetadata),
+        buildIntelligenceContext(
+          input.businessId,
+          input.leadMetadata,
+          input.conversationHistory
+        ),
+      ]);
       if (recoContext) {
-        enrichedContext = `${input.businessContext}\n\n# MATCHING PROPERTIES (from database — use these for recommendations)\n${recoContext}`;
+        enrichedContext += `\n\n# MATCHING PROPERTIES (from database — use these for recommendations)\n${recoContext}`;
+      }
+      if (intelligenceContext) {
+        enrichedContext += `\n${intelligenceContext}`;
       }
     } catch (e) {
-      console.warn("[ReplyEngine] Property recommendation injection failed (non-fatal):", e);
+      console.warn("[ReplyEngine] Real estate intelligence injection failed (non-fatal):", e);
     }
   }
 
