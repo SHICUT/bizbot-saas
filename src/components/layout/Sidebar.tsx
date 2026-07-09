@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Users, MessageSquare, Bot, Calendar,
+  LayoutDashboard, Users, MessageSquare, Bot, Calendar, Home,
   CreditCard, BarChart2, Settings, FlaskConical,
   Shield, Image, BookOpen, Megaphone, HelpCircle,
   ChevronLeft, ChevronRight,
@@ -16,6 +16,7 @@ const navigation = [
   { name: "Conversations", href: "/conversations", icon: MessageSquare, badge: true },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Appointments", href: "/appointments", icon: Calendar },
+  { name: "Properties", href: "/properties", icon: Home },
   { name: "Automation", href: "/automations", icon: Bot },
   { name: "Knowledge Base", href: "/knowledge", icon: BookOpen },
   { name: "Broadcasts", href: "/broadcasts", icon: Megaphone },

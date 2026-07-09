@@ -7,6 +7,7 @@
 
 import { generateSalesReply } from "./sales-assistant";
 import { executeActions } from "./action-executor";
+import { getRecommendationContext } from "./property-media-handler";
 import type { ConversationContext, ChatMessage } from "./types";
 
 interface SimpleReplyInput {
@@ -33,12 +34,25 @@ interface SimpleReplyInput {
  * Returns error message string if Gemini fails.
  */
 export async function generateAIReply(input: SimpleReplyInput): Promise<string | null> {
+  // For real_estate businesses, inject live property recommendations into context
+  let enrichedContext = input.businessContext;
+  if (input.businessType === "real_estate" && input.businessId && input.leadMetadata) {
+    try {
+      const recoContext = await getRecommendationContext(input.businessId, input.leadMetadata);
+      if (recoContext) {
+        enrichedContext = `${input.businessContext}\n\n# MATCHING PROPERTIES (from database — use these for recommendations)\n${recoContext}`;
+      }
+    } catch (e) {
+      console.warn("[ReplyEngine] Property recommendation injection failed (non-fatal):", e);
+    }
+  }
+
   const ctx: ConversationContext = {
     businessId: input.businessId || "",
     leadId: input.leadId || "",
     conversationId: input.conversationId || "",
     businessName: input.businessName || "Our Business",
-    businessContext: input.businessContext,
+    businessContext: enrichedContext,
     businessType: input.businessType || "service",
     businessHours: input.businessHours || {},
     tone: (input.tone as "friendly" | "casual" | "formal") || "friendly",

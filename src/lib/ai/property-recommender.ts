@@ -243,19 +243,28 @@ function parseBudget(budgetStr: string): { min: number; max: number } | null {
 export function formatRecommendationsForAI(matches: PropertyMatch[]): string {
   if (matches.length === 0) return "";
 
-  const lines: string[] = ["Based on your requirements, here are my recommendations:\n"];
+  const lines: string[] = [];
 
   for (const match of matches.slice(0, 3)) {
     const p = match.property;
-    lines.push(`🏠 *${p.name}*`);
-    if (p.bhk) lines.push(`   ${p.bhk} ${p.property_type}`);
-    if (p.price_display) lines.push(`   💰 ${p.price_display}`);
-    if (p.area || p.city) lines.push(`   📍 ${[p.area, p.city].filter(Boolean).join(", ")}`);
-    if (p.possession_date) lines.push(`   📅 Possession: ${p.possession_date}`);
-    lines.push(`   ✅ ${match.matchPercentage}% match — ${match.matchReasons.join(", ")}`);
+    lines.push(`Property: ${p.name}`);
+    lines.push(`  Match: ${match.matchPercentage}% (${match.matchReasons.join(", ")})`);
+    if (p.bhk && p.property_type) lines.push(`  Type: ${p.bhk} ${p.property_type}`);
+    if (p.price_display) lines.push(`  Price: ${p.price_display}`);
+    if (p.area || p.city) lines.push(`  Location: ${[p.area, p.city].filter(Boolean).join(", ")}`);
+    if (p.possession_date) lines.push(`  Possession: ${p.possession_date}`);
+    lines.push(`  Status: ${p.status}`);
+    if (p.rera_number) lines.push(`  RERA: ${p.rera_number}`);
+    if (p.builder_name) lines.push(`  Builder: ${p.builder_name}`);
+    if (p.amenities && p.amenities.length > 0) lines.push(`  Amenities: ${p.amenities.slice(0, 5).join(", ")}`);
+    if (p.google_maps_link) lines.push(`  Google Maps: ${p.google_maps_link}`);
+    if (p.brochure_url) lines.push(`  [Brochure PDF available]`);
+    if (p.images && p.images.length > 0) lines.push(`  [${p.images.length} image(s) available]`);
+    if (p.floor_plans && p.floor_plans.length > 0) lines.push(`  [Floor plan available]`);
     lines.push("");
   }
 
-  lines.push("Would you like details on any of these, or shall I book a site visit?");
+  lines.push("INSTRUCTION: Recommend the highest-match property first. Mention key details (price, BHK, location, possession). If customer asks for brochure/images/map, confirm you'll send them.");
+
   return lines.join("\n");
 }

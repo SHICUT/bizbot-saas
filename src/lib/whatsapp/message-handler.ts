@@ -112,7 +112,7 @@ async function processIncomingMessage(
     supabase.from("leads").upsert(
       { business_id: business.id, wa_id: message.from, phone: message.from, name: contact?.profile?.name || null, source: "whatsapp" },
       { onConflict: "business_id,wa_id" }
-    ).select("id, ai_paused_until, status").single(),
+    ).select("id, ai_paused_until, status, metadata").single(),
     // Conversation upsert
     supabase.from("conversations").upsert(
       { business_id: business.id, lead_id: "placeholder", channel: "whatsapp", status: "active", is_ai_active: true },
@@ -187,6 +187,7 @@ async function processIncomingMessage(
     conversationId: conversation.id,
     leadPhone: message.from,
     leadStatus: lead.status,
+    leadMetadata: (lead.metadata || {}) as Record<string, unknown>,
   });
 
   timings.ai = Date.now() - t3;
