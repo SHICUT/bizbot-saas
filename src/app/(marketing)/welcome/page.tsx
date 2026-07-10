@@ -6,6 +6,11 @@ import {
   CheckCircle, ArrowRight, Star, Phone, Clock, Shield,
   ChevronDown
 } from "lucide-react";
+import TrustSection from "@/components/marketing/TrustSection";
+import CustomerLogos from "@/components/marketing/CustomerLogos";
+import Testimonials from "@/components/marketing/Testimonials";
+import BuyerConfidence from "@/components/marketing/BuyerConfidence";
+import { FAQSchema, AggregateRatingSchema } from "@/components/marketing/StructuredData";
 
 const FEATURES = [
   { icon: MessageSquare, title: "Instant AI Replies", desc: "Respond to every WhatsApp inquiry in under 3 seconds — 24/7, even while you sleep.", color: "blue" },
@@ -21,12 +26,6 @@ const STATS = [
   { value: "24/7", label: "Always Available" },
   { value: "85%", label: "Lead Capture Rate" },
   { value: "3x", label: "More Appointments" },
-];
-
-const TESTIMONIALS = [
-  { name: "Rahul S.", role: "Gym Owner, Mumbai", text: "FlowNex handles 90% of my inquiries automatically. I went from missing leads to booking 3x more trial sessions.", rating: 5 },
-  { name: "Priya M.", role: "Salon Owner, Delhi", text: "My customers get instant replies even at midnight. Appointment bookings doubled in the first month.", rating: 5 },
-  { name: "Amit K.", role: "Real Estate Agent, Bangalore", text: "Every property inquiry is now captured and followed up. I closed 4 extra deals last quarter thanks to FlowNex.", rating: 5 },
 ];
 
 const FAQS = [
@@ -49,7 +48,8 @@ export default function LandingPage() {
             <a href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Features</a>
             <a href="#how-it-works" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">How It Works</a>
             <a href="#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-            <a href="#faq" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">FAQ</a>
+            <Link href="/case-studies" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Case Studies</Link>
+            <Link href="/about" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">About</Link>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg transition-colors">Sign In</Link>
@@ -147,32 +147,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Testimonials ─── */}
-      <section className="py-24 bg-gray-50/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Businesses Love FlowNex</h2>
-            <p className="text-lg text-gray-600">Real results from real businesses.</p>
-          </div>
+      {/* ─── Testimonials (Enhanced) ─── */}
+      <Testimonials />
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl border border-gray-100 p-7 hover:shadow-md transition-all">
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-gray-700 text-sm leading-relaxed mb-5">&ldquo;{t.text}&rdquo;</p>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{t.name}</p>
-                  <p className="text-xs text-gray-500">{t.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ─── Trust Section ─── */}
+      <TrustSection />
+
+      {/* ─── Customer Logos ─── */}
+      <CustomerLogos />
+
+      {/* ─── Buyer Confidence ─── */}
+      <BuyerConfidence />
 
       {/* ─── Pricing Preview ─── */}
       <section id="pricing" className="py-24">
@@ -257,20 +242,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-gray-100 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <img src="/brand/logo-full.png" alt="FlowNex" className="h-7 object-contain" />
-            <p className="text-sm text-gray-500">© {new Date().getFullYear()} FlowNex. All rights reserved.</p>
-            <div className="flex items-center gap-6">
-              <Link href="/login" className="text-sm text-gray-500 hover:text-gray-700">Sign In</Link>
-              <Link href="/register" className="text-sm text-gray-500 hover:text-gray-700">Sign Up</Link>
-              <a href="mailto:shivam95ku@gmail.com" className="text-sm text-gray-500 hover:text-gray-700">Contact</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* ─── Structured Data ─── */}
+      <FAQSchema />
+      <AggregateRatingSchema />
 
       {/* ─── Floating WhatsApp CTA ─── */}
       <a

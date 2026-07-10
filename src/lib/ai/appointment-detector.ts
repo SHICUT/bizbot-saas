@@ -103,6 +103,27 @@ export async function detectAndCreateAppointment(
 
   console.log(`[Appt] ✓ Created: ${appointment.id} | ${service} on ${details.date} at ${details.time}`);
 
+  // Step 6b: Send notification to business owner + assigned salesperson
+  try {
+    const { sendNotification } = await import("@/lib/crm/notification-engine");
+    await sendNotification({
+      businessId,
+      type: "site_visit",
+      title: `📅 Site Visit Booked`,
+      body: `${leadName || leadPhone} — ${service} on ${details.date} at ${details.time}`,
+      metadata: { lead_id: leadId, appointment_id: appointment.id, date: details.date, time: details.time },
+    });
+  } catch (e) {
+    console.warn("[Appt] Notification failed (non-critical):", e);
+  }
+
+  // Step 6c: Auto-assign salesperson (if team exists)
+  try {
+    const { assignLead } = await import("@/lib/crm/lead-assignment");
+    const { data: leadMeta } = await supabase.from("leads").select("metadata").eq("id", leadId).single();
+    await assignLead(businessId, leadId, (leadMeta?.metadata || {}) as Record<string, unknown>);
+  } catch { /* non-critical — team may not exist */ }
+
   // Step 7: Send formatted confirmation message
   if (business.whatsapp_phone_number_id && business.whatsapp_access_token) {
     try {
