@@ -13,12 +13,12 @@ export const metadata: Metadata = {
     "Shivam Kumar FlowNex",
     "FlowNex intellectual property",
   ],
-  alternates: { canonical: "https://flownex.in/ownership" },
+  alternates: { canonical: "https://www.flownex.in/ownership" },
   openGraph: {
     title: "FlowNex Ownership — Circle Creation",
     description:
       "FlowNex is proprietary software owned by Circle Creation, founded by Shivam Kumar.",
-    url: "https://flownex.in/ownership",
+    url: "https://www.flownex.in/ownership",
   },
 };
 
@@ -39,8 +39,8 @@ export default function OwnershipPage() {
 
       <BreadcrumbSchema
         items={[
-          { name: "Home", url: "https://flownex.in" },
-          { name: "Ownership", url: "https://flownex.in/ownership" },
+          { name: "Home", url: "https://www.flownex.in" },
+          { name: "Ownership", url: "https://www.flownex.in/ownership" },
         ]}
       />
 

@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import RouteLoader from "@/components/ui/RouteLoader";
-import { OrganizationSchema, SoftwareApplicationSchema, PersonSchema } from "@/components/marketing/StructuredData";
+import { OrganizationSchema, SoftwareApplicationSchema, PersonSchema, WebSiteSchema } from "@/components/marketing/StructuredData";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,56 +13,59 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "FlowNex — AI-Powered WhatsApp Automation by Circle Creation",
+    default: "FlowNex - AI Powered Lead Capture & Customer Automation Platform",
     template: "%s | FlowNex by Circle Creation",
   },
   description:
-    "FlowNex is an AI-powered WhatsApp automation platform by Circle Creation. Capture leads, reply instantly, book appointments, and grow your business. Founded by Shivam Kumar.",
+    "FlowNex by Circle Creation helps businesses automate WhatsApp conversations, capture leads instantly, book appointments, and improve customer engagement using AI. Founded by Shivam Kumar.",
   keywords: [
+    "AI customer automation",
+    "WhatsApp automation",
+    "AI lead capture",
+    "appointment booking software",
+    "customer engagement platform",
+    "real estate automation",
+    "business automation software",
     "FlowNex",
     "Circle Creation",
-    "AI WhatsApp Automation",
-    "Founder Shivam Kumar",
+    "Shivam Kumar",
     "WhatsApp CRM",
-    "Lead Automation Platform",
     "WhatsApp Business API",
     "AI Chatbot",
-    "Lead Capture",
-    "Appointment Booking",
-    "Customer Engagement",
-    "WhatsApp Marketing",
+    "lead management",
   ],
-  authors: [{ name: "Shivam Kumar", url: "https://flownex.in/about" }],
+  authors: [{ name: "Shivam Kumar", url: "https://www.flownex.in/founder" }],
   creator: "Circle Creation",
   publisher: "Circle Creation",
-  metadataBase: new URL("https://flownex.in"),
+  metadataBase: new URL("https://www.flownex.in"),
   alternates: {
-    canonical: "https://flownex.in",
+    canonical: "https://www.flownex.in",
   },
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://flownex.in",
-    siteName: "FlowNex",
-    title: "FlowNex — AI-Powered WhatsApp Automation by Circle Creation",
+    url: "https://www.flownex.in",
+    siteName: "FlowNex by Circle Creation",
+    title: "FlowNex by Circle Creation — AI Customer Automation Platform",
     description:
-      "FlowNex is an AI-powered WhatsApp automation platform developed by Circle Creation. Capture leads, reply instantly, book appointments automatically.",
+      "AI-powered customer automation platform helping businesses automate WhatsApp conversations, capture leads instantly, and book appointments. Built by Circle Creation, founded by Shivam Kumar.",
     images: [
       {
-        url: "/brand/logo-full.png",
+        url: "/brand/og-image.png",
         width: 1200,
         height: 630,
-        alt: "FlowNex by Circle Creation",
+        alt: "FlowNex by Circle Creation — AI Customer Automation Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "FlowNex — AI WhatsApp Automation by Circle Creation",
+    title: "FlowNex by Circle Creation",
     description:
-      "AI-powered WhatsApp automation platform by Circle Creation. Founded by Shivam Kumar.",
-    images: ["/brand/logo-full.png"],
+      "AI-powered customer automation platform helping businesses automate WhatsApp conversations, capture leads instantly, and book appointments.",
+    images: ["/brand/og-image.png"],
     creator: "@circlecreation",
+    site: "@flownex",
   },
   robots: {
     index: true,
@@ -84,6 +87,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OrganizationSchema />
         <SoftwareApplicationSchema />
         <PersonSchema />
+        <WebSiteSchema />
       </head>
       <body className="antialiased">
         <ToastProvider>

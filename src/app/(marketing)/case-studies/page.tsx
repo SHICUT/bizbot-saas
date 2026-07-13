@@ -14,11 +14,11 @@ export const metadata: Metadata = {
     "appointment booking automation",
     "Circle Creation",
   ],
-  alternates: { canonical: "https://flownex.in/case-studies" },
+  alternates: { canonical: "https://www.flownex.in/case-studies" },
   openGraph: {
     title: "FlowNex Case Studies — Real Business Results",
-    description: "Discover how businesses grow with FlowNex AI WhatsApp automation.",
-    url: "https://flownex.in/case-studies",
+    description: "Discover how businesses grow with FlowNex AI customer automation.",
+    url: "https://www.flownex.in/case-studies",
   },
 };
 
@@ -132,8 +132,8 @@ export default function CaseStudiesPage() {
 
       <BreadcrumbSchema
         items={[
-          { name: "Home", url: "https://flownex.in" },
-          { name: "Case Studies", url: "https://flownex.in/case-studies" },
+          { name: "Home", url: "https://www.flownex.in" },
+          { name: "Case Studies", url: "https://www.flownex.in/case-studies" },
         ]}
       />
 

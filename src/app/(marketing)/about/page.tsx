@@ -6,21 +6,21 @@ import { Users, Target, Lightbulb, Mail, Phone, MapPin } from "lucide-react";
 export const metadata: Metadata = {
   title: "About Us — Circle Creation & FlowNex",
   description:
-    "Learn about Circle Creation, the company behind FlowNex. Founded by Shivam Kumar, we build AI-powered WhatsApp automation to help businesses grow.",
+    "Learn about Circle Creation, the company behind FlowNex. Founded by Shivam Kumar, we build AI-powered customer automation to help businesses grow.",
   keywords: [
     "Circle Creation",
     "FlowNex",
     "About",
     "Shivam Kumar",
     "Founder",
-    "AI WhatsApp Automation Company",
+    "AI Customer Automation Company",
   ],
-  alternates: { canonical: "https://flownex.in/about" },
+  alternates: { canonical: "https://www.flownex.in/about" },
   openGraph: {
     title: "About Circle Creation — Makers of FlowNex",
     description:
-      "Circle Creation develops FlowNex, an AI WhatsApp automation platform. Founded by Shivam Kumar.",
-    url: "https://flownex.in/about",
+      "Circle Creation develops FlowNex, an AI customer automation platform. Founded by Shivam Kumar.",
+    url: "https://www.flownex.in/about",
   },
 };
 
@@ -42,8 +42,8 @@ export default function AboutPage() {
 
       <BreadcrumbSchema
         items={[
-          { name: "Home", url: "https://flownex.in" },
-          { name: "About Us", url: "https://flownex.in/about" },
+          { name: "Home", url: "https://www.flownex.in" },
+          { name: "About Us", url: "https://www.flownex.in/about" },
         ]}
       />
 

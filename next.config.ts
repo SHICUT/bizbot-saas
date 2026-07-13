@@ -35,8 +35,15 @@ const nextConfig: NextConfig = {
     return headers;
   },
 
-  // Redirect HTTP to HTTPS in production
-  redirects: async () => [],
+  // Redirect non-www to www in production
+  redirects: async () => [
+    {
+      source: "/:path*",
+      has: [{ type: "host", value: "flownex.in" }],
+      destination: "https://www.flownex.in/:path*",
+      permanent: true,
+    },
+  ],
 
   // Disable x-powered-by header
   poweredByHeader: false,

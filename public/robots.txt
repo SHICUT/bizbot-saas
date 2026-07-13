@@ -1,13 +1,18 @@
 # robots.txt for FlowNex by Circle Creation
-# https://flownex.in
+# https://www.flownex.in
 
 User-agent: *
 Allow: /
 Allow: /welcome
+Allow: /features
+Allow: /pricing
 Allow: /about
+Allow: /founder
+Allow: /contact
+Allow: /blog
+Allow: /case-studies
 Allow: /ownership
 Allow: /developer
-Allow: /case-studies
 Allow: /terms
 Allow: /privacy-policy
 Allow: /support
@@ -20,6 +25,10 @@ Disallow: /callback
 Disallow: /confirm
 Disallow: /onboarding
 Disallow: /reset-password
+Disallow: /select-plan
 
 # Sitemap
-Sitemap: https://flownex.in/sitemap.xml
+Sitemap: https://www.flownex.in/sitemap.xml
+
+# Host
+Host: https://www.flownex.in

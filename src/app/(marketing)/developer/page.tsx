@@ -13,11 +13,11 @@ export const metadata: Metadata = {
     "Shivam Kumar developer",
     "FlowNex creator",
   ],
-  alternates: { canonical: "https://flownex.in/developer" },
+  alternates: { canonical: "https://www.flownex.in/developer" },
   openGraph: {
     title: "FlowNex Developer Information",
     description: "Developed by Circle Creation. Founder & Product Creator: Shivam Kumar.",
-    url: "https://flownex.in/developer",
+    url: "https://www.flownex.in/developer",
   },
 };
 
@@ -38,8 +38,8 @@ export default function DeveloperPage() {
 
       <BreadcrumbSchema
         items={[
-          { name: "Home", url: "https://flownex.in" },
-          { name: "Developer", url: "https://flownex.in/developer" },
+          { name: "Home", url: "https://www.flownex.in" },
+          { name: "Developer", url: "https://www.flownex.in/developer" },
         ]}
       />
 
